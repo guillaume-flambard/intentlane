@@ -254,6 +254,16 @@ xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator .int
 
 The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml) is the executable reference fixture. Compiler rules for agents live in [AGENT-GUIDE.md](AGENT-GUIDE.md).
 
+## Continuous integration
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main`, on every pull request, and on demand. It has three jobs.
+
+- `checks`, on `ubuntu-latest`: installs from the lockfile, typechecks, runs the test suite, validates the reference contract, regenerates the artifacts, fails when they are stale, and generates a second copy in `/tmp` to prove the output is byte-for-byte deterministic.
+- `swift`, a matrix over `macos-15` and `macos-26`: compiles the generated Swift for both the reference fixture and the example app with `swiftc` against the iOS simulator SDK. This is the minimal Xcode matrix, and each run prints the Xcode and SDK versions it used.
+- `simulator`, on `macos-26`: prebuilds `apps/example-expo`, builds the Release app for the simulator with `xcodebuild`, then reads `Metadata.appintents/extract.actionsdata` and the compiled `fr.lproj/IntentLane.strings` from the product. It asserts the four actions exist, that every action carries `outputFlags: 7` (dialog, snippet view and opened URL), that `DeleteIdea` is the only one with an explicit authentication policy, that the entity and its query are indexed, that the shortcuts are registered, and that the French table holds the translated confirmation prompt and parameter title.
+
+The generated Swift is compiled and built on macOS runners only; the fast checks run everywhere.
+
 ## Open risks
 
 - An intent without `shortcuts.phrases` for the default locale is reachable programmatically but never from Siri, and it is intentionally left out of the `AppShortcutsProvider`. Whether that deserves its own diagnostic is undecided.

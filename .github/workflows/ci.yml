@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, tests and generated output
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm build
+      - name: Run the test suite
+        run: pnpm test
+      - name: Validate the reference contract
+        run: pnpm validate
+      - name: Generate the reference artifacts
+        run: pnpm exec tsx packages/cli/src/index.ts generate --output .intentlane/generated
+      - name: Fail when the generated artifacts are stale
+        run: pnpm exec tsx packages/cli/src/index.ts generate --output .intentlane/generated --check
+      - name: Generate twice and compare the output
+        run: |
+          pnpm exec tsx packages/cli/src/index.ts generate --output /tmp/intentlane-second
+          diff -r .intentlane/generated /tmp/intentlane-second
+
+  swift:
+    name: Compile the generated Swift (${{ matrix.image }})
+    runs-on: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [macos-15, macos-26]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Report the toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+      - name: Generate the reference artifacts
+        run: pnpm exec tsx packages/cli/src/index.ts generate --output .intentlane/generated
+      - name: Generate the example artifacts
+        run: pnpm exec tsx packages/cli/src/index.ts generate --config apps/example-expo/intentlane.yaml --output /tmp/intentlane-example
+      - name: Compile the generated Swift for the simulator
+        run: |
+          xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator .intentlane/generated/IntentLaneGenerated.swift -o /tmp/reference.o
+          xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator /tmp/intentlane-example/IntentLaneGenerated.swift -o /tmp/example.o
+          ls -l /tmp/reference.o /tmp/example.o
+
+  simulator:
+    name: Build the example app for the simulator
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Report the toolchain
+        run: |
+          xcodebuild -version
+          pod --version
+      - name: Generate the iOS project and build the app
+        working-directory: apps/example-expo
+        env:
+          NODE_ENV: production
+        run: |
+          pnpm exec expo prebuild --platform ios
+          cd ios
+          xcodebuild -workspace IntentLaneExample.xcworkspace -scheme IntentLaneExample -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Assert the App Intents metadata and the strings table
+        working-directory: apps/example-expo
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import plistlib
+
+          app = pathlib.Path("ios/build/Build/Products/Release-iphonesimulator/IntentLaneExample.app")
+          metadata = json.loads((app / "Metadata.appintents/extract.actionsdata").read_text())
+          actions = metadata["actions"]
+
+          expected = {"CreateIdea", "DeleteIdea", "OpenIdea", "OpenInbox"}
+          missing = expected - set(actions)
+          assert not missing, f"missing actions: {sorted(missing)}"
+
+          flags = {name: action["outputFlags"] for name, action in actions.items()}
+          assert set(flags.values()) == {7}, flags
+
+          delete = actions["DeleteIdea"]
+          assert delete["authenticationPolicy"] == 1, delete["authenticationPolicy"]
+          assert delete["isAuthPolExplicit"] is True
+
+          titles = {parameter["name"]: parameter["title"]["key"] for parameter in delete["parameters"]}
+          assert titles == {"idea": "Idea"}, titles
+
+          assert "IntentLaneIdeaEntity" in metadata["entities"]
+          assert "IntentLaneIdeaQuery" in metadata["queries"]
+
+          shortcuts = {shortcut["actionIdentifier"] for shortcut in metadata["autoShortcuts"]}
+          assert {"CreateIdea", "DeleteIdea", "OpenIdea"} <= shortcuts, sorted(shortcuts)
+
+          strings = plistlib.loads((app / "fr.lproj/IntentLane.strings").read_bytes())
+          assert strings["Delete this idea?"] == "Supprimer cette idée ?", strings["Delete this idea?"]
+          assert strings["Idea title"] == "Titre de l'idée", strings["Idea title"]
+
+          print("actions:", sorted(actions))
+          print("output flags:", flags)
+          print("strings table entries:", len(strings))
+          PY

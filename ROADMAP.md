@@ -38,7 +38,7 @@
 - Localisation en/fr. **fait** : `title` et `prompt` d'un paramètre sont localisés dans la table `IntentLane` (le `title` alimente aussi le nom du type d'un `enum`), avec repli sur l'identifiant brut quand aucun `title` n'est déclaré, et IL1201 si la locale par défaut manque. Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où chaque paramètre porte un `title.key` localisé (par exemple `Idea title`, `Due date`, `Priority`) au lieu de son identifiant.
 - Confirmation et politique de risque. **fait** : `confirmation: always` génère un `requestConfirmation` avant l'action, `authentication: required` et `none` génèrent une `authenticationPolicy` explicite, `inherited` n'émet rien, et `confirmation_prompt` alimente le dialogue et la table `IntentLane` (repli sur le titre de l'intention). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `DeleteIdea` porte `authenticationPolicy: 1` avec `isAuthPolExplicit: true` alors que les autres intentions restent à `0`.
 - Résultat/dialogue et snippet simple. **fait** : `perform()` retourne `ProvidesDialog & ShowsSnippetView & OpensIntent`, une vue `IntentLaneSnippetView` est déclarée une fois par fichier et affiche le titre de l'intention plus une ligne par paramètre (conversion identique à la query, libellés dans la table `IntentLane`, aucune ligne pour une intention sans paramètre). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `outputFlags` passe de `5` à `7` pour les quatre intentions quand la conformance est ajoutée.
-- CI macOS et matrice Xcode minimale.
+- CI macOS et matrice Xcode minimale. **fait** : `.github/workflows/ci.yml` a trois jobs. `checks` (ubuntu) enchaîne installation depuis le lockfile, typecheck, tests, validate, régénération, échec si périmé, et une seconde génération dans `/tmp` comparée par `diff -r` pour prouver le déterminisme byte pour byte. `swift` compile le Swift généré des deux fixtures avec `swiftc` contre le SDK simulateur sur `macos-15` et `macos-26` (Xcode 16.4 contre Xcode 26.4.1, versions imprimées par chaque run). `simulator` (macos-26) fait un `expo prebuild`, construit l'app Release avec `xcodebuild`, puis lit `Metadata.appintents/extract.actionsdata` et la table `fr.lproj/IntentLane.strings` du produit et vérifie les quatre actions, `outputFlags: 7`, la politique d'authentification explicite de `DeleteIdea`, l'entité et sa requête, les raccourcis enregistrés, et deux traductions.
 - Exemple Kollio-like.
 
 **Gate :** cinq pilotes, dont deux apps existantes.
@@ -87,5 +87,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(ci): run the test suite and a simulator build on macOS`.
+Ticket suivant : `feat(example): add a Kollio-like example`.
 
