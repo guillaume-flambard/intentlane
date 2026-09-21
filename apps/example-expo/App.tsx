@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useReducer, useRef } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { publishIdeas } from "./src/publish";
 import { applyUrl, initialState, type ExampleState } from "./src/router";
 import { routePath } from "./src/routes";
 
@@ -28,6 +29,10 @@ export default function App() {
       if (url) dispatch({ type: "url", url });
     });
   }, []);
+
+  useEffect(() => {
+    publishIdeas(state.ideas);
+  }, [state.ideas]);
 
   const route = state.route ? routePath(state.route) : "no route yet";
 

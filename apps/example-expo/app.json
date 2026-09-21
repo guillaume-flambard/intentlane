@@ -16,7 +16,8 @@
         {
           "configFile": "intentlane.yaml"
         }
-      ]
+      ],
+      "./plugins/withIdeaResolver.cjs"
     ]
   }
 }

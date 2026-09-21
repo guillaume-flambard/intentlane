@@ -9,7 +9,17 @@ export type Idea = Readonly<{
   status: "open" | "done";
 }>;
 
+export type IdeaEntityPayload = Readonly<{
+  id: string;
+  title: string;
+  status: "open" | "done";
+}>;
+
 const PRIORITIES: readonly IdeaPriority[] = ["low", "medium", "high"];
+
+export function ideaEntityPayloads(ideas: readonly Idea[]): readonly IdeaEntityPayload[] {
+  return ideas.map((idea) => ({ id: idea.id, title: idea.title, status: idea.status }));
+}
 
 export function isPriority(value: string | undefined): value is IdeaPriority {
   return value !== undefined && PRIORITIES.some((priority) => priority === value);

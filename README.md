@@ -138,6 +138,8 @@ IntentLane never writes business logic. The app supplies the data and registers 
 IntentLaneEntityResolvers.idea = MyIdeaResolver()
 ```
 
+`IntentLaneEntityResolvers` is main-actor isolated, so the registration happens on the main actor. Until the app registers a resolver, the query returns an empty list rather than failing. The example app does register one; see [Example app](#example-app).
+
 `display.title` and `display.subtitle` name the properties the system shows, `identifier` names the property that carries the stable identifier, and an entity parameter references an entity by id:
 
 ```yaml
@@ -207,7 +209,7 @@ Writes go to a temporary file and are renamed into place, so a failed run cannot
 
 ## Example app
 
-`apps/example-expo` is Kollio, a Kollio-like idea list that proves the quickstart end to end. It declares four intents (`open_inbox`, `create_idea`, `open_idea`, `delete_idea`), one `idea` entity, and English and French copy. The screen lists ideas, and it routes the URLs the intents open: create an idea from a query, open one, delete one. The URL parser and the router live in `apps/example-expo/src` and are unit tested. An iOS prebuild registers the generated Swift in the Sources phase and `fr.lproj/IntentLane.strings` in the Resources phase:
+`apps/example-expo` is Kollio, a Kollio-like idea list that proves the quickstart end to end. It declares four intents (`open_inbox`, `create_idea`, `open_idea`, `delete_idea`), one `idea` entity, and English and French copy. The screen lists ideas, and it routes the URLs the intents open: create an idea from a query, open one, delete one. The URL parser and the router live in `apps/example-expo/src` and are unit tested. A second local plugin, `apps/example-expo/plugins/withIdeaResolver.cjs`, closes the entity loop: it writes a Swift resolver, registers it in the app target, and merges the registration call into `AppDelegate.swift`, while the app publishes its ideas to `NSUserDefaults` on every change. An iOS prebuild registers the generated Swift in the Sources phase, `fr.lproj/IntentLane.strings` in the Resources phase, and `IdeaResolver.swift` in the Sources phase:
 
 ```sh
 cd apps/example-expo
@@ -284,7 +286,8 @@ This project is MIT licensed. See [LICENSE](LICENSE).
 - `required` is not reflected in the generated Swift. Every parameter is emitted as a plain `@Parameter` with no default, so `required: true` is a contract statement the compiler does not enforce yet.
 - Generated enum type names are `IntentLane<Intent Swift name><PascalCase parameter id>`. Two intents whose names combine into the same identifier would collide, and no diagnostic covers that case.
 - The generated entity code compiles under Swift 5 and fails under Swift 6 strict concurrency: `defaultQuery` would need to be a `let`, and the resolver holder would need a `Sendable` protocol. The example project builds with `SWIFT_VERSION = 5.0`.
-- An entity query returns nothing until the app registers its resolver. `IntentLaneEntityResolvers.<entity>` starts `nil`, so the generated query returns an empty list rather than failing, and Siri shows no entity suggestion until the app assigns an implementation.
+- An entity query returns nothing until the app registers its resolver. `IntentLaneEntityResolvers.<entity>` starts `nil`, so the generated query returns an empty list rather than failing, and Siri shows no entity suggestion until the app assigns an implementation. The example app registers one; a generated app has to.
+- The example's entity transport is `Settings` and `NSUserDefaults`. It carries the idea list from JS to the Swift resolver without a native module, but it is a demo shortcut: a real app would read its own store from Swift, and the entity list is only as fresh as the last publish.
 - Entity property names come straight from `display.title` and `display.subtitle`. The generator neither verifies that the app's own model uses those names nor reads any data source.
 - The `sensitive` level adds no constraint of its own. The generator enforces `confirmation` and `authentication`, and only `destructive` triggers a validation rule, so `sensitive` currently documents intent without changing the output.
 - `confirmation: never` cannot override the user's own Shortcuts setting; iOS may still ask before running an intent.
