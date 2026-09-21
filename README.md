@@ -10,7 +10,7 @@ Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plug
 
 Phase 3 is complete on paper: primitive and enum parameters, static App Entities with a resolver protocol, localized titles and prompts, the risk policy, a result dialog with a snippet view, a macOS runner in CI, and two example apps. Its gate (five pilots, two of them existing apps) is not measured either. The macOS target is proven separately by `apps/example-macos`, without Expo and without an Xcode project.
 
-Still out of scope: endpoint entity queries, HTTP execution, assistant schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+Still out of scope: endpoint entity queries, HTTP execution, enum schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -153,6 +153,47 @@ parameters:
 ```
 
 The version 0.1 only generates the `static` query. `query.mode: endpoint` is rejected with IL1401, an unknown or missing entity reference with IL1301, a duplicated entity id or Swift type name collision with IL1601, and an entity title missing its default locale with IL1201.
+
+## App schemas
+
+An intent or an entity may declare the App Schema it conforms to. That is how Siri and Apple Intelligence attach an action to a domain they already understand, instead of treating it as a custom action:
+
+```yaml
+entities:
+  - id: sound
+    title: { en: Ambient sound, fr: Son d'ambiance }
+    identifier: id
+    display:
+      title: title
+    query:
+      mode: static
+    schema: audio.ambientSound
+
+intents:
+  - id: stop_capture
+    title: { en: Stop capture, fr: Arrêter la capture }
+    parameters: []
+    execution:
+      mode: open_app
+      route: /stop
+    schema: camera.stopCapture
+```
+
+The generator puts the conformance in front of the declaration:
+
+```swift
+@AppEntity(schema: .audio.ambientSound)
+struct IntentLaneSoundEntity: AppEntity {
+
+@AppIntent(schema: .camera.stopCapture)
+struct StopCapture: AppIntent {
+```
+
+A conformed entity emits `var` properties instead of `let` and drops its `typeDisplayRepresentation`, because `@AppEntity(schema:)` applies a property wrapper and takes the display name from the schema. In the extracted metadata, a conformed intent fills `assistantDefinedSchemas` and adds the `AssistantIntent` system protocol, which is exactly the gap the macOS target made visible.
+
+The schema set is deliberately small. It is derived from the public App Schema surface of Xcode 27 (27A266a), cross-checked against the metadata extractor's own table, and it only holds schemas the generated shape can satisfy: an intent whose schema declares no parameter, no return value and no system protocol, and an entity whose schema requires at most two string properties, declared in order as `display.title` then `display.subtitle`. Today that is three intents (`audio.createStation`, `camera.stopCapture`, `camera.switchDevice`) and twenty entities (`audio.ambientSound`, `notes.account`, `spreadsheet.document`, `wordProcessor.template`, and others). Enum conformances are not generated yet.
+
+A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`.
 
 ## Risk policy
 
@@ -348,9 +389,9 @@ This project is MIT licensed. See [LICENSE](LICENSE).
 - The confirmation action label is system-provided. `ConfirmationActionName` has no public initializer, so the accept and decline labels follow the system language instead of the contract.
 - The snippet is generic and always shown. Every generated intent returns `IntentLaneSnippetView`, with no contract switch to disable it and no hook for an app-provided view. An app that wants its own snippet would have to edit the generated file, which regeneration overwrites.
 - The snippet imports SwiftUI into the generated file. A target that does not link SwiftUI would fail to compile it, and nothing in the contract warns about that.
-- No intent conforms to an assistant schema. `systemProtocols`, `assistantDefinedSchemas` and `assistantDefinedSchemaTraits` come out empty in the extracted metadata, so Siri treats every generated intent as a custom action instead of attaching it to a domain it already understands. That is the gap the macOS target makes visible, and closing it is the next step.
+- Schema conformances cover a small set. Only three intents and twenty entities of the Xcode 27 public App Schema surface are conformable, because the generated shape cannot carry the other schemas' parameter types, return values or system protocols. Enum conformances are not generated. The interesting domains (`notes.createNote`, `calendar.createEvent`, `reminders.createReminder`, `mail.createDraft`) stay out of reach until the contract can express more parameter types.
 - The contract requires `min_ios` on every app, including a macOS target where it means nothing. Nothing reads it outside the Expo plugin, so it stays inert, but the field name is wrong for the platform.
 - A parameter named `url` used to collide with the local route URL in `perform()`, because the generator declared `let url = <route>` before building the snippet and the opened URL. The local variable is now `intentLaneURL`, a name a contract cannot produce, since parameter identifiers must match `/^[a-z][a-z0-9_]*$/`.
 - A `native` intent throws `IntentLaneHandlerError.missingHandler` until the app registers its handler. The registry is main-actor isolated and starts empty, so an app that forgets the registration gets a runtime error rather than a compile error.
 - The generator never checks that a native handler really returns the entity named by `result.returns`. The protocol states the type, the metadata carries the output type, and the app's implementation is on its own.
-- `native` does not yet accept an assistant schema. The interesting domains (`notes.createNote`, `calendar.createEvent`, `reminders.createReminder`, `mail.createDraft`) require the intent to return the created entity and to conform to a system protocol, which the native mode now makes possible, but the schema conformance itself is not generated.
+- A schema is validated against iOS availability only. The contract has no macOS deployment floor, so a schema that macOS does not support passes validation and fails later, at build or at runtime. `min_ios` is compared numerically against the schema's iOS availability, and the schema table is versioned on Xcode 27.0 (27A266a).

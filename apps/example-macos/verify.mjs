@@ -7,14 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(here, "..", "..");
-const buildDirectory = join(here, "build");
-const contract = join(here, "intentlane.yaml");
 const protocols = join(here, "protocols.json");
-const moduleName = "IntentLaneShelf";
-const expectedActions = ["DeleteLink", "OpenLink", "OpenShelf", "PinLink", "SaveLink"];
-const nativeActions = ["PinLink"];
-const expectedShortcuts = ["DeleteLink", "OpenLink", "PinLink", "SaveLink"];
-const expectedParameterTitles = ["Link address", "Link title", "Tag", "Pinned"];
 
 function fail(message) {
   process.stderr.write(`${message}\n`);
@@ -71,150 +64,207 @@ assert(
   `Xcode ${xcodeVersion} cannot extract App Intents metadata: its swiftc has no '-const-gather-protocols-list'. Xcode 27 or newer is required.`
 );
 
-rmSync(buildDirectory, { recursive: true, force: true });
-mkdirSync(buildDirectory, { recursive: true });
+function extract({ contract, moduleName, directory }) {
+  rmSync(directory, { recursive: true, force: true });
+  mkdirSync(directory, { recursive: true });
 
-run(process.execPath, [
-  tsxCli,
-  join(repositoryRoot, "packages", "cli", "src", "index.ts"),
-  "generate",
-  "--config",
-  contract,
-  "--output",
-  buildDirectory
-], { cwd: repositoryRoot });
+  run(process.execPath, [
+    tsxCli,
+    join(repositoryRoot, "packages", "cli", "src", "index.ts"),
+    "generate",
+    "--config",
+    contract,
+    "--output",
+    directory
+  ], { cwd: repositoryRoot });
 
-const generatedSource = join(buildDirectory, "IntentLaneGenerated.swift");
-const objectFile = join(buildDirectory, "IntentLaneGenerated.o");
-const constantValues = join(buildDirectory, "IntentLaneGenerated.swiftconstvalues");
+  const generatedSource = join(directory, "IntentLaneGenerated.swift");
+  const objectFile = join(directory, "IntentLaneGenerated.o");
+  const constantValues = join(directory, "IntentLaneGenerated.swiftconstvalues");
 
-run("xcrun", [
-  "--sdk",
-  "macosx",
-  "swiftc",
-  "-target",
-  target,
-  "-sdk",
-  sdkPath,
-  "-module-name",
-  moduleName,
-  "-emit-const-values",
-  "-const-gather-protocols-list",
-  protocols,
-  "-c",
-  generatedSource,
-  "-o",
-  objectFile
-]);
+  run("xcrun", [
+    "--sdk",
+    "macosx",
+    "swiftc",
+    "-target",
+    target,
+    "-sdk",
+    sdkPath,
+    "-module-name",
+    moduleName,
+    "-emit-const-values",
+    "-const-gather-protocols-list",
+    protocols,
+    "-c",
+    generatedSource,
+    "-o",
+    objectFile
+  ]);
 
-assert(
-  existsSync(constantValues),
-  `The Swift compiler did not emit ${constantValues}. Both -emit-const-values and -const-gather-protocols-list are required.`
-);
-
-const sourceList = join(buildDirectory, "sources.txt");
-const constantValuesList = join(buildDirectory, "constvals.txt");
-writeFileSync(sourceList, `${generatedSource}\n`, "utf8");
-writeFileSync(constantValuesList, `${constantValues}\n`, "utf8");
-
-const metadataDirectory = join(buildDirectory, "metadata");
-mkdirSync(metadataDirectory, { recursive: true });
-
-run(processor, [
-  "--output",
-  metadataDirectory,
-  "--toolchain-dir",
-  toolchainDirectory,
-  "--module-name",
-  moduleName,
-  "--sdk-root",
-  sdkPath,
-  "--xcode-version",
-  xcodeVersion,
-  "--platform-family",
-  "macOS",
-  "--deployment-target",
-  deploymentTarget,
-  "--target-triple",
-  target,
-  "--source-file-list",
-  sourceList,
-  "--swift-const-vals-list",
-  constantValuesList,
-  "--force"
-]);
-
-const actionsFile = join(metadataDirectory, "Metadata.appintents", "extract.actionsdata");
-assert(existsSync(actionsFile), `Expected ${actionsFile} to exist after the metadata processor ran.`);
-
-const metadata = JSON.parse(readFileSync(actionsFile, "utf8"));
-const actions = metadata.actions;
-
-for (const name of expectedActions) {
-  assert(Object.hasOwn(actions, name), `Missing action ${name} in the extracted metadata.`);
-}
-
-const flags = Object.fromEntries(expectedActions.map((name) => [name, actions[name].outputFlags]));
-const openAppActions = expectedActions.filter((name) => !nativeActions.includes(name));
-assert(
-  openAppActions.every((name) => actions[name].outputFlags === 7) &&
-    nativeActions.every((name) => actions[name].outputFlags === 4),
-  `Expected outputFlags 7 for the open_app actions and 4 for the native ones, got ${JSON.stringify(flags)}.`
-);
-
-assert(
-  actions.DeleteLink.authenticationPolicy === 1,
-  `Expected DeleteLink to require authentication, got ${actions.DeleteLink.authenticationPolicy}.`
-);
-assert(
-  actions.DeleteLink.isAuthPolExplicit === true,
-  "Expected DeleteLink to declare its authentication policy explicitly."
-);
-
-for (const name of ["OpenLink", "OpenShelf", "PinLink", "SaveLink"]) {
   assert(
-    actions[name].authenticationPolicy === 0,
-    `Expected ${name} to inherit authentication, got ${actions[name].authenticationPolicy}.`
+    existsSync(constantValues),
+    `The Swift compiler did not emit ${constantValues}. Both -emit-const-values and -const-gather-protocols-list are required.`
   );
+
+  const sourceList = join(directory, "sources.txt");
+  const constantValuesList = join(directory, "constvals.txt");
+  writeFileSync(sourceList, `${generatedSource}\n`, "utf8");
+  writeFileSync(constantValuesList, `${constantValues}\n`, "utf8");
+
+  const metadataDirectory = join(directory, "metadata");
+  mkdirSync(metadataDirectory, { recursive: true });
+
+  run(processor, [
+    "--output",
+    metadataDirectory,
+    "--toolchain-dir",
+    toolchainDirectory,
+    "--module-name",
+    moduleName,
+    "--sdk-root",
+    sdkPath,
+    "--xcode-version",
+    xcodeVersion,
+    "--platform-family",
+    "macOS",
+    "--deployment-target",
+    deploymentTarget,
+    "--target-triple",
+    target,
+    "--source-file-list",
+    sourceList,
+    "--swift-const-vals-list",
+    constantValuesList,
+    "--force"
+  ]);
+
+  const actionsFile = join(metadataDirectory, "Metadata.appintents", "extract.actionsdata");
+  assert(existsSync(actionsFile), `Expected ${actionsFile} to exist after the metadata processor ran.`);
+
+  return JSON.parse(readFileSync(actionsFile, "utf8"));
 }
 
-assert(Object.hasOwn(metadata.entities, "IntentLaneLinkEntity"), "Missing IntentLaneLinkEntity in the extracted metadata.");
-assert(Object.hasOwn(metadata.queries, "IntentLaneLinkQuery"), "Missing IntentLaneLinkQuery in the extracted metadata.");
-assert(
-  metadata.enums.some((entry) => entry.identifier === "IntentLaneSaveLinkTag"),
-  "Missing IntentLaneSaveLinkTag in the extracted metadata."
-);
+function verifyShelf(metadata) {
+  const expectedActions = ["DeleteLink", "OpenLink", "OpenShelf", "PinLink", "SaveLink"];
+  const nativeActions = ["PinLink"];
+  const expectedShortcuts = ["DeleteLink", "OpenLink", "PinLink", "SaveLink"];
+  const expectedParameterTitles = ["Link address", "Link title", "Tag", "Pinned"];
+  const actions = metadata.actions;
 
-const registered = new Set((metadata.autoShortcuts ?? []).map((shortcut) => shortcut.actionIdentifier));
-for (const name of expectedShortcuts) {
-  assert(registered.has(name), `Missing App Shortcut ${name} in the extracted metadata.`);
-}
+  for (const name of expectedActions) {
+    assert(Object.hasOwn(actions, name), `Missing action ${name} in the extracted metadata.`);
+  }
 
-const titles = Object.fromEntries(
-  Object.entries(actions).map(([name, action]) => [name, (action.parameters ?? []).map((parameter) => parameter.title.key)])
-);
-assert(
-  expectedParameterTitles.every((title) => titles.SaveLink.includes(title)) &&
-    titles.SaveLink.length === expectedParameterTitles.length,
-  `Unexpected SaveLink parameter titles: ${JSON.stringify(titles.SaveLink)}.`
-);
-
-assert(
-  actions.PinLink.outputType?.entity?.wrapper?.typeName === "IntentLaneLinkEntity",
-  `Expected PinLink to return IntentLaneLinkEntity, got ${JSON.stringify(actions.PinLink.outputType)}.`
-);
-
-for (const name of expectedActions) {
+  const flags = Object.fromEntries(expectedActions.map((name) => [name, actions[name].outputFlags]));
+  const openAppActions = expectedActions.filter((name) => !nativeActions.includes(name));
   assert(
-    (actions[name].systemProtocols ?? []).length === 0,
-    `Expected no assistant schema on ${name} yet, found ${JSON.stringify(actions[name].systemProtocols)}.`
+    openAppActions.every((name) => actions[name].outputFlags === 7) &&
+      nativeActions.every((name) => actions[name].outputFlags === 4),
+    `Expected outputFlags 7 for the open_app actions and 4 for the native ones, got ${JSON.stringify(flags)}.`
   );
+
+  assert(
+    actions.DeleteLink.authenticationPolicy === 1,
+    `Expected DeleteLink to require authentication, got ${actions.DeleteLink.authenticationPolicy}.`
+  );
+  assert(
+    actions.DeleteLink.isAuthPolExplicit === true,
+    "Expected DeleteLink to declare its authentication policy explicitly."
+  );
+
+  for (const name of ["OpenLink", "OpenShelf", "PinLink", "SaveLink"]) {
+    assert(
+      actions[name].authenticationPolicy === 0,
+      `Expected ${name} to inherit authentication, got ${actions[name].authenticationPolicy}.`
+    );
+  }
+
+  assert(Object.hasOwn(metadata.entities, "IntentLaneLinkEntity"), "Missing IntentLaneLinkEntity in the extracted metadata.");
+  assert(Object.hasOwn(metadata.queries, "IntentLaneLinkQuery"), "Missing IntentLaneLinkQuery in the extracted metadata.");
+  assert(
+    metadata.enums.some((entry) => entry.identifier === "IntentLaneSaveLinkTag"),
+    "Missing IntentLaneSaveLinkTag in the extracted metadata."
+  );
+
+  const registered = new Set((metadata.autoShortcuts ?? []).map((shortcut) => shortcut.actionIdentifier));
+  for (const name of expectedShortcuts) {
+    assert(registered.has(name), `Missing App Shortcut ${name} in the extracted metadata.`);
+  }
+
+  const titles = Object.fromEntries(
+    Object.entries(actions).map(([name, action]) => [name, (action.parameters ?? []).map((parameter) => parameter.title.key)])
+  );
+  assert(
+    expectedParameterTitles.every((title) => titles.SaveLink.includes(title)) &&
+      titles.SaveLink.length === expectedParameterTitles.length,
+    `Unexpected SaveLink parameter titles: ${JSON.stringify(titles.SaveLink)}.`
+  );
+
+  assert(
+    actions.PinLink.outputType?.entity?.wrapper?.typeName === "IntentLaneLinkEntity",
+    `Expected PinLink to return IntentLaneLinkEntity, got ${JSON.stringify(actions.PinLink.outputType)}.`
+  );
+
+  for (const name of expectedActions) {
+    assert(
+      (actions[name].systemProtocols ?? []).length === 0,
+      `Expected no assistant schema on ${name} yet, found ${JSON.stringify(actions[name].systemProtocols)}.`
+    );
+  }
+
+  process.stdout.write(`shelf actions: ${expectedActions.join(", ")}\n`);
+  process.stdout.write(`shelf output flags: ${JSON.stringify(flags)}\n`);
+  process.stdout.write(`shelf native PinLink returns ${actions.PinLink.outputType.entity.wrapper.typeName}\n`);
+  process.stdout.write(`shelf parameter titles: ${JSON.stringify(titles.SaveLink)}\n`);
+  process.stdout.write("shelf entity IntentLaneLinkEntity, query IntentLaneLinkQuery, enum IntentLaneSaveLinkTag\n");
+  process.stdout.write(`shelf shortcuts: ${expectedShortcuts.join(", ")}\n`);
 }
 
-process.stdout.write(`actions: ${expectedActions.join(", ")}\n`);
-process.stdout.write(`output flags: ${JSON.stringify(flags)}\n`);
-process.stdout.write(`native PinLink returns ${actions.PinLink.outputType.entity.wrapper.typeName}\n`);
-process.stdout.write(`parameter titles: ${JSON.stringify(titles.SaveLink)}\n`);
-process.stdout.write(`entity IntentLaneLinkEntity, query IntentLaneLinkQuery, enum IntentLaneSaveLinkTag\n`);
-process.stdout.write(`shortcuts: ${expectedShortcuts.join(", ")}\n`);
+function verifyStudio(metadata) {
+  const actions = metadata.actions;
+
+  assert(Object.hasOwn(actions, "StopCapture"), "Missing action StopCapture in the extracted metadata.");
+  assert(
+    actions.StopCapture.outputFlags === 7,
+    `Expected StopCapture to keep the open_app result, got ${actions.StopCapture.outputFlags}.`
+  );
+  assert(
+    JSON.stringify(actions.StopCapture.systemProtocols) === JSON.stringify(["com.apple.link.systemProtocol.AssistantIntent"]),
+    `Expected StopCapture to declare the assistant intent protocol, got ${JSON.stringify(actions.StopCapture.systemProtocols)}.`
+  );
+  assert(
+    JSON.stringify(actions.StopCapture.assistantDefinedSchemas) ===
+      JSON.stringify([{ domain: "camera", name: "StopCaptureIntent", version: "1.0.0" }]),
+    `Expected StopCapture to conform to camera.stopCapture, got ${JSON.stringify(actions.StopCapture.assistantDefinedSchemas)}.`
+  );
+
+  assert(Object.hasOwn(metadata.entities, "IntentLaneSoundEntity"), "Missing IntentLaneSoundEntity in the extracted metadata.");
+  assert(
+    JSON.stringify(metadata.entities.IntentLaneSoundEntity.assistantDefinedSchemas) ===
+      JSON.stringify([{ domain: "audio", name: "AmbientSoundEntity", version: "1.0.0" }]),
+    `Expected IntentLaneSoundEntity to conform to audio.ambientSound, got ${JSON.stringify(metadata.entities.IntentLaneSoundEntity.assistantDefinedSchemas)}.`
+  );
+  assert(Object.hasOwn(metadata.queries, "IntentLaneSoundQuery"), "Missing IntentLaneSoundQuery in the extracted metadata.");
+
+  const registered = new Set((metadata.autoShortcuts ?? []).map((shortcut) => shortcut.actionIdentifier));
+  assert(registered.has("StopCapture"), "Missing App Shortcut StopCapture in the extracted metadata.");
+
+  process.stdout.write(`studio actions: ${Object.keys(actions).join(", ")}\n`);
+  process.stdout.write(`studio output flags: ${JSON.stringify({ StopCapture: actions.StopCapture.outputFlags })}\n`);
+  process.stdout.write(`studio schemas: ${JSON.stringify(actions.StopCapture.assistantDefinedSchemas)}\n`);
+  process.stdout.write(`studio entity schemas: ${JSON.stringify(metadata.entities.IntentLaneSoundEntity.assistantDefinedSchemas)}\n`);
+}
+
+verifyShelf(await extract({
+  contract: join(here, "intentlane.yaml"),
+  moduleName: "IntentLaneShelf",
+  directory: join(here, "build", "shelf")
+}));
+
+verifyStudio(await extract({
+  contract: join(here, "schemas.yaml"),
+  moduleName: "IntentLaneStudio",
+  directory: join(here, "build", "studio")
+}));
+
 process.stdout.write(`toolchain: Xcode ${xcodeVersion}, ${target}, sdk ${sdkVersion}\n`);

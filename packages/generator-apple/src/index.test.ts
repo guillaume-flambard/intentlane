@@ -695,3 +695,56 @@ describe("native execution", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+const schemaConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.studio", name: "Studio", url_scheme: "studio", min_ios: "27.0", locales: ["en", "fr"] },
+  entities: [{
+    id: "sound",
+    title: { en: "Ambient sound", fr: "Son d'ambiance" },
+    identifier: "id",
+    display: { title: "title" },
+    query: { mode: "static" },
+    schema: "audio.ambientSound"
+  }],
+  intents: [{
+    id: "stop_capture",
+    title: { en: "Stop capture", fr: "Arrêter la capture" },
+    parameters: [],
+    execution: { mode: "open_app", route: "/stop" },
+    schema: "camera.stopCapture"
+  }]
+};
+
+describe("app schemas", () => {
+  const swift = (source: unknown = schemaConfig): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Schema fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("annotates a conformed intent and entity with their schema", () => {
+    const source = swift();
+    expect(source).toContain("@AppIntent(schema: .camera.stopCapture)\nstruct StopCapture: AppIntent {");
+    expect(source).toContain("@AppEntity(schema: .audio.ambientSound)\nstruct IntentLaneSoundEntity: AppEntity {");
+  });
+
+  it("uses var properties and drops typeDisplayRepresentation on a conformed entity", () => {
+    const source = swift();
+    const entity = source.slice(source.indexOf("@AppEntity(schema:"));
+    expect(entity).toContain("  var id: String");
+    expect(entity).toContain("  var title: String");
+    expect(entity).not.toContain("typeDisplayRepresentation");
+  });
+
+  it("leaves an entity and an intent without a schema untouched", () => {
+    const source = swift(entityConfig);
+    expect(source).not.toContain("@AppEntity(schema:");
+    expect(source).not.toContain("@AppIntent(schema:");
+    expect(source).toContain("  let id: String");
+  });
+
+  it("matches the schema Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});

@@ -92,7 +92,7 @@ Les listes, unions, fichiers et médias sont réservés à une version ultérieu
 
 ## Intention
 
-Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required` ; `title` et `prompt` sont optionnels.
+Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required` ; `title` et `prompt` sont optionnels. Une intention peut déclarer `schema`, la référence `domaine.membre` du schéma d'application auquel elle se conforme.
 
 ## Entité
 
@@ -117,6 +117,28 @@ IntentLaneEntityResolvers.idea = MyIdeaResolver()
 `display.title` et `display.subtitle` nomment les propriétés de l'entité affichées par le système, et `identifier` nomme la propriété qui porte l'identifiant. Une entité dont le titre manque dans la locale par défaut est refusée (IL1201), un identifiant déclaré deux fois ou un nom de type Swift en collision aussi (IL1601).
 
 La version 0.1 ne génère que la requête `static`. Un `query.mode` valant `endpoint` est refusé (IL1401) : les données passent par le protocole de résolution. Les valeurs privées ne doivent pas être indexées dans Spotlight sans opt-in.
+
+## Schémas d'application
+
+Une intention et une entité acceptent un champ optionnel `schema`, de la forme `domaine.membre` :
+
+```yaml
+entities:
+  - id: sound
+    schema: audio.ambientSound
+    # ...
+
+intents:
+  - id: stop_capture
+    schema: camera.stopCapture
+    # ...
+```
+
+Le générateur écrit la conformance devant la déclaration : `@AppIntent(schema: .camera.stopCapture)` et `@AppEntity(schema: .audio.ambientSound)`. Une entité conforme émet des propriétés `var` au lieu de `let` et n'émet pas `typeDisplayRepresentation`, parce que la macro applique un property wrapper et prend le nom d'affichage du schéma.
+
+La table des schémas est dérivée de la surface publique des App Schemas d'Xcode 27 (27A266a) et croisée avec la table du processeur de métadonnées. Elle ne retient que les schémas que la forme générée peut satisfaire : une intention dont le schéma ne déclare ni paramètre, ni valeur de retour, ni protocole système, et une entité dont le schéma n'exige pas plus de deux propriétés de type `string`, déclarées dans l'ordre en `display.title` puis `display.subtitle`. Les conformances d'enum ne sont pas générées en 0.1.
+
+Un schéma inconnu, mal formé, d'un autre genre, ou connu mais que la forme générée ne peut pas satisfaire, est refusé en IL1401 avec un message qui nomme ce qui manque. Un schéma dont la disponibilité iOS est supérieure au `min_ios` de l'application est refusé de la même façon. La disponibilité macOS n'est pas validable : le contrat n'a pas de plancher macOS.
 
 ## Exécution
 
@@ -187,7 +209,7 @@ Toutes les clés visibles acceptent une map locale. La locale par défaut est la
 | IL1101 | identifiant invalide |
 | IL1201 | traduction par défaut absente |
 | IL1301 | type de paramètre incompatible |
-| IL1401 | capability indisponible pour l'OS cible |
+| IL1401 | capability ou schéma d'application indisponible pour la cible |
 | IL1501 | opération destructive sans confirmation |
 | IL1601 | collision de nom Swift |
 | IL1701 | fichier généré modifié manuellement |

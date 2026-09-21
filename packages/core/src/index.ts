@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { parse } from "yaml";
 import { ZodError } from "zod";
 import { intentLaneConfigSchema, type IntentLaneConfig, type ParameterType } from "../../schema/src/index.js";
+import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSchemaKind } from "./app-schemas.js";
 
 export type Severity = "error" | "warning";
 export type DiagnosticCode = "IL1001" | "IL1101" | "IL1201" | "IL1301" | "IL1401" | "IL1501" | "IL1601";
@@ -25,6 +26,7 @@ export type RiskIR = Readonly<{
 export type IntentIR = Readonly<{
   id: string;
   swiftName: string;
+  schema?: string;
   title: LocalizedText;
   description?: LocalizedText;
   parameters: readonly ParameterIR[];
@@ -40,6 +42,7 @@ export type IntentIR = Readonly<{
 export type EntityIR = Readonly<{
   id: string;
   swiftName: string;
+  schema?: string;
   title: LocalizedText;
   identifier: string;
   displayTitle: string;
@@ -68,6 +71,83 @@ function localizedDiagnostics(value: LocalizedText | undefined, locales: readonl
   if (!value[fallback]) diagnostics.push(error("IL1201", `Missing translation for default locale '${fallback}'.`, path));
   for (const locale of locales) {
     if (!value[locale]) diagnostics.push(warning("IL1201", `Missing translation for locale '${locale}'.`, path));
+  }
+  return diagnostics;
+}
+
+function compareVersions(left: string, right: string): number {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+const SCHEMA_REFERENCE_PATTERN = /^[a-z][a-zA-Z0-9]*\.[a-z][a-zA-Z0-9]*$/;
+
+function unavailableSchemaMessage(kind: AppSchemaKind, reference: string): string {
+  if (findAppSchema(kind === "intent" ? "entity" : "intent", reference)) {
+    return `Schema '${reference}' is an App Schema of the other kind, so it cannot be used here.`;
+  }
+  if (isKnownSchemaReference(reference)) {
+    const shape =
+      kind === "intent"
+        ? "IntentLane only conforms an intent whose schema declares no parameter, no return value and no system protocol"
+        : "IntentLane only conforms an entity whose schema requires at most two string properties";
+    return `Schema '${reference}' is known to Xcode 27, but IntentLane cannot conform to it: ${shape}.`;
+  }
+  return `Schema '${reference}' is not an App Schema known to Xcode 27. Domains: ${APP_SCHEMA_DOMAINS.join(", ")}.`;
+}
+
+function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const [index, entity] of config.entities.entries()) {
+    const reference = entity.schema;
+    if (!reference) continue;
+    const path = `entities[${index}].schema`;
+    if (!SCHEMA_REFERENCE_PATTERN.test(reference)) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' is not a 'domain.member' reference.`, path));
+      continue;
+    }
+    const entry = findAppSchema("entity", reference);
+    if (!entry) {
+      diagnostics.push(error("IL1401", unavailableSchemaMessage("entity", reference), path));
+      continue;
+    }
+    const declared = [entity.display.title, entity.display.subtitle].filter((name): name is string => Boolean(name));
+    if (!entry.properties.every((name, position) => declared[position] === name)) {
+      const expected = entry.properties.map((name) => `'${name}'`).join(", ");
+      diagnostics.push(error("IL1401", `Schema '${reference}' requires the properties ${expected}, declared in that order as display.title then display.subtitle.`, path));
+    }
+    if (compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
+    }
+  }
+  for (const [index, intent] of config.intents.entries()) {
+    const reference = intent.schema;
+    if (!reference) continue;
+    const path = `intents[${index}].schema`;
+    if (!SCHEMA_REFERENCE_PATTERN.test(reference)) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' is not a 'domain.member' reference.`, path));
+      continue;
+    }
+    const entry = findAppSchema("intent", reference);
+    if (!entry) {
+      diagnostics.push(error("IL1401", unavailableSchemaMessage("intent", reference), path));
+      continue;
+    }
+    if (intent.parameters.length > 0) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' declares no parameter, and the generated shape cannot carry one yet, so intent '${intent.id}' must declare none.`, path));
+    }
+    if (intent.result?.returns !== undefined) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${path.slice(0, -".schema".length)}.result.returns`));
+    }
+    if (compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
+      diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
+    }
   }
   return diagnostics;
 }
@@ -136,6 +216,7 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
     if (intent.risk?.level === "destructive" && intent.risk.confirmation !== "always") diagnostics.push(error("IL1501", "Destructive intents require confirmation: always.", `${path}.risk.confirmation`));
     diagnostics.push(...localizedDiagnostics(intent.risk?.confirmation_prompt, config.app.locales, `${path}.risk.confirmation_prompt`));
   }
+  diagnostics.push(...schemaDiagnostics(config));
   return diagnostics;
 }
 
@@ -158,6 +239,7 @@ export function parseConfig(value: unknown): ParseResult {
     entities: [...parsed.data.entities].sort((left, right) => left.id.localeCompare(right.id)).map((entity) => ({
       id: entity.id,
       swiftName: swiftName(entity.id),
+      ...(entity.schema ? { schema: entity.schema } : {}),
       title: entity.title,
       identifier: entity.identifier,
       displayTitle: entity.display.title,
@@ -166,6 +248,7 @@ export function parseConfig(value: unknown): ParseResult {
     intents: parsed.data.intents.map((intent) => ({
       id: intent.id,
       swiftName: swiftName(intent.id),
+      ...(intent.schema ? { schema: intent.schema } : {}),
       title: intent.title,
       ...(intent.description ? { description: intent.description } : {}),
       parameters: intent.parameters.map((parameter) => ({

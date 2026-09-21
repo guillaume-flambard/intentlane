@@ -88,12 +88,17 @@ function emitEntity(entity: EntityIR, locale: string): string {
           : entity.displaySubtitle;
   const names = ["id", titleProperty, ...(subtitleProperty === undefined ? [] : [subtitleProperty])];
   const properties = [...new Set(names)].map((name) => ({ name, optional: name === subtitleProperty && name !== titleProperty && name !== "id" }));
-  const declarations = properties.map((property) => `  let ${property.name}: String${property.optional ? "?" : ""}`).join("\n");
+  const conformed = entity.schema !== undefined;
+  const declarations = properties.map((property) => `  ${conformed ? "var" : "let"} ${property.name}: String${property.optional ? "?" : ""}`).join("\n");
+  const annotation = conformed ? `@AppEntity(schema: .${entity.schema})\n` : "";
+  const typeDisplay = conformed
+    ? ""
+    : `  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(localized(entity.title, locale))})\n  }\n\n`;
   const subtitleExpression =
     subtitleProperty === undefined
       ? ""
       : `,\n      subtitle: ${subtitleProperty === titleProperty || subtitleProperty === "id" ? `LocalizedStringResource(stringLiteral: ${subtitleProperty})` : `${subtitleProperty}.map { LocalizedStringResource(stringLiteral: $0) }`}`;
-  return `struct ${typeName}: AppEntity {\n  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(localized(entity.title, locale))})\n  }\n\n  static var defaultQuery = ${queryName}()\n\n${declarations}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName} {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
+  return `${annotation}struct ${typeName}: AppEntity {\n${typeDisplay}  static var defaultQuery = ${queryName}()\n\n${declarations}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName} {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
 }
 
 function entityDeclarations(ir: ConfigIR, locale: string): string {
@@ -174,6 +179,7 @@ function emitNativeIntent(ir: ConfigIR, intent: IntentIR, locale: string): strin
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
   const authentication = authenticationLine(intent);
   const confirmation = confirmationStatement(intent, locale);
+  const annotation = intent.schema ? `@AppIntent(schema: .${intent.schema})\n` : "";
   const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities, locale)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   const returns = nativeReturnType(ir, intent);
@@ -182,7 +188,7 @@ function emitNativeIntent(ir: ConfigIR, intent: IntentIR, locale: string): strin
   const call = returns
     ? `    let value = try await handler.perform(${argumentsList})\n    return .result(value: value, dialog: IntentDialog(${localizedResource(dialog)}))`
     : `    try await handler.perform(${argumentsList})\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))`;
-  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> ${signature} {\n${confirmation}    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n${call}\n  }\n}`;
+  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> ${signature} {\n${confirmation}    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n${call}\n  }\n}`;
 }
 
 function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: string): string {
@@ -191,10 +197,11 @@ function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: stri
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
   const authentication = authenticationLine(intent);
   const confirmation = confirmationStatement(intent, locale);
+  const annotation = intent.schema ? `@AppIntent(schema: .${intent.schema})\n` : "";
   const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities, locale)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   const fields = intent.parameters.map((parameter) => `(${localizedResource(parameterTitle(parameter, locale))}, ${queryValue(intent, parameter.id)})`).join(", ");
-  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {\n${confirmation}    let intentLaneURL = ${routeExpression(intent, scheme)}\n    return .result(\n      opensIntent: OpenURLIntent(intentLaneURL),\n      dialog: IntentDialog(${localizedResource(dialog)}),\n      view: IntentLaneSnippetView(title: ${localizedResource(title)}, fields: [${fields}])\n    )\n  }\n}`;
+  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {\n${confirmation}    let intentLaneURL = ${routeExpression(intent, scheme)}\n    return .result(\n      opensIntent: OpenURLIntent(intentLaneURL),\n      dialog: IntentDialog(${localizedResource(dialog)}),\n      view: IntentLaneSnippetView(title: ${localizedResource(title)}, fields: [${fields}])\n    )\n  }\n}`;
 }
 
 function emitShortcuts(ir: ConfigIR, locale: string): string {

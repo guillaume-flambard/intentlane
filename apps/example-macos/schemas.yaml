@@ -1,0 +1,46 @@
+schema: "0.1"
+
+app:
+  id: dev.intentlane.studio
+  name: Studio
+  url_scheme: studio
+  min_ios: "27.0"
+  locales:
+    - en
+    - fr
+
+entities:
+  - id: sound
+    title:
+      en: Ambient sound
+      fr: Son d'ambiance
+    identifier: id
+    display:
+      title: title
+    query:
+      mode: static
+    schema: audio.ambientSound
+
+intents:
+  - id: stop_capture
+    title:
+      en: Stop capture
+      fr: Arrêter la capture
+    description:
+      en: Stop the running capture
+      fr: Arrêter la capture en cours
+    parameters: []
+    execution:
+      mode: open_app
+      route: /stop
+    schema: camera.stopCapture
+    result:
+      dialog:
+        en: Capture stopped
+        fr: Capture arrêtée
+    shortcuts:
+      phrases:
+        en:
+          - Stop the capture in ${appName}
+        fr:
+          - Arrêter la capture dans ${appName}

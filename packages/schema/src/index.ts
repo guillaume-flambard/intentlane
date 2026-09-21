@@ -4,6 +4,7 @@ export const identifierPattern = /^[a-z][a-z0-9_]*$/;
 
 const localizedSchema = z.record(z.string().min(1));
 const identifierSchema = z.string().regex(identifierPattern);
+const schemaReferenceSchema = z.string().min(1);
 const parameterTypeSchema = z.enum([
   "string",
   "integer",
@@ -53,7 +54,8 @@ export const intentLaneConfigSchema = z.object({
     title: localizedSchema,
     identifier: identifierSchema,
     display: z.object({ title: z.string(), subtitle: z.string().optional() }).strict(),
-    query: z.object({ mode: z.enum(["static", "endpoint"]), endpoint: z.string().optional() }).strict()
+    query: z.object({ mode: z.enum(["static", "endpoint"]), endpoint: z.string().optional() }).strict(),
+    schema: schemaReferenceSchema.optional()
   }).strict()).default([]),
   intents: z.array(z.object({
     id: identifierSchema,
@@ -62,6 +64,7 @@ export const intentLaneConfigSchema = z.object({
     parameters: z.array(parameterSchema).default([]),
     execution: executionSchema,
     risk: riskSchema.optional(),
+    schema: schemaReferenceSchema.optional(),
     result: z.object({ dialog: localizedSchema.optional(), returns: identifierSchema.optional() }).strict().optional(),
     shortcuts: z.object({ phrases: z.record(z.array(z.string().min(1)).min(1)) }).strict().optional()
   }).strict()).min(1)

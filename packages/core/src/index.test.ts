@@ -387,3 +387,141 @@ describe("native execution", () => {
     );
   });
 });
+
+describe("app schemas", () => {
+  const sound = {
+    id: "sound",
+    title: { en: "Ambient sound", fr: "Son d'ambiance" },
+    identifier: "id",
+    display: { title: "title" },
+    query: { mode: "static" }
+  };
+
+  const withSchema = (entitySchema: string | undefined, intentSchema: string | undefined, minIos = "27.0"): unknown => ({
+    ...base,
+    app: { ...base.app, min_ios: minIos },
+    entities: entitySchema ? [{ ...sound, schema: entitySchema }] : [],
+    intents: [
+      {
+        ...base.intents[0],
+        parameters: [],
+        execution: { mode: "open_app", route: "/stop" },
+        ...(intentSchema ? { schema: intentSchema } : {})
+      }
+    ]
+  });
+
+  it("normalizes a conformed entity and intent into the IR", () => {
+    const result = parseConfig(withSchema("audio.ambientSound", "camera.stopCapture"));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.entities[0]).toMatchObject({ id: "sound", schema: "audio.ambientSound" });
+    expect(result.ir?.intents[0]).toMatchObject({ id: "create_idea", schema: "camera.stopCapture" });
+  });
+
+  it("omits the schema when the contract declares none", () => {
+    const result = parseConfig(withSchema(undefined, undefined));
+    expect(result.ir?.entities).toEqual([]);
+    expect(result.ir?.intents[0]).not.toHaveProperty("schema");
+  });
+
+  it("accepts an entity whose display properties follow the schema order", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      entities: [{ ...sound, display: { title: "title", subtitle: "providerName" }, schema: "audio.liveRadioStation" }],
+      intents: [{ ...base.intents[0], parameters: [], execution: { mode: "open_app", route: "/stop" } }]
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.entities[0]?.displaySubtitle).toBe("providerName");
+  });
+
+  it("rejects a schema reference that is not a domain and a member", () => {
+    const result = parseConfig(withSchema("audio", undefined));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("'domain.member'") })
+    );
+  });
+
+  it("rejects a schema reference that Xcode does not know", () => {
+    const result = parseConfig(withSchema("audio.ambientSounds", undefined));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("not an App Schema known to Xcode 27") })
+    );
+  });
+
+  it("rejects a known schema that the generated shape cannot satisfy", () => {
+    const result = parseConfig(withSchema("notes.note", "notes.createNote"));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("cannot conform to it") })
+    );
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].schema", message: expect.stringContaining("cannot conform to it") })
+    );
+  });
+
+  it("rejects a schema of the other kind", () => {
+    const result = parseConfig(withSchema("camera.stopCapture", "audio.ambientSound"));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("of the other kind") })
+    );
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].schema", message: expect.stringContaining("of the other kind") })
+    );
+  });
+
+  it("rejects an entity whose display does not follow the schema properties", () => {
+    const result = parseConfig(withSchema("audio.liveRadioStation", undefined));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("'providerName'") })
+    );
+  });
+
+  it("rejects an intent that declares a parameter under a schema", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      intents: [{ ...base.intents[0], execution: { mode: "open_app", route: "/stop" }, schema: "camera.stopCapture" }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].schema", message: expect.stringContaining("must declare none") })
+    );
+  });
+
+  it("rejects a return value under a schema", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      entities: [sound],
+      intents: [
+        {
+          ...base.intents[0],
+          parameters: [],
+          execution: { mode: "native", handler: "StopCaptureHandler" },
+          result: { returns: "sound" },
+          schema: "camera.stopCapture"
+        }
+      ]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].result.returns" })
+    );
+  });
+
+  it("rejects a schema that needs a newer iOS than the app declares", () => {
+    const result = parseConfig(withSchema("audio.ambientSound", "camera.stopCapture", "18.0"));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("requires iOS 27") })
+    );
+    expect(result.diagnostics).not.toContainEqual(
+      expect.objectContaining({ path: "intents[0].schema" })
+    );
+  });
+});
