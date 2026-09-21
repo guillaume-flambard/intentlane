@@ -114,6 +114,71 @@ function ensureLocaleResourcesRegistered({ project, projectName, outputDirectory
   return registered;
 }
 
+function resolveExpoConfigPlugins({
+  projectRoot,
+  resolveModule = (request, roots) => require.resolve(request, { paths: roots })
+}) {
+  const candidates = [];
+
+  try {
+    candidates.push(dirname(resolveModule("expo/package.json", [projectRoot])));
+  } catch {
+    candidates.push(projectRoot);
+  }
+
+  for (const root of candidates) {
+    try {
+      return resolveModule("@expo/config-plugins", [root]);
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error(
+    `IntentLane could not load '@expo/config-plugins'. Make sure 'expo' is installed in ${projectRoot}.`
+  );
+}
+
+function readManifest(manifestFile) {
+  try {
+    return JSON.parse(readFileSync(manifestFile, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function compareVersions(left, right) {
+  const leftParts = left.split(".").map(Number);
+  const rightParts = right.split(".").map(Number);
+
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const leftPart = leftParts[index] ?? 0;
+    const rightPart = rightParts[index] ?? 0;
+    if (leftPart !== rightPart) return leftPart - rightPart;
+  }
+
+  return 0;
+}
+
+function ensureDeploymentTarget({ project, minIos }) {
+  const configurations = project.pbxXCBuildConfigurationSection();
+  let updated = 0;
+
+  for (const key of Object.keys(configurations)) {
+    const configuration = configurations[key];
+    const buildSettings = configuration?.buildSettings;
+    const current = buildSettings?.IPHONEOS_DEPLOYMENT_TARGET;
+
+    if (typeof current !== "string") continue;
+    if (compareVersions(current, minIos) >= 0) continue;
+
+    buildSettings.IPHONEOS_DEPLOYMENT_TARGET = minIos;
+    updated += 1;
+  }
+
+  return updated;
+}
+
 function applyIntentLane(config, options, dependencies) {
   const { plugins, xcodeUtils, projectRoot, runGenerator } = dependencies;
   const configFile = options.configFile ?? "intentlane.yaml";
@@ -131,6 +196,8 @@ function applyIntentLane(config, options, dependencies) {
   return plugins.withXcodeProject(withDangerousMod, (modConfig) => {
     const projectName = modConfig.modRequest.projectName;
     const outputDirectory = join(modConfig.modRequest.platformProjectRoot, projectName, GENERATED_GROUP);
+    const manifest = readManifest(join(outputDirectory, MANIFEST_FILE));
+
     ensureGeneratedSourceRegistered({
       project: modConfig.modResults,
       projectName,
@@ -142,6 +209,9 @@ function applyIntentLane(config, options, dependencies) {
       outputDirectory,
       xcodeUtils
     });
+    if (typeof manifest?.minIos === "string") {
+      ensureDeploymentTarget({ project: modConfig.modResults, minIos: manifest.minIos });
+    }
     return modConfig;
   });
 }
@@ -161,9 +231,12 @@ module.exports = {
   GENERATED_SOURCE,
   MANIFEST_FILE,
   applyIntentLane,
+  ensureDeploymentTarget,
   ensureGeneratedSourceRegistered,
   ensureLocaleResourcesRegistered,
   localeResources,
+  readManifest,
+  resolveExpoConfigPlugins,
   resolveGeneratorInvocation,
   runGenerator
 };

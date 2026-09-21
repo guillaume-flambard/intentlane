@@ -54,7 +54,7 @@ async function inputHash(configFile: string): Promise<string> {
 
 function artifactSet(ir: ConfigIR, hash: string): ArtifactSet {
   const files = generateArtifacts(ir);
-  const manifest = `${JSON.stringify({ version: ir.schemaVersion, inputHash: hash, files: files.map((file) => ({ path: file.path, hash: generatedFileHash(file.contents) })) }, null, 2)}\n`;
+  const manifest = `${JSON.stringify({ version: ir.schemaVersion, minIos: ir.app.minIos, inputHash: hash, files: files.map((file) => ({ path: file.path, hash: generatedFileHash(file.contents) })) }, null, 2)}\n`;
   return { files, manifest };
 }
 

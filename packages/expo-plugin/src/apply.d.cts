@@ -63,6 +63,16 @@ export type EnsureLocaleResourcesOptions = Readonly<{
   xcodeUtils: XcodeResourceUtils;
 }>;
 
+export type ResolveExpoConfigPluginsOptions = Readonly<{
+  projectRoot: string;
+  resolveModule?: (request: string, roots: readonly string[]) => string;
+}>;
+
+export type DeploymentTargetOptions = Readonly<{
+  project: unknown;
+  minIos: string;
+}>;
+
 export type ExpoPluginApi = Readonly<{
   withDangerousMod: (config: unknown, entry: readonly [string, (modConfig: any) => Promise<unknown>]) => any;
   withXcodeProject: (config: unknown, action: (modConfig: any) => unknown) => any;
@@ -85,5 +95,8 @@ export declare function resolveGeneratorInvocation(request: GeneratorRequest): G
 export declare function ensureGeneratedSourceRegistered(options: EnsureSourceOptions): boolean;
 export declare function localeResources(manifestFile: string): readonly LocaleResource[];
 export declare function ensureLocaleResourcesRegistered(options: EnsureLocaleResourcesOptions): number;
+export declare function ensureDeploymentTarget(options: DeploymentTargetOptions): number;
+export declare function readManifest(manifestFile: string): unknown;
+export declare function resolveExpoConfigPlugins(options: ResolveExpoConfigPluginsOptions): string;
 export declare function runGenerator(request: GeneratorRequest): void;
 export declare function applyIntentLane(config: unknown, options: ApplyOptions, dependencies: ApplyDependencies): unknown;

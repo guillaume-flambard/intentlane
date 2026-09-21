@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   applyIntentLane,
+  ensureDeploymentTarget,
   ensureGeneratedSourceRegistered,
   ensureLocaleResourcesRegistered,
   localeResources,
+  readManifest,
+  resolveExpoConfigPlugins,
   resolveGeneratorInvocation
 } from "./apply.cjs";
 
@@ -248,5 +251,94 @@ describe("ensureLocaleResourcesRegistered", () => {
     group.children.push({ comment: "IntentLane.strings" });
     expect(ensureLocaleResourcesRegistered(options)).toBe(0);
     expect(addResourceFileToGroup).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveExpoConfigPlugins", () => {
+  it("anchors the lookup on the project expo package", () => {
+    const seen: [string, readonly string[]][] = [];
+    const resolveModule = (request: string, roots: readonly string[]): string => {
+      seen.push([request, roots]);
+      if (request === "expo/package.json") {
+        return "/app/node_modules/.pnpm/expo@54.0.37/node_modules/expo/package.json";
+      }
+      if (request === "@expo/config-plugins" && roots[0] === "/app/node_modules/.pnpm/expo@54.0.37/node_modules/expo") {
+        return "/app/node_modules/.pnpm/expo@54.0.37/node_modules/@expo/config-plugins/build/index.js";
+      }
+      throw new Error(`Cannot find module '${request}'`);
+    };
+
+    expect(resolveExpoConfigPlugins({ projectRoot: "/app", resolveModule })).toBe(
+      "/app/node_modules/.pnpm/expo@54.0.37/node_modules/@expo/config-plugins/build/index.js"
+    );
+    expect(seen).toEqual([
+      ["expo/package.json", ["/app"]],
+      ["@expo/config-plugins", ["/app/node_modules/.pnpm/expo@54.0.37/node_modules/expo"]]
+    ]);
+  });
+
+  it("falls back to the project root when expo cannot be resolved", () => {
+    const resolveModule = (request: string, roots: readonly string[]): string => {
+      if (request === "expo/package.json") {
+        throw new Error("Cannot find module 'expo/package.json'");
+      }
+      if (roots[0] === "/app") {
+        return "/app/node_modules/@expo/config-plugins/build/index.js";
+      }
+      throw new Error(`Cannot find module '${request}'`);
+    };
+
+    expect(resolveExpoConfigPlugins({ projectRoot: "/app", resolveModule })).toBe(
+      "/app/node_modules/@expo/config-plugins/build/index.js"
+    );
+  });
+
+  it("fails with an actionable message when the config plugins are unreachable", () => {
+    const resolveModule = (request: string): string => {
+      throw new Error(`Cannot find module '${request}'`);
+    };
+
+    expect(() => resolveExpoConfigPlugins({ projectRoot: "/app", resolveModule })).toThrow(
+      /could not load '@expo\/config-plugins'.*'expo' is installed in \/app/
+    );
+  });
+});
+
+describe("ensureDeploymentTarget", () => {
+  it("raises every deployment target below the contract minimum", () => {
+    const configurations = {
+      first: { buildSettings: { IPHONEOS_DEPLOYMENT_TARGET: "15.1" } },
+      second: { buildSettings: { IPHONEOS_DEPLOYMENT_TARGET: "17.5" } },
+      third: { buildSettings: { IPHONEOS_DEPLOYMENT_TARGET: "18.0" } },
+      fourth: { buildSettings: { PRODUCT_NAME: "IntentLaneExample" } }
+    };
+    const project = { pbxXCBuildConfigurationSection: () => configurations };
+
+    expect(ensureDeploymentTarget({ project, minIos: "18.0" })).toBe(2);
+    expect(configurations.first.buildSettings.IPHONEOS_DEPLOYMENT_TARGET).toBe("18.0");
+    expect(configurations.second.buildSettings.IPHONEOS_DEPLOYMENT_TARGET).toBe("18.0");
+    expect(configurations.third.buildSettings.IPHONEOS_DEPLOYMENT_TARGET).toBe("18.0");
+    expect(configurations.fourth.buildSettings).toEqual({ PRODUCT_NAME: "IntentLaneExample" });
+  });
+
+  it("never lowers a deployment target that is already above the minimum", () => {
+    const configurations = { only: { buildSettings: { IPHONEOS_DEPLOYMENT_TARGET: "19.0" } } };
+    const project = { pbxXCBuildConfigurationSection: () => configurations };
+
+    expect(ensureDeploymentTarget({ project, minIos: "18.0" })).toBe(0);
+    expect(configurations.only.buildSettings.IPHONEOS_DEPLOYMENT_TARGET).toBe("19.0");
+  });
+});
+
+describe("readManifest", () => {
+  it("reads the manifest and stays quiet when it is missing", async () => {
+    const root = await manifestDirectory([{ path: "fr.lproj/IntentLane.strings" }]);
+
+    expect(readManifest(join(root, "intentlane.manifest.json"))).toEqual({
+      version: "0.1",
+      inputHash: "hash",
+      files: [{ path: "fr.lproj/IntentLane.strings" }]
+    });
+    expect(readManifest(join(tmpdir(), "intentlane-plugin-absent", "intentlane.manifest.json"))).toBeUndefined();
   });
 });
