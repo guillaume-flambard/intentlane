@@ -27,7 +27,7 @@
 - Copie des sources et ressources. **fait** : le Swift généré est enregistré dans la phase Sources, les tables `<locale>.lproj/IntentLane.strings` dans la phase Resources, et un prebuild réel a prouvé que la seconde exécution ne produit aucun doublon.
 - `doctor`. **fait** : contrôles `node`, `config`, `schema`, `generated`, `xcode`, `plugin`.
 - Deep links sûrs. **partiel** : les URLs sont construites via `URLComponents` et les query triées, le routage côté app n'existe pas encore.
-- EAS development build documenté. **à faire**
+- EAS development build documenté. **fait** : section « Running on a device » du README, parcours local `expo run:ios` et parcours EAS `eas build --profile development`, avec la raison native (Expo Go ne peut pas exécuter les App Intents générées).
 
 **Gate :** un utilisateur externe suit le quickstart en moins de 30 minutes. **pas encore mesuré** ; le quickstart `init` vers build simulateur est reproductible ici.
 
@@ -87,5 +87,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `docs(expo): document the EAS development build flow`.
+Ticket suivant : `feat(apple): support integer, number, boolean, date, datetime and enum parameters`.
 

@@ -8,7 +8,7 @@ Phase 1 is done: the `0.1` contract validates, and the generator emits compilabl
 
 Phase 2 is in progress: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to a compiling simulator build.
 
-Still out of scope: entities, non-`string` parameter types, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and signing or EAS configuration.
+Still out of scope: entities, non-`string` parameter types, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -86,6 +86,33 @@ cd apps/example-expo
 pnpm install
 pnpm prebuild
 ```
+
+## Running on a device
+
+The generated App Intents are native Swift. Expo Go cannot run them, because the Swift only exists after a native build and the shortcuts only exist in an app that actually contains them. Both paths below run the generator through the config plugin, so the plugin declaration from the quickstart is all the project needs.
+
+Local build, with Xcode and no Expo account:
+
+```sh
+npx expo install expo-dev-client
+npx expo run:ios --device
+```
+
+`run:ios` prebuilds when the project has no native directory yet, then builds and installs on the attached iPhone. A physical device needs developer mode enabled and a unique `ios.bundleIdentifier` in `app.json`.
+
+EAS build:
+
+```sh
+npm install --global eas-cli
+eas login
+eas build --platform ios --profile development
+```
+
+The CLI offers to create `eas.json` with a `development` profile. Add `"ios": { "simulator": true }` to that profile for a simulator build, which installs on a simulator only. A build for a physical iPhone needs an Apple Developer account for signing. `eas build --local` does the same work on your machine.
+
+Rebuild after a change to native code, to `app.json`, or to the Expo SDK. Otherwise `npx expo start` is enough, and it talks to the development build instead of Expo Go.
+
+Once the app is installed, iOS indexes its App Shortcuts, so they appear in the Shortcuts app and work with Siri without any registration step. That is how App Shortcuts are designed: they are "available as soon as someone installs your app". Run `intentlane generate --check` before a build to confirm the Swift still matches the contract.
 
 ## Verification
 
