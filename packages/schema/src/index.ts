@@ -34,7 +34,8 @@ const executionSchema = z.object({
 const riskSchema = z.object({
   level: z.enum(["read", "write", "sensitive", "destructive"]),
   confirmation: z.enum(["never", "optional", "always"]),
-  authentication: z.enum(["none", "inherited", "required"])
+  authentication: z.enum(["none", "inherited", "required"]),
+  confirmation_prompt: localizedSchema.optional()
 }).strict();
 
 export const intentLaneConfigSchema = z.object({

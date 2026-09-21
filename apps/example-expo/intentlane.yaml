@@ -122,3 +122,41 @@ intents:
           - Open an idea in ${appName}
         fr:
           - Ouvrir une idée dans ${appName}
+
+  - id: delete_idea
+    title:
+      en: Delete an idea
+      fr: Supprimer une idée
+    description:
+      en: Delete a saved idea
+      fr: Supprimer une idée enregistrée
+    parameters:
+      - id: idea
+        type: entity
+        entity: idea
+        required: true
+        prompt:
+          en: Which idea?
+          fr: Quelle idée ?
+    execution:
+      mode: open_app
+      route: /ideas/delete
+      mapping:
+        idea: idea
+    risk:
+      level: destructive
+      confirmation: always
+      authentication: required
+      confirmation_prompt:
+        en: Delete this idea?
+        fr: Supprimer cette idée ?
+    result:
+      dialog:
+        en: The idea is deleted
+        fr: "L'idée est supprimée"
+    shortcuts:
+      phrases:
+        en:
+          - Delete an idea in ${appName}
+        fr:
+          - Supprimer une idée dans ${appName}

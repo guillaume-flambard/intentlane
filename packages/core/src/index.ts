@@ -15,6 +15,12 @@ export type ParameterIR = Readonly<{
   values?: Readonly<Record<string, LocalizedText>>;
   entity?: string;
 }>;
+export type RiskIR = Readonly<{
+  level: "read" | "write" | "sensitive" | "destructive";
+  confirmation: "never" | "optional" | "always";
+  authentication: "none" | "inherited" | "required";
+  confirmationPrompt?: LocalizedText;
+}>;
 export type IntentIR = Readonly<{
   id: string;
   swiftName: string;
@@ -23,6 +29,7 @@ export type IntentIR = Readonly<{
   parameters: readonly ParameterIR[];
   route: string;
   mapping: Readonly<Record<string, string>>;
+  risk?: RiskIR;
   dialog?: LocalizedText;
   phrases: Readonly<Record<string, readonly string[]>>;
 }>;
@@ -103,6 +110,7 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       }
     }
     if (intent.risk?.level === "destructive" && intent.risk.confirmation !== "always") diagnostics.push(error("IL1501", "Destructive intents require confirmation: always.", `${path}.risk.confirmation`));
+    diagnostics.push(...localizedDiagnostics(intent.risk?.confirmation_prompt, config.app.locales, `${path}.risk.confirmation_prompt`));
   }
   return diagnostics;
 }
@@ -146,6 +154,16 @@ export function parseConfig(value: unknown): ParseResult {
       })),
       route: intent.execution.route ?? "",
       mapping: intent.execution.mapping ?? {},
+      ...(intent.risk
+        ? {
+            risk: {
+              level: intent.risk.level,
+              confirmation: intent.risk.confirmation,
+              authentication: intent.risk.authentication,
+              ...(intent.risk.confirmation_prompt ? { confirmationPrompt: intent.risk.confirmation_prompt } : {})
+            }
+          }
+        : {}),
       ...(intent.result?.dialog ? { dialog: intent.result.dialog } : {}),
       phrases: intent.shortcuts?.phrases ?? {}
     })).sort((left, right) => left.id.localeCompare(right.id))

@@ -137,6 +137,32 @@ parameters:
 
 The version 0.1 only generates the `static` query. `query.mode: endpoint` is rejected with IL1401, an unknown or missing entity reference with IL1301, a duplicated entity id or Swift type name collision with IL1601, and an entity title missing its default locale with IL1201.
 
+## Risk policy
+
+An intent declares how dangerous it is:
+
+```yaml
+risk:
+  level: destructive
+  confirmation: always
+  authentication: required
+  confirmation_prompt: { en: Delete this idea?, fr: Supprimer cette idée ? }
+```
+
+The generator turns the confirmation and authentication fields into App Intents behaviour:
+
+| Contract | Generated Swift |
+| --- | --- |
+| `confirmation: always` | `try await requestConfirmation(actionName: .continue, dialog: ...)` before the action runs |
+| `confirmation: optional` or `never` | nothing, the app decides at runtime |
+| `authentication: required` | `static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication` |
+| `authentication: none` | `static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed` |
+| `authentication: inherited` | nothing, the system policy applies |
+
+`confirmation_prompt` is the dialog text, localized through the `IntentLane` strings table. Without it, the confirmation shows the intent title. The accept button label comes from the system (`ConfirmationActionName.continue`); the platform exposes no public initializer for that type, so the contract cannot name the accept and decline actions.
+
+The `level` participates in validation rather than generation: a `destructive` intent without `confirmation: always` is rejected with IL1501, and a confirmation prompt missing its default locale with IL1201.
+
 ## Generated files
 
 IntentLane owns the output directory. The generator writes the Swift source, one strings table per non-default locale, and a manifest:
@@ -214,3 +240,6 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 - The generated entity code compiles under Swift 5 and fails under Swift 6 strict concurrency: `defaultQuery` would need to be a `let`, and the resolver holder would need a `Sendable` protocol. The example project builds with `SWIFT_VERSION = 5.0`.
 - An entity query returns nothing until the app registers its resolver. `IntentLaneEntityResolvers.<entity>` starts `nil`, so the generated query returns an empty list rather than failing, and Siri shows no entity suggestion until the app assigns an implementation.
 - Entity property names come straight from `display.title` and `display.subtitle`. The generator neither verifies that the app's own model uses those names nor reads any data source.
+- The `sensitive` level adds no constraint of its own. The generator enforces `confirmation` and `authentication`, and only `destructive` triggers a validation rule, so `sensitive` currently documents intent without changing the output.
+- `confirmation: never` cannot override the user's own Shortcuts setting; iOS may still ask before running an intent.
+- The confirmation action label is system-provided. `ConfirmationActionName` has no public initializer, so the accept and decline labels follow the system language instead of the contract.

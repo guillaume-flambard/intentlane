@@ -128,9 +128,14 @@ risk:
   level: destructive
   confirmation: always
   authentication: required
+  confirmation_prompt: { en: Delete this idea?, fr: Supprimer cette idée ? }
 ```
 
-Niveaux : `read`, `write`, `sensitive`, `destructive`. Les deux derniers activent des contraintes supplémentaires. La validation refuse `destructive` sans confirmation.
+Niveaux : `read`, `write`, `sensitive`, `destructive`. Les trois champs `level`, `confirmation` et `authentication` sont obligatoires dès que `risk` est présent. La validation refuse `destructive` sans `confirmation: always` (IL1501).
+
+Le générateur applique la politique déclarée. `confirmation: always` produit un `requestConfirmation` avant l'action, `authentication: required` produit `authenticationPolicy = .requiresAuthentication`, et `authentication: none` produit `.alwaysAllowed`. `authentication: inherited` n'émet rien, le système applique sa propre politique. `confirmation: optional` et `never` n'émettent rien non plus.
+
+`confirmation_prompt` est le texte du dialogue de confirmation, localisé comme les autres clés visibles ; une locale par défaut absente est refusée (IL1201). Sans ce champ, le dialogue affiche le titre de l'intention. Le libellé du bouton d'acceptation vient du système, la plateforme n'exposant aucun initialiseur public pour le personnaliser.
 
 ## Localisation
 

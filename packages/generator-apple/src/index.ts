@@ -21,6 +21,11 @@ const SWIFT_TYPES: Readonly<Record<string, string>> = {
   datetime: "Date"
 };
 
+const AUTHENTICATION_POLICIES: Readonly<Record<string, string>> = {
+  none: ".alwaysAllowed",
+  required: ".requiresAuthentication"
+};
+
 const pascalCase = (value: string): string => value.split("_").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join("");
 
 const labelsFor = (parameter: ParameterIR, value: string): LocalizedText => parameter.values?.[value] ?? {};
@@ -107,12 +112,25 @@ function routeExpression(intent: IntentIR, scheme: string): string {
   return `IntentLaneRoute.make(scheme: ${swiftString(scheme)}, path: ${swiftString(intent.route)}, query: [${items}])`;
 }
 
+function authenticationLine(intent: IntentIR): string {
+  const policy = intent.risk ? AUTHENTICATION_POLICIES[intent.risk.authentication] : undefined;
+  return policy ? `\n  static let authenticationPolicy: IntentAuthenticationPolicy = ${policy}` : "";
+}
+
+function confirmationStatement(intent: IntentIR, locale: string): string {
+  if (intent.risk?.confirmation !== "always") return "";
+  const prompt = localized(intent.risk.confirmationPrompt ?? intent.title, locale);
+  return `    try await requestConfirmation(actionName: .continue, dialog: IntentDialog(${localizedResource(prompt)}))\n`;
+}
+
 function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: string): string {
   const title = localized(intent.title, locale);
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
+  const authentication = authenticationLine(intent);
+  const confirmation = confirmationStatement(intent, locale);
   const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
-  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {\n    let url = ${routeExpression(intent, scheme)}\n    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
+  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {\n${confirmation}    let url = ${routeExpression(intent, scheme)}\n    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
 }
 
 function emitShortcuts(ir: ConfigIR, locale: string): string {
@@ -162,6 +180,7 @@ function stringsEntries(ir: ConfigIR, locale: string): readonly (readonly [strin
   for (const intent of ir.intents) {
     consider(intent.title);
     consider(intent.description);
+    consider(intent.risk?.confirmationPrompt);
     consider(intent.dialog);
     for (const parameter of intent.parameters) {
       for (const labels of Object.values(parameter.values ?? {})) consider(labels);

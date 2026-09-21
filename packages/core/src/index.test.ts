@@ -197,3 +197,43 @@ describe("entities", () => {
     expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({ id: "related", type: "entity", entity: "idea" });
   });
 });
+
+const withRisk = (risk: unknown) => ({
+  ...base,
+  intents: [{ ...base.intents[0], risk }]
+});
+
+describe("risk policy", () => {
+  it("normalizes the declared risk policy into the IR", () => {
+    const result = parseConfig(withRisk({
+      level: "destructive",
+      confirmation: "always",
+      authentication: "required",
+      confirmation_prompt: { en: "Delete this idea?", fr: "Supprimer cette idée ?" }
+    }));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.risk).toEqual({
+      level: "destructive",
+      confirmation: "always",
+      authentication: "required",
+      confirmationPrompt: { en: "Delete this idea?", fr: "Supprimer cette idée ?" }
+    });
+  });
+
+  it("omits the confirmation prompt when the contract declares none", () => {
+    const result = parseConfig(withRisk({ level: "write", confirmation: "optional", authentication: "inherited" }));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.risk).not.toHaveProperty("confirmationPrompt");
+  });
+
+  it("reports a confirmation prompt that misses its default locale", () => {
+    const result = parseConfig(withRisk({
+      level: "destructive",
+      confirmation: "always",
+      authentication: "required",
+      confirmation_prompt: { fr: "Supprimer cette idée ?" }
+    }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", path: "intents[0].risk.confirmation_prompt" }));
+  });
+});

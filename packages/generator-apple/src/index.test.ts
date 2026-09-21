@@ -371,3 +371,95 @@ describe("entities", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+const riskConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  intents: [
+    {
+      id: "read_note",
+      title: { en: "Read a note", fr: "Lire une note" },
+      parameters: [],
+      execution: { mode: "open_app", route: "/notes/read" },
+      risk: { level: "read", confirmation: "never", authentication: "inherited" }
+    },
+    {
+      id: "create_note",
+      title: { en: "Create a note", fr: "Créer une note" },
+      parameters: [],
+      execution: { mode: "open_app", route: "/notes/new" },
+      risk: { level: "write", confirmation: "optional", authentication: "none" }
+    },
+    {
+      id: "delete_note",
+      title: { en: "Delete a note", fr: "Supprimer une note" },
+      parameters: [],
+      execution: { mode: "open_app", route: "/notes/delete" },
+      risk: {
+        level: "destructive",
+        confirmation: "always",
+        authentication: "required",
+        confirmation_prompt: { en: "Delete this note?", fr: "Supprimer cette note ?" }
+      },
+      result: { dialog: { en: "The note is deleted", fr: "La note est supprimée" } }
+    },
+    {
+      id: "archive_note",
+      title: { en: "Archive a note", fr: "Archiver une note" },
+      parameters: [],
+      execution: { mode: "open_app", route: "/notes/archive" },
+      risk: { level: "destructive", confirmation: "always", authentication: "required" },
+      result: { dialog: { en: "The note is archived", fr: "La note est archivée" } }
+    }
+  ]
+};
+
+describe("risk policy", () => {
+  const swift = (): string => {
+    const result = parseConfig(riskConfig);
+    if (!result.ir) throw new Error("Risk fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  const body = (name: string): string => {
+    const match = swift().match(new RegExp(`struct ${name}: AppIntent \\{[\\s\\S]*?\\n\\}`));
+    if (!match) throw new Error(`Missing ${name}`);
+    return match[0];
+  };
+
+  it("emits the authentication policy declared by the contract", () => {
+    expect(body("CreateNote")).toContain("static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed");
+    expect(body("DeleteNote")).toContain("static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication");
+    expect(body("ArchiveNote")).toContain("static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication");
+    expect(body("ReadNote")).not.toContain("authenticationPolicy");
+  });
+
+  it("requests confirmation before the action when the contract requires it", () => {
+    const statement = 'try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Delete this note?", table: "IntentLane")))';
+    expect(body("DeleteNote")).toContain(statement);
+    expect(body("DeleteNote").indexOf(statement)).toBeLessThan(body("DeleteNote").indexOf("let url ="));
+  });
+
+  it("falls back to the intent title when the contract declares no confirmation prompt", () => {
+    expect(body("ArchiveNote")).toContain('try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Archive a note", table: "IntentLane")))');
+    expect(body("ArchiveNote")).toContain('dialog: IntentDialog(LocalizedStringResource("The note is archived", table: "IntentLane"))');
+  });
+
+  it("never requests confirmation for optional or disabled confirmation", () => {
+    expect(body("ReadNote")).not.toContain("requestConfirmation");
+    expect(body("CreateNote")).not.toContain("requestConfirmation");
+    expect(swift().match(/requestConfirmation/g)).toHaveLength(2);
+  });
+
+  it("puts the confirmation prompt in the strings table", () => {
+    const result = parseConfig(riskConfig);
+    if (!result.ir) throw new Error("Risk fixture must parse");
+    const strings = generateStrings(result.ir, "fr");
+    expect(strings).toContain('"Delete this note?" = "Supprimer cette note ?";');
+    expect(strings).toContain('"Read a note" = "Lire une note";');
+  });
+
+  it("matches the risk Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});
