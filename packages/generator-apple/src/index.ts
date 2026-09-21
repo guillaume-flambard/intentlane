@@ -12,22 +12,68 @@ const defaultLocale = (ir: ConfigIR): string => ir.app.locales[0] ?? "en";
 const localized = (values: LocalizedText, locale: string): string => values[locale] ?? values[Object.keys(values).sort()[0] ?? ""] ?? "";
 const localizedResource = (value: string): string => `LocalizedStringResource(${swiftString(value)}, table: ${swiftString(STRING_TABLE)})`;
 
-function parameterDeclaration(parameter: ParameterIR): string {
-  if (parameter.type !== "string") throw new Error(`IL1301: Parameter '${parameter.id}' uses unsupported Phase 1 type '${parameter.type}'.`);
-  return `  @Parameter(title: ${localizedResource(parameter.id)})\n  var ${parameter.id}: String`;
+const SWIFT_TYPES: Readonly<Record<string, string>> = {
+  string: "String",
+  integer: "Int",
+  number: "Double",
+  boolean: "Bool",
+  date: "DateComponents",
+  datetime: "Date"
+};
+
+const pascalCase = (value: string): string => value.split("_").map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`).join("");
+
+const labelsFor = (parameter: ParameterIR, value: string): LocalizedText => parameter.values?.[value] ?? {};
+
+function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
+  return `IntentLane${intent.swiftName}${pascalCase(parameter.id)}`;
+}
+
+function swiftType(intent: IntentIR, parameter: ParameterIR): string {
+  if (parameter.type === "enum") return enumTypeName(intent, parameter);
+  const mapped = SWIFT_TYPES[parameter.type];
+  if (!mapped) throw new Error(`IL1301: Parameter '${parameter.id}' uses unsupported type '${parameter.type}'.`);
+  return mapped;
+}
+
+function parameterDeclaration(intent: IntentIR, parameter: ParameterIR): string {
+  return `  @Parameter(title: ${localizedResource(parameter.id)})\n  var ${parameter.id}: ${swiftType(intent, parameter)}`;
+}
+
+function emitEnum(intent: IntentIR, parameter: ParameterIR, locale: string): string {
+  const name = enumTypeName(intent, parameter);
+  const values = Object.keys(parameter.values ?? {}).sort((left, right) => left.localeCompare(right));
+  const cases = values.map((value) => `  case ${value}`).join("\n");
+  const representations = values.map((value) => `    .${value}: DisplayRepresentation(title: ${localizedResource(localized(labelsFor(parameter, value), locale))})`).join(",\n");
+  return `enum ${name}: String, AppEnum {\n${cases}\n\n  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(parameter.id)})\n  }\n\n  static var caseDisplayRepresentations: [${name}: DisplayRepresentation] {\n    [\n${representations}\n    ]\n  }\n}`;
+}
+
+function enumDeclarations(ir: ConfigIR, locale: string): string {
+  const declarations = ir.intents.flatMap((intent) => intent.parameters.filter((parameter) => parameter.type === "enum").map((parameter) => emitEnum(intent, parameter, locale)));
+  return declarations.length === 0 ? "" : `${declarations.join("\n\n")}\n\n`;
+}
+
+function queryValue(intent: IntentIR, source: string): string {
+  const type = intent.parameters.find((parameter) => parameter.id === source)?.type ?? "string";
+  if (type === "integer" || type === "number") return `String(${source})`;
+  if (type === "boolean") return `${source} ? "true" : "false"`;
+  if (type === "datetime") return `${source}.ISO8601Format()`;
+  if (type === "date") return `String(format: "%04d-%02d-%02d", ${source}.year ?? 0, ${source}.month ?? 0, ${source}.day ?? 0)`;
+  if (type === "enum") return `${source}.rawValue`;
+  return source;
 }
 
 function routeExpression(intent: IntentIR, scheme: string): string {
   const entries = Object.entries(intent.mapping).sort(([left], [right]) => left.localeCompare(right));
   if (entries.length === 0) return `IntentLaneRoute.make(scheme: ${swiftString(scheme)}, path: ${swiftString(intent.route)}, query: [:])`;
-  const items = entries.map(([target, source]) => `${swiftString(target)}: ${source}`).join(", ");
+  const items = entries.map(([target, source]) => `${swiftString(target)}: ${queryValue(intent, source)}`).join(", ");
   return `IntentLaneRoute.make(scheme: ${swiftString(scheme)}, path: ${swiftString(intent.route)}, query: [${items}])`;
 }
 
 function emitIntent(intent: IntentIR, locale: string, scheme: string): string {
   const title = localized(intent.title, locale);
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
-  const parameters = intent.parameters.map(parameterDeclaration).join("\n\n");
+  const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {\n    let url = ${routeExpression(intent, scheme)}\n    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
 }
@@ -43,10 +89,11 @@ function emitShortcuts(ir: ConfigIR, locale: string): string {
 
 export function generateSwift(ir: ConfigIR): string {
   const locale = defaultLocale(ir);
+  const enums = enumDeclarations(ir, locale);
   const intents = ir.intents.map((intent) => emitIntent(intent, locale, ir.app.urlScheme)).join("\n\n");
   const shortcuts = emitShortcuts(ir, locale);
   const shortcutsSection = shortcuts ? `\n\n${shortcuts}` : "";
-  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${intents}${shortcutsSection}\n`;
+  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${enums}${intents}${shortcutsSection}\n`;
 }
 
 export function generatedFileHash(contents: string): string {
@@ -77,6 +124,9 @@ function stringsEntries(ir: ConfigIR, locale: string): readonly (readonly [strin
     consider(intent.title);
     consider(intent.description);
     consider(intent.dialog);
+    for (const parameter of intent.parameters) {
+      for (const labels of Object.values(parameter.values ?? {})) consider(labels);
+    }
   }
   return [...entries.entries()];
 }

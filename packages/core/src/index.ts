@@ -7,7 +7,13 @@ export type Severity = "error" | "warning";
 export type DiagnosticCode = "IL1001" | "IL1101" | "IL1201" | "IL1301" | "IL1401" | "IL1501" | "IL1601";
 export type Diagnostic = { code: DiagnosticCode; severity: Severity; message: string; path: string };
 export type LocalizedText = Readonly<Record<string, string>>;
-export type ParameterIR = Readonly<{ id: string; type: ParameterType; required: boolean; prompt?: LocalizedText }>;
+export type ParameterIR = Readonly<{
+  id: string;
+  type: ParameterType;
+  required: boolean;
+  prompt?: LocalizedText;
+  values?: Readonly<Record<string, LocalizedText>>;
+}>;
 export type IntentIR = Readonly<{
   id: string;
   swiftName: string;
@@ -55,7 +61,14 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
     diagnostics.push(...localizedDiagnostics(intent.description, config.app.locales, `${path}.description`));
     diagnostics.push(...localizedDiagnostics(intent.result?.dialog, config.app.locales, `${path}.result.dialog`));
     for (const [parameterIndex, parameter] of intent.parameters.entries()) {
-      diagnostics.push(...localizedDiagnostics(parameter.prompt, config.app.locales, `${path}.parameters[${parameterIndex}].prompt`));
+      const parameterPath = `${path}.parameters[${parameterIndex}]`;
+      diagnostics.push(...localizedDiagnostics(parameter.prompt, config.app.locales, `${parameterPath}.prompt`));
+      for (const [value, labels] of Object.entries(parameter.values ?? {})) {
+        diagnostics.push(...localizedDiagnostics(labels, config.app.locales, `${parameterPath}.values.${value}`));
+      }
+      if (parameter.type === "entity") diagnostics.push(error("IL1401", `Parameter '${parameter.id}' uses type 'entity', which is not supported yet.`, `${parameterPath}.type`));
+      if (parameter.type === "enum" && Object.keys(parameter.values ?? {}).length === 0) diagnostics.push(error("IL1301", `Enum parameter '${parameter.id}' must declare at least one value.`, `${parameterPath}.values`));
+      if (parameter.type !== "enum" && parameter.values) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares values but its type is '${parameter.type}'.`, `${parameterPath}.values`));
     }
     const name = swiftName(intent.id);
     if (swiftNames.has(name)) diagnostics.push(error("IL1601", `Swift type name '${name}' collides with another intent.`, `${path}.id`));
@@ -97,7 +110,8 @@ export function parseConfig(value: unknown): ParseResult {
         id: parameter.id,
         type: parameter.type,
         required: parameter.required,
-        ...(parameter.prompt ? { prompt: parameter.prompt } : {})
+        ...(parameter.prompt ? { prompt: parameter.prompt } : {}),
+        ...(parameter.values ? { values: parameter.values } : {})
       })),
       route: intent.execution.route ?? "",
       mapping: intent.execution.mapping ?? {},

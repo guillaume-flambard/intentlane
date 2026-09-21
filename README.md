@@ -4,11 +4,11 @@ IntentLane is a deterministic compiler from a versioned YAML contract to Apple A
 
 ## Status
 
-Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string` parameters, plus an `AppShortcutsProvider` for intents that declare phrases.
+Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string`, `integer`, `number`, `boolean`, `date`, `datetime` and `enum` parameters, plus an `AppShortcutsProvider` for intents that declare phrases.
 
-Phase 2 is in progress: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to a compiling simulator build.
+Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift and the `<locale>.lproj` resources in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to an installed simulator build. The gate (an external user following the quickstart in under 30 minutes) is not measured yet.
 
-Still out of scope: entities, non-`string` parameter types, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+Still out of scope: entities, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -64,6 +64,34 @@ npx intentlane doctor
 
 - `--config <file>`: YAML source, default `intentlane.yaml`.
 - `--output <directory>`: generated-source directory, default `ios/IntentLaneGenerated`.
+
+## Parameter types
+
+A parameter declares an `id`, a `type` and `required`. The generator maps each type to its Swift counterpart and, for `open_app` execution, converts the value into the URL query:
+
+| Contract type | Swift type | Query value |
+| --- | --- | --- |
+| `string` | `String` | the value itself |
+| `integer` | `Int` | `String(value)` |
+| `number` | `Double` | `String(value)` |
+| `boolean` | `Bool` | `"true"` or `"false"` |
+| `date` | `DateComponents` | `YYYY-MM-DD` |
+| `datetime` | `Date` | ISO 8601 |
+| `enum` | generated `AppEnum` | the case `rawValue` |
+
+An `enum` parameter declares its cases under `values`, one localized label per case:
+
+```yaml
+parameters:
+  - id: priority
+    type: enum
+    required: true
+    values:
+      low: { en: Low, fr: Basse }
+      high: { en: High, fr: Haute }
+```
+
+The generator emits `enum IntentLane<Intent><Parameter>: String, AppEnum` with one `case` per value, and every label goes into the `IntentLane` strings table. Case names therefore stay stable identifiers while Siri and the Shortcuts app show the translated label. An enum without values is rejected (IL1301), `values` on a parameter that is not an enum is rejected too (IL1301), and `entity` is rejected with IL1401 until App Entities land.
 
 ## Generated files
 
@@ -136,3 +164,6 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 - `knownRegions` is left untouched. The plugin mirrors what Expo does for `expo.locales` on iOS (`@expo/config-plugins/build/ios/Locales.js`), which registers `<locale>.lproj` groups and resources without editing `knownRegions`. Whether iOS selects `fr.lproj/IntentLane.strings` while `fr` is absent from `knownRegions` was not verified on a device.
 - Stale localization directories are not pruned. Dropping a locale from `app.locales` leaves its `<locale>.lproj` directory on disk and its Xcode registration in place. Expo has the same limitation (`TODO: Should we delete all before running?` in `Locales.js`).
 - Two intents that share the same default-locale text but carry different translations collide in the strings table. The first one in canonical intent order wins; the other keeps its default-locale text.
+- `required` is not reflected in the generated Swift. Every parameter is emitted as a plain `@Parameter` with no default, so `required: true` is a contract statement the compiler does not enforce yet.
+- An enum `typeDisplayRepresentation` uses the raw parameter id as its `LocalizedStringResource` key, the same limitation as `@Parameter(title:)`.
+- Generated enum type names are `IntentLane<Intent Swift name><PascalCase parameter id>`. Two intents whose names combine into the same identifier would collide, and no diagnostic covers that case.

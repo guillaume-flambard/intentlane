@@ -182,3 +182,84 @@ describe("generateArtifacts", () => {
     expect(generateArtifacts(result.ir)).toEqual(generateArtifacts(result.ir));
   });
 });
+
+const typedConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  intents: [{
+    id: "create_idea",
+    title: { en: "Create an idea", fr: "Créer une idée" },
+    parameters: [
+      { id: "title", type: "string", required: true },
+      { id: "effort", type: "integer", required: true },
+      { id: "ratio", type: "number", required: false },
+      { id: "pinned", type: "boolean", required: false },
+      { id: "due", type: "date", required: false },
+      { id: "at", type: "datetime", required: false },
+      {
+        id: "priority",
+        type: "enum",
+        required: true,
+        values: { low: { en: "Low", fr: "Basse" }, high: { en: "High", fr: "Haute" } }
+      }
+    ],
+    execution: {
+      mode: "open_app",
+      route: "/ideas/new",
+      mapping: { title: "title", effort: "effort", ratio: "ratio", pinned: "pinned", due: "due", at: "at", priority: "priority" }
+    },
+    result: { dialog: { en: "Your idea is ready", fr: "Votre idée est prête" } },
+    shortcuts: { phrases: { en: ["Create an idea in ${appName}"], fr: ["Créer une idée dans ${appName}"] } }
+  }]
+};
+
+describe("typed parameters", () => {
+  const swift = (): string => {
+    const result = parseConfig(typedConfig);
+    if (!result.ir) throw new Error("Typed fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("maps every supported parameter type to its Swift type", () => {
+    const source = swift();
+    expect(source).toContain("var title: String");
+    expect(source).toContain("var effort: Int");
+    expect(source).toContain("var ratio: Double");
+    expect(source).toContain("var pinned: Bool");
+    expect(source).toContain("var due: DateComponents");
+    expect(source).toContain("var at: Date");
+    expect(source).toContain("var priority: IntentLaneCreateIdeaPriority");
+  });
+
+  it("emits an AppEnum with localized case labels for enum parameters", () => {
+    const source = swift();
+    expect(source).toContain("enum IntentLaneCreateIdeaPriority: String, AppEnum {");
+    expect(source).toContain("  case high\n  case low");
+    expect(source).toContain('static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: LocalizedStringResource("priority", table: "IntentLane"))\n  }');
+    expect(source).toContain('.low: DisplayRepresentation(title: LocalizedStringResource("Low", table: "IntentLane"))');
+    expect(source).toContain('.high: DisplayRepresentation(title: LocalizedStringResource("High", table: "IntentLane"))');
+  });
+
+  it("converts every typed parameter into a query value", () => {
+    const source = swift();
+    expect(source).toContain('"title": title');
+    expect(source).toContain('"effort": String(effort)');
+    expect(source).toContain('"ratio": String(ratio)');
+    expect(source).toContain('"pinned": pinned ? "true" : "false"');
+    expect(source).toContain('"due": String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0)');
+    expect(source).toContain('"at": at.ISO8601Format()');
+    expect(source).toContain('"priority": priority.rawValue');
+  });
+
+  it("matches the typed Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+
+  it("puts enum case labels in the strings table", () => {
+    const result = parseConfig(typedConfig);
+    if (!result.ir) throw new Error("Typed fixture must parse");
+    const strings = generateStrings(result.ir, "fr");
+    expect(strings).toContain('"Low" = "Basse";');
+    expect(strings).toContain('"High" = "Haute";');
+  });
+});

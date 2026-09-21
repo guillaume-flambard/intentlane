@@ -33,11 +33,42 @@ intents:
         prompt:
           en: What is the idea?
           fr: Quelle est l'idée ?
+      - id: effort
+        type: integer
+        required: true
+        prompt:
+          en: How much effort?
+          fr: Combien d'effort ?
+      - id: due
+        type: date
+        required: false
+        prompt:
+          en: When is it due?
+          fr: Pour quand ?
+      - id: priority
+        type: enum
+        required: true
+        prompt:
+          en: Which priority?
+          fr: Quelle priorité ?
+        values:
+          low:
+            en: Low
+            fr: Basse
+          medium:
+            en: Medium
+            fr: Moyenne
+          high:
+            en: High
+            fr: Haute
     execution:
       mode: open_app
       route: /ideas/new
       mapping:
         title: title
+        effort: effort
+        due: due
+        priority: priority
     risk:
       level: write
       confirmation: optional

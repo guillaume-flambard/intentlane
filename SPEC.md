@@ -47,7 +47,23 @@ intents:
 
 ## Types MVP
 
-`string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`.
+Types de paramètre : `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`.
+
+Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré. `entity` est réservé aux App Entities et refusé en 0.1 (IL1401).
+
+Un paramètre `enum` déclare ses valeurs sous `values`, une map identifiant vers map locale. Les identifiants de valeurs suivent la règle des autres identifiants et deviennent les noms de cas Swift.
+
+```yaml
+parameters:
+  - id: priority
+    type: enum
+    required: true
+    values:
+      low: { en: Low, fr: Basse }
+      high: { en: High, fr: Haute }
+```
+
+Un `enum` sans aucune valeur est refusé (IL1301), et un paramètre qui déclare `values` sans être de type `enum` l'est aussi (IL1301).
 
 Les listes, unions, fichiers et médias sont réservés à une version ultérieure.
 
@@ -76,7 +92,7 @@ Le MVP accepte `static` et `endpoint`. Un endpoint renvoie une enveloppe JSON ve
 
 ### `open_app`
 
-Construit une URL interne sûre. `route` doit commencer par `/`. `mapping` associe query/path/state aux paramètres déclarés.
+Construit une URL interne sûre. `route` doit commencer par `/`. `mapping` associe query/path/state aux paramètres déclarés. Chaque valeur est convertie en chaîne dans la query : la valeur brute pour `string`, `String(valeur)` pour `integer` et `number`, `"true"` ou `"false"` pour `boolean`, ISO 8601 pour `datetime`, `YYYY-MM-DD` pour `date`, `rawValue` pour `enum`.
 
 ### `native`
 

@@ -33,7 +33,7 @@
 
 ## Phase 3 — vrai MVP (semaines 3–4)
 
-- Types primitifs et enums.
+- Types primitifs et enums. **fait** : `string`, `integer`, `number`, `boolean`, `date`, `datetime` et `enum` sont générés, avec `AppEnum` et libellés de cas localisés dans la table `IntentLane`, conversions de query par type, et contrôles IL1301 et IL1401. Prouvé par compilation `swiftc` et par un build simulateur de `apps/example-expo`.
 - App Entities statiques/endpoint.
 - Localisation en/fr.
 - Confirmation et politique de risque.
@@ -87,5 +87,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(apple): support integer, number, boolean, date, datetime and enum parameters`.
+Ticket suivant : `feat(apple): emit App Entities for static and endpoint queries`.
 

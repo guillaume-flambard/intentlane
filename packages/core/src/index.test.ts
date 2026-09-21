@@ -82,3 +82,47 @@ describe("collectDoctorChecks", () => {
     expect(checks.every((check) => check.status !== "error")).toBe(true);
   });
 });
+
+describe("parameter types", () => {
+  const withParameters = (parameters: unknown): unknown => ({
+    ...base,
+    intents: [{ ...base.intents[0], parameters, execution: { mode: "open_app", route: "/ideas/new" } }]
+  });
+
+  it("rejects the entity type with a capability diagnostic", () => {
+    const result = parseConfig(withParameters([{ id: "idea", type: "entity", required: true }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1401", path: "intents[0].parameters[0].type" }));
+  });
+
+  it("requires at least one value on an enum parameter", () => {
+    const result = parseConfig(withParameters([{ id: "priority", type: "enum", required: true }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].values" }));
+  });
+
+  it("rejects values on a parameter that is not an enum", () => {
+    const result = parseConfig(withParameters([{ id: "title", type: "string", required: true, values: { low: { en: "Low" } } }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].values" }));
+  });
+
+  it("normalizes enum values into the IR", () => {
+    const result = parseConfig(withParameters([{ id: "priority", type: "enum", required: true, values: { low: { en: "Low", fr: "Basse" } } }]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({ id: "priority", type: "enum", values: { low: { en: "Low", fr: "Basse" } } });
+  });
+
+  it("errors when an enum label misses its default locale", () => {
+    const result = parseConfig(withParameters([{ id: "priority", type: "enum", required: true, values: { low: { fr: "Basse" } } }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", path: "intents[0].parameters[0].values.low" }));
+  });
+
+  it("accepts every non-enum primitive type", () => {
+    const types = ["string", "integer", "number", "boolean", "date", "datetime"];
+    const result = parseConfig(withParameters(types.map((type, index) => ({ id: `value_${index}`, type, required: false }))));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters.map((parameter) => parameter.type)).toEqual(types);
+  });
+});

@@ -19,7 +19,8 @@ const parameterSchema = z.object({
   id: identifierSchema,
   type: parameterTypeSchema,
   required: z.boolean(),
-  prompt: localizedSchema.optional()
+  prompt: localizedSchema.optional(),
+  values: z.record(identifierSchema, localizedSchema).optional()
 }).strict();
 
 const executionSchema = z.object({
