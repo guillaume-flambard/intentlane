@@ -128,7 +128,24 @@ Le résultat généré combine l'URL ouverte, le dialogue et un snippet : `perfo
 
 ### `native`
 
-Référence un handler Swift enregistré, par exemple `handler: CreateIdeaHandler`. Le générateur émet le protocole attendu mais jamais la logique métier.
+L'application exécute l'action elle-même. `handler` nomme le type Swift que l'application implémente, par exemple `PinLinkHandler`. IntentLane émet le protocole attendu, jamais la logique métier :
+
+```swift
+protocol PinLinkHandler {
+  func perform(link: IntentLaneLinkEntity) async throws -> IntentLaneLinkEntity
+}
+
+@MainActor
+enum IntentLaneIntentHandlers {
+  static var pin_link: (any PinLinkHandler)?
+}
+```
+
+`perform()` lit ce registre et jette `IntentLaneHandlerError.missingHandler("<id>")` quand l'application ne l'a pas enregistré au lancement. Une intention `native` n'accepte ni `route` ni `mapping`.
+
+Le résultat peut exiger une valeur avec `result.returns`, qui nomme une entité du contrat. Le générateur ajoute alors `ReturnsValue<IntentLane<Entité>Entity>` au type de retour de `perform()` et passe la valeur à `.result(value:dialog:)`. Sans `returns`, `perform()` retourne `some IntentResult & ProvidesDialog` et les métadonnées ne portent aucune valeur de sortie.
+
+Diagnostics : un `handler` absent, mal formé ou déclaré par deux intentions, un `route` ou un `mapping` sur une intention `native`, et un `result.returns` sur une intention qui n'est pas `native` ou qui référence une entité inconnue sont des erreurs (IL1301, IL1601). `http` reste refusé (IL1401).
 
 ### `http`
 

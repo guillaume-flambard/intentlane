@@ -145,6 +145,43 @@ intents:
         fr:
           - "Ouvrir un lien dans ${appName}"
 
+  - id: pin_link
+    title:
+      en: Pin a link
+      fr: Épingler un lien
+    description:
+      en: Keep a link at the top of Shelf
+      fr: Garder un lien en haut de Shelf
+    parameters:
+      - id: link
+        type: entity
+        entity: link
+        required: true
+        title:
+          en: Link
+          fr: Lien
+        prompt:
+          en: Which link should stay at the top?
+          fr: Quel lien doit rester en haut ?
+    execution:
+      mode: native
+      handler: PinLinkHandler
+    risk:
+      level: write
+      confirmation: optional
+      authentication: inherited
+    result:
+      dialog:
+        en: The link is pinned
+        fr: "Le lien est épinglé"
+      returns: link
+    shortcuts:
+      phrases:
+        en:
+          - "Pin a link in ${appName}"
+        fr:
+          - "Épingler un lien dans ${appName}"
+
   - id: delete_link
     title:
       en: Delete a link

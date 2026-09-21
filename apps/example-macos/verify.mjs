@@ -11,8 +11,9 @@ const buildDirectory = join(here, "build");
 const contract = join(here, "intentlane.yaml");
 const protocols = join(here, "protocols.json");
 const moduleName = "IntentLaneShelf";
-const expectedActions = ["DeleteLink", "OpenLink", "OpenShelf", "SaveLink"];
-const expectedShortcuts = ["DeleteLink", "OpenLink", "SaveLink"];
+const expectedActions = ["DeleteLink", "OpenLink", "OpenShelf", "PinLink", "SaveLink"];
+const nativeActions = ["PinLink"];
+const expectedShortcuts = ["DeleteLink", "OpenLink", "PinLink", "SaveLink"];
 const expectedParameterTitles = ["Link address", "Link title", "Tag", "Pinned"];
 
 function fail(message) {
@@ -154,9 +155,11 @@ for (const name of expectedActions) {
 }
 
 const flags = Object.fromEntries(expectedActions.map((name) => [name, actions[name].outputFlags]));
+const openAppActions = expectedActions.filter((name) => !nativeActions.includes(name));
 assert(
-  new Set(Object.values(flags)).size === 1 && flags[expectedActions[0]] === 7,
-  `Expected outputFlags 7 for every action, got ${JSON.stringify(flags)}.`
+  openAppActions.every((name) => actions[name].outputFlags === 7) &&
+    nativeActions.every((name) => actions[name].outputFlags === 4),
+  `Expected outputFlags 7 for the open_app actions and 4 for the native ones, got ${JSON.stringify(flags)}.`
 );
 
 assert(
@@ -168,7 +171,7 @@ assert(
   "Expected DeleteLink to declare its authentication policy explicitly."
 );
 
-for (const name of ["OpenLink", "OpenShelf", "SaveLink"]) {
+for (const name of ["OpenLink", "OpenShelf", "PinLink", "SaveLink"]) {
   assert(
     actions[name].authenticationPolicy === 0,
     `Expected ${name} to inherit authentication, got ${actions[name].authenticationPolicy}.`
@@ -196,6 +199,11 @@ assert(
   `Unexpected SaveLink parameter titles: ${JSON.stringify(titles.SaveLink)}.`
 );
 
+assert(
+  actions.PinLink.outputType?.entity?.wrapper?.typeName === "IntentLaneLinkEntity",
+  `Expected PinLink to return IntentLaneLinkEntity, got ${JSON.stringify(actions.PinLink.outputType)}.`
+);
+
 for (const name of expectedActions) {
   assert(
     (actions[name].systemProtocols ?? []).length === 0,
@@ -205,6 +213,7 @@ for (const name of expectedActions) {
 
 process.stdout.write(`actions: ${expectedActions.join(", ")}\n`);
 process.stdout.write(`output flags: ${JSON.stringify(flags)}\n`);
+process.stdout.write(`native PinLink returns ${actions.PinLink.outputType.entity.wrapper.typeName}\n`);
 process.stdout.write(`parameter titles: ${JSON.stringify(titles.SaveLink)}\n`);
 process.stdout.write(`entity IntentLaneLinkEntity, query IntentLaneLinkQuery, enum IntentLaneSaveLinkTag\n`);
 process.stdout.write(`shortcuts: ${expectedShortcuts.join(", ")}\n`);

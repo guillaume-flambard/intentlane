@@ -28,8 +28,11 @@ export type IntentIR = Readonly<{
   title: LocalizedText;
   description?: LocalizedText;
   parameters: readonly ParameterIR[];
+  mode: "open_app" | "native";
   route: string;
   mapping: Readonly<Record<string, string>>;
+  handler?: string;
+  returns?: string;
   risk?: RiskIR;
   dialog?: LocalizedText;
   phrases: Readonly<Record<string, readonly string[]>>;
@@ -84,6 +87,7 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
     if (entity.query.mode === "endpoint") diagnostics.push(error("IL1401", `Entity '${entity.id}' declares an endpoint query, which is not generated yet. Use a static query and provide the data through the resolver protocol.`, `${path}.query.mode`));
   }
   const swiftNames = new Set<string>();
+  const handlerNames = new Set<string>();
   for (const [index, intent] of config.intents.entries()) {
     const path = `intents[${index}]`;
     diagnostics.push(...localizedDiagnostics(intent.title, config.app.locales, `${path}.title`));
@@ -110,6 +114,24 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       for (const [target, source] of Object.entries(intent.execution.mapping ?? {})) {
         if (!intent.parameters.some((parameter) => parameter.id === source)) diagnostics.push(error("IL1301", `Mapping '${target}' references unknown parameter '${source}'.`, `${path}.execution.mapping.${target}`));
       }
+      if (intent.execution.handler !== undefined) diagnostics.push(error("IL1301", "handler requires native execution.", `${path}.execution.handler`));
+    }
+    if (intent.execution.mode === "native") {
+      const handler = intent.execution.handler;
+      if (!handler) {
+        diagnostics.push(error("IL1301", "native execution requires a handler naming the Swift type the app implements.", `${path}.execution.handler`));
+      } else {
+        if (!/^[A-Z][A-Za-z0-9]*$/.test(handler)) diagnostics.push(error("IL1301", `Handler '${handler}' must be a Swift type name.`, `${path}.execution.handler`));
+        if (handlerNames.has(handler)) diagnostics.push(error("IL1601", `Handler '${handler}' is declared by more than one intent.`, `${path}.execution.handler`));
+        handlerNames.add(handler);
+      }
+      if (intent.execution.route !== undefined) diagnostics.push(error("IL1301", "native execution must not declare a route.", `${path}.execution.route`));
+      if (intent.execution.mapping !== undefined) diagnostics.push(error("IL1301", "native execution must not declare a mapping.", `${path}.execution.mapping`));
+    }
+    if (intent.execution.mode === "http") diagnostics.push(error("IL1401", "http execution is not generated yet.", `${path}.execution.mode`));
+    if (intent.result?.returns !== undefined) {
+      if (intent.execution.mode !== "native") diagnostics.push(error("IL1301", "result.returns requires native execution.", `${path}.result.returns`));
+      else if (!entityIds.has(intent.result.returns)) diagnostics.push(error("IL1301", `result.returns references unknown entity '${intent.result.returns}'.`, `${path}.result.returns`));
     }
     if (intent.risk?.level === "destructive" && intent.risk.confirmation !== "always") diagnostics.push(error("IL1501", "Destructive intents require confirmation: always.", `${path}.risk.confirmation`));
     diagnostics.push(...localizedDiagnostics(intent.risk?.confirmation_prompt, config.app.locales, `${path}.risk.confirmation_prompt`));
@@ -155,8 +177,11 @@ export function parseConfig(value: unknown): ParseResult {
         ...(parameter.values ? { values: parameter.values } : {}),
         ...(parameter.entity ? { entity: parameter.entity } : {})
       })),
+      mode: intent.execution.mode === "native" ? ("native" as const) : ("open_app" as const),
       route: intent.execution.route ?? "",
       mapping: intent.execution.mapping ?? {},
+      ...(intent.execution.handler ? { handler: intent.execution.handler } : {}),
+      ...(intent.result?.returns ? { returns: intent.result.returns } : {}),
       ...(intent.risk
         ? {
             risk: {

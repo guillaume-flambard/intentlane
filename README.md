@@ -10,7 +10,7 @@ Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plug
 
 Phase 3 is complete on paper: primitive and enum parameters, static App Entities with a resolver protocol, localized titles and prompts, the risk policy, a result dialog with a snippet view, a macOS runner in CI, and two example apps. Its gate (five pilots, two of them existing apps) is not measured either. The macOS target is proven separately by `apps/example-macos`, without Expo and without an Xcode project.
 
-Still out of scope: endpoint entity queries, native and HTTP execution, assistant schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+Still out of scope: endpoint entity queries, HTTP execution, assistant schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -197,6 +197,38 @@ func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippet
 
 The snippet view is declared once for the whole file. It shows the intent title and one row per parameter, using the same string conversions as the URL query, so an `enum` contributes its `rawValue`, an `entity` its identifier, and a `date` its `YYYY-MM-DD` form. An intent without parameters shows the title alone. Field labels are `LocalizedStringResource` values, so they read the `IntentLane` table like every other visible string.
 
+## Native execution
+
+`open_app` opens a URL and lets the app react. `native` is the other way around: the app does the work, and IntentLane only declares the shape.
+
+```yaml
+- id: pin_link
+  title: { en: Pin a link, fr: Épingler un lien }
+  parameters:
+    - { id: link, type: entity, entity: link, required: true }
+  execution:
+    mode: native
+    handler: PinLinkHandler
+  result:
+    dialog: { en: The link is pinned, fr: "Le lien est épinglé" }
+    returns: link
+```
+
+The generator emits the handler protocol, the main-actor registry and the `perform()` that reads it:
+
+```swift
+protocol PinLinkHandler {
+  func perform(link: IntentLaneLinkEntity) async throws -> IntentLaneLinkEntity
+}
+
+@MainActor
+enum IntentLaneIntentHandlers {
+  static var pin_link: (any PinLinkHandler)?
+}
+```
+
+The app registers its implementation at launch with `IntentLaneIntentHandlers.pin_link = PinLink()`. Until it does, `perform()` throws `IntentLaneHandlerError.missingHandler("pin_link")` instead of failing silently. `result.returns` names an entity of the contract, which adds `ReturnsValue<IntentLaneLinkEntity>` to the return type and makes the system carry the created or updated value. Without `returns`, `perform()` returns a dialog alone and the metadata records no output value. A `native` intent declares neither `route` nor `mapping`; `http` is refused with IL1401.
+
 ## Generated files
 
 IntentLane owns the output directory. The generator writes the Swift source, one strings table per non-default locale, and a manifest:
@@ -258,7 +290,7 @@ node apps/example-macos/verify.mjs
 
 The script generates the Swift, compiles it for the local macOS SDK, then runs `appintentsmetadataprocessor` from the Xcode toolchain and asserts the extracted metadata. The compile step needs both flags together, `-emit-const-values` and `-const-gather-protocols-list <protocols.json>`, or the compiler writes no `.swiftconstvalues` file and the processor refuses to run. Both flags exist in Xcode 27 and not before, so the script checks for the second one and stops with a clear message on an older toolchain.
 
-What the script proves: four actions, `outputFlags: 7` on each, `DeleteLink` as the only action with an explicit authentication policy, the `IntentLaneLinkEntity` entity, its `IntentLaneLinkQuery`, the `IntentLaneSaveLinkTag` enum, and three registered shortcuts.
+What the script proves: five actions, `outputFlags: 7` on the four `open_app` actions and `4` on the native `PinLink`, `DeleteLink` as the only action with an explicit authentication policy, the `IntentLaneLinkEntity` entity, its `IntentLaneLinkQuery`, the `IntentLaneSaveLinkTag` enum, the `IntentLaneLinkEntity` value returned by `PinLink`, and four registered shortcuts.
 
 What is still missing is the assistant schema layer. `systemProtocols`, `assistantDefinedSchemas` and `assistantDefinedSchemaTraits` come out empty on every action, so Siri treats these intents as custom actions instead of attaching them to the domains it already understands. Conforming an intent to an app schema (`@AppIntent(schema:)`, `@AppEntity(schema:)`, `@AppEnum(schema:)`) is the next step, and it is the same kind of deterministic boilerplate the compiler exists to produce.
 
@@ -319,3 +351,6 @@ This project is MIT licensed. See [LICENSE](LICENSE).
 - No intent conforms to an assistant schema. `systemProtocols`, `assistantDefinedSchemas` and `assistantDefinedSchemaTraits` come out empty in the extracted metadata, so Siri treats every generated intent as a custom action instead of attaching it to a domain it already understands. That is the gap the macOS target makes visible, and closing it is the next step.
 - The contract requires `min_ios` on every app, including a macOS target where it means nothing. Nothing reads it outside the Expo plugin, so it stays inert, but the field name is wrong for the platform.
 - A parameter named `url` used to collide with the local route URL in `perform()`, because the generator declared `let url = <route>` before building the snippet and the opened URL. The local variable is now `intentLaneURL`, a name a contract cannot produce, since parameter identifiers must match `/^[a-z][a-z0-9_]*$/`.
+- A `native` intent throws `IntentLaneHandlerError.missingHandler` until the app registers its handler. The registry is main-actor isolated and starts empty, so an app that forgets the registration gets a runtime error rather than a compile error.
+- The generator never checks that a native handler really returns the entity named by `result.returns`. The protocol states the type, the metadata carries the output type, and the app's implementation is on its own.
+- `native` does not yet accept an assistant schema. The interesting domains (`notes.createNote`, `calendar.createEvent`, `reminders.createReminder`, `mail.createDraft`) require the intent to return the created entity and to conform to a system protocol, which the native mode now makes possible, but the schema conformance itself is not generated.

@@ -266,3 +266,124 @@ describe("risk policy", () => {
     expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", path: "intents[0].risk.confirmation_prompt" }));
   });
 });
+
+const nativeEntity = {
+  id: "note",
+  title: { en: "Note", fr: "Note" },
+  identifier: "id",
+  display: { title: "title" },
+  query: { mode: "static" }
+};
+
+const withNative = (overrides: Record<string, unknown> = {}) => ({
+  ...base,
+  entities: [nativeEntity],
+  intents: [
+    {
+      ...base.intents[0],
+      parameters: [],
+      execution: { mode: "native", handler: "CreateNoteHandler", ...overrides }
+    }
+  ]
+});
+
+describe("native execution", () => {
+  it("normalizes native execution and its return value into the IR", () => {
+    const result = parseConfig({
+      ...withNative(),
+      intents: [{ ...withNative().intents[0], result: { dialog: { en: "Created", fr: "Créée" }, returns: "note" } }]
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]).toMatchObject({ mode: "native", handler: "CreateNoteHandler", returns: "note" });
+  });
+
+  it("requires a handler on a native intent", () => {
+    const result = parseConfig(withNative({ handler: undefined }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].execution.handler" })
+    );
+  });
+
+  it("requires the handler to be a Swift type name", () => {
+    const result = parseConfig(withNative({ handler: "create_note_handler" }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].execution.handler" })
+    );
+  });
+
+  it("rejects a handler declared by more than one intent", () => {
+    const config = withNative();
+    const result = parseConfig({
+      ...config,
+      intents: [config.intents[0], { ...config.intents[0], id: "archive_note" }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1601", path: "intents[1].execution.handler" })
+    );
+  });
+
+  it("rejects a route on a native intent", () => {
+    const result = parseConfig(withNative({ route: "/notes/new" }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].execution.route" })
+    );
+  });
+
+  it("rejects a mapping on a native intent", () => {
+    const result = parseConfig(withNative({ mapping: { title: "title" } }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].execution.mapping" })
+    );
+  });
+
+  it("rejects a handler on an open_app intent", () => {
+    const result = parseConfig({
+      ...base,
+      intents: [{ ...base.intents[0], execution: { mode: "open_app", route: "/ideas/new", handler: "CreateIdeaHandler" } }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].execution.handler" })
+    );
+  });
+
+  it("rejects a return value on an open_app intent", () => {
+    const result = parseConfig({
+      ...base,
+      entities: [nativeEntity],
+      intents: [{ ...base.intents[0], result: { returns: "note" } }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].result.returns" })
+    );
+  });
+
+  it("rejects a return value that references an unknown entity", () => {
+    const config = withNative();
+    const result = parseConfig({
+      ...config,
+      intents: [{ ...config.intents[0], result: { returns: "missing" } }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].result.returns" })
+    );
+  });
+
+  it("reports http execution as not generated yet", () => {
+    const result = parseConfig({
+      ...base,
+      intents: [{ ...base.intents[0], execution: { mode: "http" } }]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].execution.mode" })
+    );
+  });
+});

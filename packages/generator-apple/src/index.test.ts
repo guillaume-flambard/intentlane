@@ -610,3 +610,88 @@ describe("parameter named url", () => {
     expect(swift).toContain('(LocalizedStringResource("url", table: "IntentLane"), url)');
   });
 });
+
+const nativeConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  entities: [
+    {
+      id: "note",
+      title: { en: "Note", fr: "Note" },
+      identifier: "id",
+      display: { title: "title", subtitle: "status" },
+      query: { mode: "static" }
+    }
+  ],
+  intents: [
+    {
+      id: "create_note",
+      title: { en: "Create a note", fr: "Créer une note" },
+      parameters: [
+        { id: "title", type: "string", required: true, title: { en: "Note title", fr: "Titre de la note" } },
+        { id: "pinned", type: "boolean", required: false }
+      ],
+      execution: { mode: "native", handler: "CreateNoteHandler" },
+      risk: { level: "write", confirmation: "optional", authentication: "inherited" },
+      result: { dialog: { en: "Note created", fr: "Note créée" }, returns: "note" }
+    },
+    {
+      id: "archive_note",
+      title: { en: "Archive a note", fr: "Archiver une note" },
+      parameters: [{ id: "note", type: "entity", required: true, entity: "note" }],
+      execution: { mode: "native", handler: "ArchiveNoteHandler" },
+      result: { dialog: { en: "Note archived", fr: "Note archivée" } }
+    }
+  ]
+};
+
+describe("native execution", () => {
+  const swift = (): string => {
+    const result = parseConfig(nativeConfig);
+    if (!result.ir) throw new Error("Native fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("declares a handler protocol per native intent", () => {
+    const source = swift();
+    expect(source).toContain("protocol CreateNoteHandler {");
+    expect(source).toContain("func perform(title: String, pinned: Bool) async throws -> IntentLaneNoteEntity");
+    expect(source).toContain("protocol ArchiveNoteHandler {");
+    expect(source).toContain("func perform(note: IntentLaneNoteEntity) async throws");
+  });
+
+  it("registers the handlers on the main actor and throws when one is missing", () => {
+    const source = swift();
+    expect(source).toContain("enum IntentLaneHandlerError: Error {");
+    expect(source).toContain("case missingHandler(String)");
+    expect(source).toContain("@MainActor");
+    expect(source).toContain("enum IntentLaneIntentHandlers {");
+    expect(source).toContain("  static var create_note: (any CreateNoteHandler)?");
+    expect(source).toContain("  static var archive_note: (any ArchiveNoteHandler)?");
+    expect(source).toContain("    guard let handler = await IntentLaneIntentHandlers.create_note else {\n      throw IntentLaneHandlerError.missingHandler(\"create_note\")\n    }");
+  });
+
+  it("returns the handler value when the intent declares one", () => {
+    const source = swift();
+    expect(source).toContain("func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<IntentLaneNoteEntity> {");
+    expect(source).toContain("let value = try await handler.perform(title: title, pinned: pinned)");
+    expect(source).toContain("return .result(value: value, dialog: IntentDialog(LocalizedStringResource(\"Note created\", table: \"IntentLane\")))");
+  });
+
+  it("returns only a dialog when the intent declares no value", () => {
+    const source = swift();
+    expect(source).toContain("func perform() async throws -> some IntentResult & ProvidesDialog {");
+    expect(source).toContain("try await handler.perform(note: note)");
+    expect(source).toContain("return .result(dialog: IntentDialog(LocalizedStringResource(\"Note archived\", table: \"IntentLane\")))");
+  });
+
+  it("emits no handler registry when every intent opens the app", () => {
+    const result = parseConfig(config);
+    if (!result.ir) throw new Error("Open app fixture must parse");
+    expect(generateSwift(result.ir)).not.toContain("IntentLaneIntentHandlers");
+  });
+
+  it("matches the native Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});
