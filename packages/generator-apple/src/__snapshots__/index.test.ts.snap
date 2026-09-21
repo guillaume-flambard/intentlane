@@ -13,7 +13,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }
@@ -155,7 +157,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }
@@ -237,7 +241,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }
@@ -301,7 +307,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }
@@ -376,7 +384,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }
@@ -480,7 +490,9 @@ enum IntentLaneRoute {
     var components = URLComponents()
     components.scheme = scheme
     components.path = path
-    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    if !query.isEmpty {
+      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+    }
     return components.url ?? URL(string: "about:blank")!
   }
 }

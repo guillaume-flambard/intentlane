@@ -567,3 +567,23 @@ describe("results and snippets", () => {
     expect(swift).toContain("Text(fields[index].0).foregroundStyle(.secondary)");
   });
 });
+
+describe("route builder", () => {
+  const swiftFor = (source: unknown): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Route fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("leaves the query off the URL when an intent declares no parameter", () => {
+    const swift = swiftFor(multiIntentConfig);
+    expect(swift).toContain("    if !query.isEmpty {\n      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    }");
+    expect(swift).not.toContain("\n    components.queryItems =");
+  });
+
+  it("keeps the sorted query when an intent declares parameters", () => {
+    const swift = swiftFor(typedConfig);
+    expect(swift).toContain("if !query.isEmpty {");
+    expect(swift).toContain('"at": at.ISO8601Format()');
+  });
+});
