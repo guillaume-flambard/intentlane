@@ -437,7 +437,7 @@ describe("risk policy", () => {
   it("requests confirmation before the action when the contract requires it", () => {
     const statement = 'try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Delete this note?", table: "IntentLane")))';
     expect(body("DeleteNote")).toContain(statement);
-    expect(body("DeleteNote").indexOf(statement)).toBeLessThan(body("DeleteNote").indexOf("let url ="));
+    expect(body("DeleteNote").indexOf(statement)).toBeLessThan(body("DeleteNote").indexOf("let intentLaneURL ="));
   });
 
   it("falls back to the intent title when the contract declares no confirmation prompt", () => {
@@ -585,5 +585,28 @@ describe("route builder", () => {
     const swift = swiftFor(typedConfig);
     expect(swift).toContain("if !query.isEmpty {");
     expect(swift).toContain('"at": at.ISO8601Format()');
+  });
+});
+
+describe("parameter named url", () => {
+  const urlParameterConfig = {
+    ...config,
+    intents: [{
+      id: "save_link",
+      title: { en: "Save a link", fr: "Enregistrer un lien" },
+      parameters: [{ id: "url", type: "string", required: true }],
+      execution: { mode: "open_app", route: "/links/new", mapping: { url: "url" } },
+      result: { dialog: { en: "Link saved", fr: "Lien enregistré" } }
+    }]
+  };
+
+  it("keeps the local route URL out of the parameter name", () => {
+    const result = parseConfig(urlParameterConfig);
+    if (!result.ir) throw new Error("URL fixture must parse");
+    const swift = generateSwift(result.ir);
+    expect(swift).toContain("let intentLaneURL = IntentLaneRoute.make(");
+    expect(swift).toContain("opensIntent: OpenURLIntent(intentLaneURL)");
+    expect(swift).not.toContain("let url = IntentLaneRoute.make(");
+    expect(swift).toContain('(LocalizedStringResource("url", table: "IntentLane"), url)');
   });
 });

@@ -125,9 +125,9 @@ struct OpenIdea: AppIntent {
   var tag: IntentLaneTagEntity
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/ideas", query: ["idea": idea.id])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/ideas", query: ["idea": idea.id])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Open an idea", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Open an idea", table: "IntentLane"), fields: [(LocalizedStringResource("idea", table: "IntentLane"), idea.id), (LocalizedStringResource("tag", table: "IntentLane"), tag.id)])
     )
@@ -191,9 +191,9 @@ struct CreateIdea: AppIntent {
   var title: String
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title)])
     )
@@ -206,9 +206,9 @@ struct OpenInbox: AppIntent {
 
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/inbox", query: [:])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/inbox", query: [:])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Open the inbox", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Open the inbox", table: "IntentLane"), fields: [])
     )
@@ -275,9 +275,9 @@ struct CreateIdea: AppIntent {
   var title: String
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title)])
     )
@@ -360,9 +360,9 @@ struct CreateIdea: AppIntent {
   var priority: IntentLaneCreateIdeaPriority
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Create an idea", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("Idea title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("Priority", table: "IntentLane"), priority.rawValue)])
     )
@@ -418,9 +418,9 @@ struct ArchiveNote: AppIntent {
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Archive a note", table: "IntentLane")))
-    let url = IntentLaneRoute.make(scheme: "example", path: "/notes/archive", query: [:])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/notes/archive", query: [:])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("The note is archived", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Archive a note", table: "IntentLane"), fields: [])
     )
@@ -434,9 +434,9 @@ struct CreateNote: AppIntent {
 
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/notes/new", query: [:])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/notes/new", query: [:])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Create a note", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create a note", table: "IntentLane"), fields: [])
     )
@@ -451,9 +451,9 @@ struct DeleteNote: AppIntent {
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Delete this note?", table: "IntentLane")))
-    let url = IntentLaneRoute.make(scheme: "example", path: "/notes/delete", query: [:])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/notes/delete", query: [:])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("The note is deleted", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Delete a note", table: "IntentLane"), fields: [])
     )
@@ -466,9 +466,9 @@ struct ReadNote: AppIntent {
 
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/notes/read", query: [:])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/notes/read", query: [:])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Read a note", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Read a note", table: "IntentLane"), fields: [])
     )
@@ -557,9 +557,9 @@ struct CreateIdea: AppIntent {
   var priority: IntentLaneCreateIdeaPriority
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
-    let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["at": at.ISO8601Format(), "due": String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0), "effort": String(effort), "pinned": pinned ? "true" : "false", "priority": priority.rawValue, "ratio": String(ratio), "title": title])
+    let intentLaneURL = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["at": at.ISO8601Format(), "due": String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0), "effort": String(effort), "pinned": pinned ? "true" : "false", "priority": priority.rawValue, "ratio": String(ratio), "title": title])
     return .result(
-      opensIntent: OpenURLIntent(url),
+      opensIntent: OpenURLIntent(intentLaneURL),
       dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("ratio", table: "IntentLane"), String(ratio)), (LocalizedStringResource("pinned", table: "IntentLane"), pinned ? "true" : "false"), (LocalizedStringResource("due", table: "IntentLane"), String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0)), (LocalizedStringResource("at", table: "IntentLane"), at.ISO8601Format()), (LocalizedStringResource("priority", table: "IntentLane"), priority.rawValue)])
     )

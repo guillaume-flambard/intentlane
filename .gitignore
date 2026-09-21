@@ -5,3 +5,4 @@ coverage/
 apps/*/ios/
 apps/*/android/
 apps/*/.expo/
+apps/*/build/

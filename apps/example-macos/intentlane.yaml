@@ -1,0 +1,187 @@
+schema: "0.1"
+
+app:
+  id: "dev.intentlane.shelf"
+  name: "Shelf"
+  url_scheme: "shelf"
+  min_ios: "18.0"
+  locales:
+    - en
+    - fr
+
+entities:
+  - id: link
+    title:
+      en: Link
+      fr: Lien
+    identifier: id
+    display:
+      title: title
+      subtitle: tag
+    query:
+      mode: static
+
+intents:
+  - id: open_shelf
+    title:
+      en: Open the shelf
+      fr: Ouvrir l'étagère
+    description:
+      en: Show the Shelf window with every saved link
+      fr: Afficher la fenêtre Shelf avec tous les liens enregistrés
+    parameters: []
+    execution:
+      mode: open_app
+      route: /shelf
+
+  - id: save_link
+    title:
+      en: Save a link
+      fr: Enregistrer un lien
+    description:
+      en: Add a link to Shelf
+      fr: Ajouter un lien à Shelf
+    parameters:
+      - id: url
+        type: string
+        required: true
+        title:
+          en: Link address
+          fr: Adresse du lien
+        prompt:
+          en: Which address should Shelf save?
+          fr: Quelle adresse Shelf doit-il enregistrer ?
+      - id: title
+        type: string
+        required: false
+        title:
+          en: Link title
+          fr: Titre du lien
+        prompt:
+          en: What is the link called?
+          fr: Comment s'appelle le lien ?
+      - id: tag
+        type: enum
+        required: false
+        title:
+          en: Tag
+          fr: Étiquette
+        prompt:
+          en: Which tag fits best?
+          fr: Quelle étiquette convient le mieux ?
+        values:
+          read_later:
+            en: Read later
+            fr: À lire plus tard
+          reference:
+            en: Reference
+            fr: Référence
+          work:
+            en: Work
+            fr: Travail
+      - id: pinned
+        type: boolean
+        required: false
+        title:
+          en: Pinned
+          fr: Épinglé
+        prompt:
+          en: Should it stay at the top?
+          fr: Doit-il rester en haut ?
+    execution:
+      mode: open_app
+      route: /links/new
+      mapping:
+        url: url
+        title: title
+        tag: tag
+        pinned: pinned
+    risk:
+      level: write
+      confirmation: optional
+      authentication: inherited
+    result:
+      dialog:
+        en: Link saved in Shelf
+        fr: Lien enregistré dans Shelf
+    shortcuts:
+      phrases:
+        en:
+          - "Save a link in ${appName}"
+        fr:
+          - "Enregistrer un lien dans ${appName}"
+
+  - id: open_link
+    title:
+      en: Open a link
+      fr: Ouvrir un lien
+    description:
+      en: Open a saved link from Shelf
+      fr: Ouvrir un lien enregistré depuis Shelf
+    parameters:
+      - id: link
+        type: entity
+        entity: link
+        required: true
+        title:
+          en: Link
+          fr: Lien
+        prompt:
+          en: Which link should open?
+          fr: Quel lien faut-il ouvrir ?
+    execution:
+      mode: open_app
+      route: /links
+      mapping:
+        link: link
+    result:
+      dialog:
+        en: Opening the link
+        fr: Ouverture du lien
+    shortcuts:
+      phrases:
+        en:
+          - "Open a link in ${appName}"
+        fr:
+          - "Ouvrir un lien dans ${appName}"
+
+  - id: delete_link
+    title:
+      en: Delete a link
+      fr: Supprimer un lien
+    description:
+      en: Remove a link from Shelf
+      fr: Retirer un lien de Shelf
+    parameters:
+      - id: link
+        type: entity
+        entity: link
+        required: true
+        title:
+          en: Link
+          fr: Lien
+        prompt:
+          en: Which link should Shelf delete?
+          fr: Quel lien Shelf doit-il supprimer ?
+    execution:
+      mode: open_app
+      route: /links/delete
+      mapping:
+        link: link
+    risk:
+      level: destructive
+      confirmation: always
+      authentication: required
+      confirmation_prompt:
+        en: Delete this link?
+        fr: Supprimer ce lien ?
+    result:
+      dialog:
+        en: The link is deleted
+        fr: "Le lien est supprimé"
+    shortcuts:
+      phrases:
+        en:
+          - "Delete a link in ${appName}"
+        fr:
+          - "Supprimer un lien dans ${appName}"

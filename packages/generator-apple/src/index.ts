@@ -153,7 +153,7 @@ function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: stri
   const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities, locale)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   const fields = intent.parameters.map((parameter) => `(${localizedResource(parameterTitle(parameter, locale))}, ${queryValue(intent, parameter.id)})`).join(", ");
-  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {\n${confirmation}    let url = ${routeExpression(intent, scheme)}\n    return .result(\n      opensIntent: OpenURLIntent(url),\n      dialog: IntentDialog(${localizedResource(dialog)}),\n      view: IntentLaneSnippetView(title: ${localizedResource(title)}, fields: [${fields}])\n    )\n  }\n}`;
+  return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {\n${confirmation}    let intentLaneURL = ${routeExpression(intent, scheme)}\n    return .result(\n      opensIntent: OpenURLIntent(intentLaneURL),\n      dialog: IntentDialog(${localizedResource(dialog)}),\n      view: IntentLaneSnippetView(title: ${localizedResource(title)}, fields: [${fields}])\n    )\n  }\n}`;
 }
 
 function emitShortcuts(ir: ConfigIR, locale: string): string {

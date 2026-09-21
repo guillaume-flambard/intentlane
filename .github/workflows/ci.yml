@@ -78,6 +78,29 @@ jobs:
           xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator /tmp/intentlane-example/IntentLaneGenerated.swift -o /tmp/example.o
           ls -l /tmp/reference.o /tmp/example.o
 
+  macos:
+    name: Extract the App Intents metadata for macOS
+    runs-on: macos-26
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+      - name: Install Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Report the toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+      - name: Verify the macOS example
+        run: node apps/example-macos/verify.mjs
+
   simulator:
     name: Build the example app for the simulator
     runs-on: macos-26

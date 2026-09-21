@@ -1,6 +1,6 @@
 # IntentLane
 
-IntentLane is a deterministic compiler from a versioned YAML contract to Apple App Intents for Expo applications. No model runs in the build path: the same YAML always produces the same Swift.
+IntentLane is a deterministic compiler from a versioned YAML contract to Apple App Intents. No model runs in the build path: the same YAML always produces the same Swift. The generated Swift is not platform-specific: it compiles for iOS and for macOS, and the Xcode toolchain extracts the same App Intents metadata from either. Expo is the first integration path, because an Expo app regenerates its native directory on every prebuild and needs a plugin to put the Swift back; a plain Swift target just commits the generated file. See [macOS](#macos).
 
 ## Status
 
@@ -8,7 +8,9 @@ Phase 1 is done: the `0.1` contract validates, and the generator emits compilabl
 
 Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift and the `<locale>.lproj` resources in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to an installed simulator build. The gate (an external user following the quickstart in under 30 minutes) is not measured yet.
 
-Still out of scope: endpoint entity queries, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+Phase 3 is complete on paper: primitive and enum parameters, static App Entities with a resolver protocol, localized titles and prompts, the risk policy, a result dialog with a snippet view, a macOS runner in CI, and two example apps. Its gate (five pilots, two of them existing apps) is not measured either. The macOS target is proven separately by `apps/example-macos`, without Expo and without an Xcode project.
+
+Still out of scope: endpoint entity queries, native and HTTP execution, assistant schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -244,6 +246,24 @@ Rebuild after a change to native code, to `app.json`, or to the Expo SDK. Otherw
 
 Once the app is installed, iOS indexes its App Shortcuts, so they appear in the Shortcuts app and work with Siri without any registration step. That is how App Shortcuts are designed: they are "available as soon as someone installs your app". Run `intentlane generate --check` before a build to confirm the Swift still matches the contract.
 
+## macOS
+
+The generated Swift is not iOS-specific. The same file, with no edit, compiles for macOS and the Xcode toolchain extracts the same App Intents metadata from it. That matters on macOS 27, where Siri and Apple Intelligence only see an app's actions and content when the app declares them with App Intents.
+
+`apps/example-macos` is the proof, and it needs no Xcode project. It holds a contract (`intentlane.yaml`), the protocol list the compiler expects (`protocols.json`), and `verify.mjs`, which runs the whole chain:
+
+```sh
+node apps/example-macos/verify.mjs
+```
+
+The script generates the Swift, compiles it for the local macOS SDK, then runs `appintentsmetadataprocessor` from the Xcode toolchain and asserts the extracted metadata. The compile step needs both flags together, `-emit-const-values` and `-const-gather-protocols-list <protocols.json>`, or the compiler writes no `.swiftconstvalues` file and the processor refuses to run.
+
+What the script proves: four actions, `outputFlags: 7` on each, `DeleteLink` as the only action with an explicit authentication policy, the `IntentLaneLinkEntity` entity, its `IntentLaneLinkQuery`, the `IntentLaneSaveLinkTag` enum, and three registered shortcuts.
+
+What is still missing is the assistant schema layer. `systemProtocols`, `assistantDefinedSchemas` and `assistantDefinedSchemaTraits` come out empty on every action, so Siri treats these intents as custom actions instead of attaching them to the domains it already understands. Conforming an intent to an app schema (`@AppIntent(schema:)`, `@AppEntity(schema:)`, `@AppEnum(schema:)`) is the next step, and it is the same kind of deterministic boilerplate the compiler exists to produce.
+
+One contract wart: the schema requires `min_ios` on every app, and it is meaningless for a macOS target. The macOS example carries it and the field stays inert, because nothing here reads it.
+
 ## Verification
 
 ```sh
@@ -252,16 +272,18 @@ pnpm build
 pnpm validate
 pnpm exec tsx packages/cli/src/index.ts generate --output .intentlane/generated --check
 xcrun --sdk iphonesimulator swiftc -c -target arm64-apple-ios18.0-simulator .intentlane/generated/IntentLaneGenerated.swift -o /tmp/intentlane-generated.o
+node apps/example-macos/verify.mjs
 ```
 
 The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml) is the executable reference fixture. Compiler rules for agents live in [AGENT-GUIDE.md](AGENT-GUIDE.md).
 
 ## Continuous integration
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main`, on every pull request, and on demand. It has three jobs.
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main`, on every pull request, and on demand. It has four jobs.
 
 - `checks`, on `ubuntu-latest`: installs from the lockfile, typechecks, runs the test suite, validates the reference contract, regenerates the artifacts, fails when they are stale, and generates a second copy in `/tmp` to prove the output is byte-for-byte deterministic.
 - `swift`, a matrix over `macos-15` and `macos-26`: compiles the generated Swift for both the reference fixture and the example app with `swiftc` against the iOS simulator SDK. This is the minimal Xcode matrix, and each run prints the Xcode and SDK versions it used.
+- `macos`, on `macos-26`: runs `node apps/example-macos/verify.mjs`, which generates the macOS contract, compiles it for the runner's macOS SDK, extracts the App Intents metadata with `appintentsmetadataprocessor`, and asserts the actions, the flags, the authentication policy, the entity, the query, the enum and the shortcuts. The script reads the SDK version and the Xcode build from the machine, so it adapts to whatever toolchain the runner ships.
 - `simulator`, on `macos-26`: prebuilds `apps/example-expo`, builds the Release app for the simulator with `xcodebuild`, then reads `Metadata.appintents/extract.actionsdata` and the compiled `fr.lproj/IntentLane.strings` from the product. It asserts the four actions exist, that every action carries `outputFlags: 7` (dialog, snippet view and opened URL), that `DeleteIdea` is the only one with an explicit authentication policy, that the entity and its query are indexed, that the shortcuts are registered, and that the French table holds the translated confirmation prompt and parameter title.
 
 The generated Swift is compiled and built on macOS runners only; the fast checks run everywhere.
@@ -294,3 +316,6 @@ This project is MIT licensed. See [LICENSE](LICENSE).
 - The confirmation action label is system-provided. `ConfirmationActionName` has no public initializer, so the accept and decline labels follow the system language instead of the contract.
 - The snippet is generic and always shown. Every generated intent returns `IntentLaneSnippetView`, with no contract switch to disable it and no hook for an app-provided view. An app that wants its own snippet would have to edit the generated file, which regeneration overwrites.
 - The snippet imports SwiftUI into the generated file. A target that does not link SwiftUI would fail to compile it, and nothing in the contract warns about that.
+- No intent conforms to an assistant schema. `systemProtocols`, `assistantDefinedSchemas` and `assistantDefinedSchemaTraits` come out empty in the extracted metadata, so Siri treats every generated intent as a custom action instead of attaching it to a domain it already understands. That is the gap the macOS target makes visible, and closing it is the next step.
+- The contract requires `min_ios` on every app, including a macOS target where it means nothing. Nothing reads it outside the Expo plugin, so it stays inert, but the field name is wrong for the platform.
+- A parameter named `url` used to collide with the local route URL in `perform()`, because the generator declared `let url = <route>` before building the snippet and the opened URL. The local variable is now `intentLaneURL`, a name a contract cannot produce, since parameter identifiers must match `/^[a-z][a-z0-9_]*$/`.
