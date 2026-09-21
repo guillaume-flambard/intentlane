@@ -207,7 +207,7 @@ Writes go to a temporary file and are renamed into place, so a failed run cannot
 
 ## Example app
 
-`apps/example-expo` is a minimal Expo app with two intents, English and French copy, and the plugin declared. It typechecks, and an iOS prebuild registers the generated Swift in the Sources phase and `fr.lproj/IntentLane.strings` in the Resources phase:
+`apps/example-expo` is Kollio, a Kollio-like idea list that proves the quickstart end to end. It declares four intents (`open_inbox`, `create_idea`, `open_idea`, `delete_idea`), one `idea` entity, and English and French copy. The screen lists ideas, and it routes the URLs the intents open: create an idea from a query, open one, delete one. The URL parser and the router live in `apps/example-expo/src` and are unit tested. An iOS prebuild registers the generated Swift in the Sources phase and `fr.lproj/IntentLane.strings` in the Resources phase:
 
 ```sh
 cd apps/example-expo
