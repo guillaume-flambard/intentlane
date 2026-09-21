@@ -37,7 +37,7 @@
 - App Entities statiques/endpoint. **fait** pour `static` : l'entité génère une `AppEntity`, une `EntityQuery` et un protocole de résolution que l'application implémente et enregistre dans `IntentLaneEntityResolvers`, les paramètres `entity` référencent une entité par id et envoient `<valeur>.id` dans la query, `display.title` et `display.subtitle` nomment les propriétés affichées, et les titres d'entité alimentent la table `IntentLane`. `query.mode: endpoint` est refusé en IL1401 (pas de réseau généré). Prouvé par `swiftc` et par un build simulateur Release où `extract.actionsdata` contient l'entité, sa requête et le paramètre typé.
 - Localisation en/fr. **fait** : `title` et `prompt` d'un paramètre sont localisés dans la table `IntentLane` (le `title` alimente aussi le nom du type d'un `enum`), avec repli sur l'identifiant brut quand aucun `title` n'est déclaré, et IL1201 si la locale par défaut manque. Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où chaque paramètre porte un `title.key` localisé (par exemple `Idea title`, `Due date`, `Priority`) au lieu de son identifiant.
 - Confirmation et politique de risque. **fait** : `confirmation: always` génère un `requestConfirmation` avant l'action, `authentication: required` et `none` génèrent une `authenticationPolicy` explicite, `inherited` n'émet rien, et `confirmation_prompt` alimente le dialogue et la table `IntentLane` (repli sur le titre de l'intention). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `DeleteIdea` porte `authenticationPolicy: 1` avec `isAuthPolExplicit: true` alors que les autres intentions restent à `0`.
-- Résultat/dialogue et snippet simple.
+- Résultat/dialogue et snippet simple. **fait** : `perform()` retourne `ProvidesDialog & ShowsSnippetView & OpensIntent`, une vue `IntentLaneSnippetView` est déclarée une fois par fichier et affiche le titre de l'intention plus une ligne par paramètre (conversion identique à la query, libellés dans la table `IntentLane`, aucune ligne pour une intention sans paramètre). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `outputFlags` passe de `5` à `7` pour les quatre intentions quand la conformance est ajoutée.
 - CI macOS et matrice Xcode minimale.
 - Exemple Kollio-like.
 
@@ -87,5 +87,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(apple): generate a Shortcuts snippet for the open_app result`.
+Ticket suivant : `feat(ci): run the test suite and a simulator build on macOS`.
 

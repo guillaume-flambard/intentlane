@@ -6,6 +6,7 @@ exports[`entities > matches the entity Swift snapshot 1`] = `
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -14,6 +15,25 @@ enum IntentLaneRoute {
     components.path = path
     components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
     return components.url ?? URL(string: "about:blank")!
+  }
+}
+
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
   }
 }
 
@@ -102,9 +122,13 @@ struct OpenIdea: AppIntent {
   @Parameter(title: LocalizedStringResource("tag", table: "IntentLane"))
   var tag: IntentLaneTagEntity
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas", query: ["idea": idea.id])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Open an idea", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Open an idea", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Open an idea", table: "IntentLane"), fields: [(LocalizedStringResource("idea", table: "IntentLane"), idea.id), (LocalizedStringResource("tag", table: "IntentLane"), tag.id)])
+    )
   }
 }
 
@@ -124,6 +148,7 @@ exports[`generateSwift > matches the multi-intent Swift snapshot 1`] = `
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -135,6 +160,25 @@ enum IntentLaneRoute {
   }
 }
 
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
+  }
+}
+
 struct CreateIdea: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Create an idea", table: "IntentLane")
   static let description = IntentDescription(LocalizedStringResource("Add a new idea", table: "IntentLane"))
@@ -142,9 +186,13 @@ struct CreateIdea: AppIntent {
   @Parameter(title: LocalizedStringResource("title", table: "IntentLane"))
   var title: String
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title)])
+    )
   }
 }
 
@@ -153,9 +201,13 @@ struct OpenInbox: AppIntent {
 
 
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/inbox", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Open the inbox", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Open the inbox", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Open the inbox", table: "IntentLane"), fields: [])
+    )
   }
 }
 
@@ -178,6 +230,7 @@ exports[`generateSwift > matches the reference Swift snapshot 1`] = `
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -189,6 +242,25 @@ enum IntentLaneRoute {
   }
 }
 
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
+  }
+}
+
 struct CreateIdea: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Create an idea", table: "IntentLane")
   static let description = IntentDescription(LocalizedStringResource("Add a new idea", table: "IntentLane"))
@@ -196,9 +268,13 @@ struct CreateIdea: AppIntent {
   @Parameter(title: LocalizedStringResource("title", table: "IntentLane"))
   var title: String
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title)])
+    )
   }
 }
 
@@ -218,6 +294,7 @@ exports[`localized parameters > matches the localized parameter Swift snapshot 1
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -226,6 +303,25 @@ enum IntentLaneRoute {
     components.path = path
     components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
     return components.url ?? URL(string: "about:blank")!
+  }
+}
+
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
   }
 }
 
@@ -255,9 +351,13 @@ struct CreateIdea: AppIntent {
   @Parameter(title: LocalizedStringResource("Priority", table: "IntentLane"))
   var priority: IntentLaneCreateIdeaPriority
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Create an idea", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Create an idea", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("Idea title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("Priority", table: "IntentLane"), priority.rawValue)])
+    )
   }
 }
 "
@@ -269,6 +369,7 @@ exports[`risk policy > matches the risk Swift snapshot 1`] = `
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -280,16 +381,39 @@ enum IntentLaneRoute {
   }
 }
 
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
+  }
+}
+
 struct ArchiveNote: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Archive a note", table: "IntentLane")
   static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
 
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Archive a note", table: "IntentLane")))
     let url = IntentLaneRoute.make(scheme: "example", path: "/notes/archive", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("The note is archived", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("The note is archived", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Archive a note", table: "IntentLane"), fields: [])
+    )
   }
 }
 
@@ -299,9 +423,13 @@ struct CreateNote: AppIntent {
 
 
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/notes/new", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Create a note", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Create a note", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Create a note", table: "IntentLane"), fields: [])
+    )
   }
 }
 
@@ -311,10 +439,14 @@ struct DeleteNote: AppIntent {
 
 
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     try await requestConfirmation(actionName: .continue, dialog: IntentDialog(LocalizedStringResource("Delete this note?", table: "IntentLane")))
     let url = IntentLaneRoute.make(scheme: "example", path: "/notes/delete", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("The note is deleted", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("The note is deleted", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Delete a note", table: "IntentLane"), fields: [])
+    )
   }
 }
 
@@ -323,9 +455,13 @@ struct ReadNote: AppIntent {
 
 
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/notes/read", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Read a note", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Read a note", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Read a note", table: "IntentLane"), fields: [])
+    )
   }
 }
 "
@@ -337,6 +473,7 @@ exports[`typed parameters > matches the typed Swift snapshot 1`] = `
 
 import AppIntents
 import Foundation
+import SwiftUI
 
 enum IntentLaneRoute {
   static func make(scheme: String, path: String, query: [String: String]) -> URL {
@@ -345,6 +482,25 @@ enum IntentLaneRoute {
     components.path = path
     components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
     return components.url ?? URL(string: "about:blank")!
+  }
+}
+
+struct IntentLaneSnippetView: View {
+  let title: LocalizedStringResource
+  let fields: [(LocalizedStringResource, String)]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title).font(.headline)
+      ForEach(fields.indices, id: \\.self) { index in
+        HStack {
+          Text(fields[index].0).foregroundStyle(.secondary)
+          Spacer()
+          Text(fields[index].1)
+        }
+      }
+    }
+    .padding()
   }
 }
 
@@ -388,9 +544,13 @@ struct CreateIdea: AppIntent {
   @Parameter(title: LocalizedStringResource("priority", table: "IntentLane"))
   var priority: IntentLaneCreateIdeaPriority
 
-  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
+  func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["at": at.ISO8601Format(), "due": String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0), "effort": String(effort), "pinned": pinned ? "true" : "false", "priority": priority.rawValue, "ratio": String(ratio), "title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")))
+    return .result(
+      opensIntent: OpenURLIntent(url),
+      dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
+      view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("ratio", table: "IntentLane"), String(ratio)), (LocalizedStringResource("pinned", table: "IntentLane"), pinned ? "true" : "false"), (LocalizedStringResource("due", table: "IntentLane"), String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0)), (LocalizedStringResource("at", table: "IntentLane"), at.ISO8601Format()), (LocalizedStringResource("priority", table: "IntentLane"), priority.rawValue)])
+    )
   }
 }
 

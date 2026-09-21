@@ -527,3 +527,43 @@ describe("localized parameters", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+describe("results and snippets", () => {
+  const swiftFor = (source: unknown): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Snippet fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("returns a snippet view alongside the dialog and the opened URL", () => {
+    const swift = swiftFor(localizedParameterConfig);
+    expect(swift).toContain("func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {");
+    expect(swift).toContain('view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("Idea title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("Priority", table: "IntentLane"), priority.rawValue)])');
+  });
+
+  it("converts every parameter value into a snippet field", () => {
+    const swift = swiftFor(typedConfig);
+    expect(swift).toContain('(LocalizedStringResource("effort", table: "IntentLane"), String(effort))');
+    expect(swift).toContain('(LocalizedStringResource("ratio", table: "IntentLane"), String(ratio))');
+    expect(swift).toContain('(LocalizedStringResource("pinned", table: "IntentLane"), pinned ? "true" : "false")');
+    expect(swift).toContain('(LocalizedStringResource("due", table: "IntentLane"), String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0))');
+    expect(swift).toContain('(LocalizedStringResource("at", table: "IntentLane"), at.ISO8601Format())');
+    expect(swift).toContain('(LocalizedStringResource("priority", table: "IntentLane"), priority.rawValue)');
+  });
+
+  it("sends the entity identifier into the snippet field", () => {
+    expect(swiftFor(entityConfig)).toContain('(LocalizedStringResource("idea", table: "IntentLane"), idea.id)');
+  });
+
+  it("shows an empty snippet for an intent without parameters", () => {
+    const swift = swiftFor(multiIntentConfig);
+    expect(swift).toContain('view: IntentLaneSnippetView(title: LocalizedStringResource("Open the inbox", table: "IntentLane"), fields: [])');
+  });
+
+  it("declares the shared snippet view once and imports SwiftUI", () => {
+    const swift = swiftFor(multiIntentConfig);
+    expect(swift).toContain("import SwiftUI");
+    expect(swift.match(/struct IntentLaneSnippetView: View \{/g)).toHaveLength(1);
+    expect(swift).toContain("Text(fields[index].0).foregroundStyle(.secondary)");
+  });
+});

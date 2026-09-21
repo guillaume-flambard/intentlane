@@ -176,6 +176,23 @@ The generator turns the confirmation and authentication fields into App Intents 
 
 The `level` participates in validation rather than generation: a `destructive` intent without `confirmation: always` is rejected with IL1501, and a confirmation prompt missing its default locale with IL1201.
 
+## Results and snippets
+
+Every generated intent returns a result that combines three things: the opened URL, the spoken dialog, and a SwiftUI snippet shown by the Shortcuts app and Siri:
+
+```swift
+func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent {
+  let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
+  return .result(
+    opensIntent: OpenURLIntent(url),
+    dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
+    view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("Idea title", table: "IntentLane"), title)])
+  )
+}
+```
+
+The snippet view is declared once for the whole file. It shows the intent title and one row per parameter, using the same string conversions as the URL query, so an `enum` contributes its `rawValue`, an `entity` its identifier, and a `date` its `YYYY-MM-DD` form. An intent without parameters shows the title alone. Field labels are `LocalizedStringResource` values, so they read the `IntentLane` table like every other visible string.
+
 ## Generated files
 
 IntentLane owns the output directory. The generator writes the Swift source, one strings table per non-default locale, and a manifest:
@@ -254,3 +271,5 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 - The `sensitive` level adds no constraint of its own. The generator enforces `confirmation` and `authentication`, and only `destructive` triggers a validation rule, so `sensitive` currently documents intent without changing the output.
 - `confirmation: never` cannot override the user's own Shortcuts setting; iOS may still ask before running an intent.
 - The confirmation action label is system-provided. `ConfirmationActionName` has no public initializer, so the accept and decline labels follow the system language instead of the contract.
+- The snippet is generic and always shown. Every generated intent returns `IntentLaneSnippetView`, with no contract switch to disable it and no hook for an app-provided view. An app that wants its own snippet would have to edit the generated file, which regeneration overwrites.
+- The snippet imports SwiftUI into the generated file. A target that does not link SwiftUI would fail to compile it, and nothing in the contract warns about that.

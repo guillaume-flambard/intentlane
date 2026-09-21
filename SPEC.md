@@ -124,6 +124,8 @@ La version 0.1 ne génère que la requête `static`. Un `query.mode` valant `end
 
 Construit une URL interne sûre. `route` doit commencer par `/`. `mapping` associe query/path/state aux paramètres déclarés. Chaque valeur est convertie en chaîne dans la query : la valeur brute pour `string`, `String(valeur)` pour `integer` et `number`, `"true"` ou `"false"` pour `boolean`, ISO 8601 pour `datetime`, `YYYY-MM-DD` pour `date`, `rawValue` pour `enum`.
 
+Le résultat généré combine l'URL ouverte, le dialogue et un snippet : `perform()` retourne `some IntentResult & ProvidesDialog & ShowsSnippetView & OpensIntent`. Le snippet est une vue SwiftUI déclarée une seule fois dans le fichier, qui affiche le titre de l'intention et une ligne par paramètre, avec la même conversion de valeur que la query. Un paramètre `entity` y contribue son identifiant.
+
 ### `native`
 
 Référence un handler Swift enregistré, par exemple `handler: CreateIdeaHandler`. Le générateur émet le protocole attendu mais jamais la logique métier.
