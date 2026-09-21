@@ -80,7 +80,7 @@ jobs:
 
   macos:
     name: Extract the App Intents metadata for macOS
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - name: Check out the repository
         uses: actions/checkout@v5

@@ -65,6 +65,11 @@ try {
 
 assert(existsSync(processor), `Unable to locate 'appintentsmetadataprocessor' at ${processor}.`);
 
+assert(
+  capture(swiftc, ["-help-hidden"]).includes("-const-gather-protocols-list"),
+  `Xcode ${xcodeVersion} cannot extract App Intents metadata: its swiftc has no '-const-gather-protocols-list'. Xcode 27 or newer is required.`
+);
+
 rmSync(buildDirectory, { recursive: true, force: true });
 mkdirSync(buildDirectory, { recursive: true });
 
