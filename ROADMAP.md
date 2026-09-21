@@ -45,7 +45,7 @@
 
 ## Phase 4 — bêta open source (semaines 5–6)
 
-- Documentation publique.
+- Documentation publique. **partiel** : le dépôt est public et sous licence MIT, avec `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et `AGENT-GUIDE.md` dans le dépôt. Il n'y a pas encore de site de documentation ni de référence CLI publiée.
 - CLI publiée sur npm.
 - Plugin `@intentlane/expo`.
 - Diagnostics stables.

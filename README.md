@@ -264,6 +264,14 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 
 The generated Swift is compiled and built on macOS runners only; the fast checks run everywhere.
 
+## Contributing
+
+IntentLane is at the pilot stage, so the most useful thing you can do is run it on an Expo app you already ship and report where the contract got in the way. The Phase 3 gate needs five pilots, two of them existing apps.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) says what helps most, what to include in a bug report, and the rules the code follows. The short version: a new capability starts in the schema with tests that reject the invalid shapes, generation stays deterministic and offline, and every Swift emission has a golden snapshot.
+
+This project is MIT licensed. See [LICENSE](LICENSE).
+
 ## Open risks
 
 - An intent without `shortcuts.phrases` for the default locale is reachable programmatically but never from Siri, and it is intentionally left out of the `AppShortcutsProvider`. Whether that deserves its own diagnostic is undecided.
