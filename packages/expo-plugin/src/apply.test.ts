@@ -2,7 +2,13 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applyIntentLane, ensureGeneratedSourceRegistered, resolveGeneratorInvocation } from "./apply.cjs";
+import {
+  applyIntentLane,
+  ensureGeneratedSourceRegistered,
+  ensureLocaleResourcesRegistered,
+  localeResources,
+  resolveGeneratorInvocation
+} from "./apply.cjs";
 
 async function projectWithConfig(contents = 'schema: "0.1"\n'): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "intentlane-plugin-"));
@@ -115,6 +121,7 @@ describe("applyIntentLane", () => {
     const xcodeUtils = {
       ensureGroupRecursively: () => ({ children: [] }),
       addBuildSourceFileToGroup,
+      addResourceFileToGroup: vi.fn(),
       getApplicationNativeTarget: () => ({ uuid: "TARGET-UUID" })
     };
 
@@ -138,7 +145,10 @@ describe("applyIntentLane", () => {
       outputDirectory: "/app/ios/Example/IntentLaneGenerated"
     });
 
-    xcodeMods[0]?.({ modRequest: { projectName: "Example" }, modResults: { id: "project" } });
+    xcodeMods[0]?.({
+      modRequest: { projectName: "Example", platformProjectRoot: "/app/ios" },
+      modResults: { id: "project" }
+    });
     expect(addBuildSourceFileToGroup).toHaveBeenCalledTimes(1);
   });
 
@@ -155,6 +165,7 @@ describe("applyIntentLane", () => {
       xcodeUtils: {
         ensureGroupRecursively: () => ({ children: [] }),
         addBuildSourceFileToGroup: () => undefined,
+        addResourceFileToGroup: () => undefined,
         getApplicationNativeTarget: () => ({ uuid: "TARGET-UUID" })
       },
       projectRoot: "/app",
@@ -164,5 +175,78 @@ describe("applyIntentLane", () => {
     });
     await iosMods[0]?.({ modRequest: { projectName: "Example", platformProjectRoot: "/app/ios" } });
     expect(generated[0]?.configFile).toBe("intentlane.prod.yaml");
+  });
+});
+
+async function manifestDirectory(files: unknown): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "intentlane-manifest-"));
+  const contents = typeof files === "string" ? files : JSON.stringify({ version: "0.1", inputHash: "hash", files });
+  await writeFile(join(root, "intentlane.manifest.json"), contents, "utf8");
+  return root;
+}
+
+describe("localeResources", () => {
+  it("reads locale resources in code point order and ignores everything else", async () => {
+    const root = await manifestDirectory([
+      { path: "fr.lproj/IntentLane.strings" },
+      { path: "IntentLaneGenerated.swift" },
+      { path: "de.lproj/IntentLane.strings" },
+      { path: "nested/de.lproj/IntentLane.strings" },
+      { path: "fr.lproj" }
+    ]);
+
+    expect(localeResources(join(root, "intentlane.manifest.json"))).toEqual([
+      { locale: "de", file: "IntentLane.strings", path: "de.lproj/IntentLane.strings" },
+      { locale: "fr", file: "IntentLane.strings", path: "fr.lproj/IntentLane.strings" }
+    ]);
+  });
+
+  it("returns nothing when the manifest is missing, unreadable or malformed", async () => {
+    expect(localeResources(join(tmpdir(), "intentlane-plugin-missing", "intentlane.manifest.json"))).toEqual([]);
+
+    const unreadable = await manifestDirectory("not json");
+    expect(localeResources(join(unreadable, "intentlane.manifest.json"))).toEqual([]);
+
+    const malformed = await manifestDirectory(undefined);
+    expect(localeResources(join(malformed, "intentlane.manifest.json"))).toEqual([]);
+  });
+});
+
+describe("ensureLocaleResourcesRegistered", () => {
+  it("registers locale resources once and stays idempotent", async () => {
+    const outputDirectory = await manifestDirectory([
+      { path: "fr.lproj/IntentLane.strings" },
+      { path: "IntentLaneGenerated.swift" }
+    ]);
+    const project = { id: "project" };
+    const group = { children: [{ comment: "existing" }] };
+    const addResourceFileToGroup = vi.fn();
+    const ensureGroupRecursively = vi.fn(() => group);
+
+    const options = {
+      project,
+      projectName: "Example",
+      outputDirectory,
+      xcodeUtils: {
+        ensureGroupRecursively,
+        addResourceFileToGroup,
+        getApplicationNativeTarget: () => ({ uuid: "TARGET-UUID" })
+      }
+    };
+
+    expect(ensureLocaleResourcesRegistered(options)).toBe(1);
+    expect(ensureGroupRecursively).toHaveBeenCalledWith(project, "Example/IntentLaneGenerated/fr.lproj");
+    expect(addResourceFileToGroup).toHaveBeenCalledWith({
+      filepath: join("Example", "IntentLaneGenerated", "fr.lproj/IntentLane.strings"),
+      groupName: "Example/IntentLaneGenerated/fr.lproj",
+      project,
+      isBuildFile: true,
+      verbose: true,
+      targetUuid: "TARGET-UUID"
+    });
+
+    group.children.push({ comment: "IntentLane.strings" });
+    expect(ensureLocaleResourcesRegistered(options)).toBe(0);
+    expect(addResourceFileToGroup).toHaveBeenCalledTimes(1);
   });
 });

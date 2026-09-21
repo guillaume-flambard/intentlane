@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, type ConfigIR, type Diagnostic, type DoctorFacts } from "../../core/src/index.js";
-import { generateSwift, generatedFileHash } from "../../generator-apple/src/index.js";
+import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
@@ -44,15 +44,34 @@ function commandAvailable(command: string): boolean {
   return spawnSync(command, ["--version"], { stdio: "ignore" }).status === 0;
 }
 
+const MANIFEST_FILE = "intentlane.manifest.json";
+
+type ArtifactSet = Readonly<{ files: readonly GeneratedArtifact[]; manifest: string }>;
+
+async function inputHash(configFile: string): Promise<string> {
+  return createHash("sha256").update(await readFile(configFile)).digest("hex");
+}
+
+function artifactSet(ir: ConfigIR, hash: string): ArtifactSet {
+  const files = generateArtifacts(ir);
+  const manifest = `${JSON.stringify({ version: ir.schemaVersion, inputHash: hash, files: files.map((file) => ({ path: file.path, hash: generatedFileHash(file.contents) })) }, null, 2)}\n`;
+  return { files, manifest };
+}
+
+function expectedOutputs(output: string, set: ArtifactSet): readonly Readonly<{ file: string; contents: string }>[] {
+  return [...set.files.map((file) => ({ file: join(output, file.path), contents: file.contents })), { file: join(output, MANIFEST_FILE), contents: set.manifest }];
+}
+
 async function generatedStatus(configFile: string, ir: ConfigIR | undefined, output: string): Promise<DoctorFacts["generatedStatus"]> {
   if (!ir) return "missing";
-  const swiftFile = join(output, "IntentLaneGenerated.swift");
-  const manifestFile = join(output, "intentlane.manifest.json");
-  if (!existsSync(swiftFile) || !existsSync(manifestFile)) return "missing";
-  const contents = generateSwift(ir);
-  const manifest = `${JSON.stringify({ version: ir.schemaVersion, inputHash: createHash("sha256").update(await readFile(configFile)).digest("hex"), files: [{ path: "IntentLaneGenerated.swift", hash: generatedFileHash(contents) }] }, null, 2)}\n`;
-  const [swift, stored] = await Promise.all([readFile(swiftFile, "utf8"), readFile(manifestFile, "utf8")]);
-  return swift === contents && stored === manifest ? "fresh" : "stale";
+  const expected = expectedOutputs(output, artifactSet(ir, await inputHash(configFile)));
+  if (expected.some((item) => !existsSync(item.file))) return "missing";
+  try {
+    const stored = await Promise.all(expected.map((item) => readFile(item.file, "utf8")));
+    return stored.every((contents, index) => contents === expected[index]?.contents) ? "fresh" : "stale";
+  } catch {
+    return "stale";
+  }
 }
 
 async function doctorFacts(config: string, output: string): Promise<DoctorFacts> {
@@ -136,21 +155,18 @@ program.command("generate")
     const config = configPath(options.config);
     const ir = await load(config);
     if (!ir) return;
-    const contents = generateSwift(ir);
     const output = resolve(options.output);
-    const swiftFile = join(output, "IntentLaneGenerated.swift");
-    const manifestFile = join(output, "intentlane.manifest.json");
-    const manifest = `${JSON.stringify({ version: ir.schemaVersion, inputHash: createHash("sha256").update(await readFile(config)).digest("hex"), files: [{ path: "IntentLaneGenerated.swift", hash: generatedFileHash(contents) }] }, null, 2)}\n`;
+    const expected = expectedOutputs(output, artifactSet(ir, await inputHash(config)));
     if (options.check) {
-      if (!existsSync(swiftFile) || !existsSync(manifestFile)) {
+      if (expected.some((item) => !existsSync(item.file))) {
         process.stderr.write(`Generated files are missing in ${output}. Run 'intentlane generate'.\n`);
         process.exitCode = 1;
         return;
       }
       let identical = false;
       try {
-        const [existingSwift, existingManifest] = await Promise.all([readFile(swiftFile, "utf8"), readFile(manifestFile, "utf8")]);
-        identical = existingSwift === contents && existingManifest === manifest;
+        const stored = await Promise.all(expected.map((item) => readFile(item.file, "utf8")));
+        identical = stored.every((contents, index) => contents === expected[index]?.contents);
       } catch (reason) {
         process.stderr.write(`Unable to read generated files in ${output}: ${reason instanceof Error ? reason.message : "unknown error"}\n`);
         process.exitCode = 1;
@@ -162,9 +178,8 @@ program.command("generate")
       }
       return;
     }
-    await atomicWrite(swiftFile, contents);
-    await atomicWrite(manifestFile, manifest);
-    process.stdout.write(`Generated ${swiftFile}\n`);
+    for (const item of expected) await atomicWrite(item.file, item.contents);
+    process.stdout.write(`Generated ${join(output, GENERATED_SWIFT_FILE)}\n`);
   });
 
 await program.parseAsync();

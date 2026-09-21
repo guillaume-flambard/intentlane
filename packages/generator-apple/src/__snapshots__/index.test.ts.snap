@@ -18,26 +18,26 @@ enum IntentLaneRoute {
 }
 
 struct CreateIdea: AppIntent {
-  static let title: LocalizedStringResource = "Create an idea"
-  static let description = IntentDescription("Add a new idea")
+  static let title: LocalizedStringResource = LocalizedStringResource("Create an idea", table: "IntentLane")
+  static let description = IntentDescription(LocalizedStringResource("Add a new idea", table: "IntentLane"))
 
-  @Parameter(title: "title")
+  @Parameter(title: LocalizedStringResource("title", table: "IntentLane"))
   var title: String
 
   func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: "Your idea is ready")
+    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")))
   }
 }
 
 struct OpenInbox: AppIntent {
-  static let title: LocalizedStringResource = "Open the inbox"
+  static let title: LocalizedStringResource = LocalizedStringResource("Open the inbox", table: "IntentLane")
 
 
 
   func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/inbox", query: [:])
-    return .result(opensIntent: OpenURLIntent(url), dialog: "Open the inbox")
+    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Open the inbox", table: "IntentLane")))
   }
 }
 
@@ -45,10 +45,10 @@ struct IntentLaneShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
       AppShortcut(intent: CreateIdea(), phrases: [
         "Create an idea in \\(.applicationName)"
-      ], shortTitle: "Create an idea", systemImageName: "sparkles")
+      ], shortTitle: LocalizedStringResource("Create an idea", table: "IntentLane"), systemImageName: "sparkles")
       AppShortcut(intent: OpenInbox(), phrases: [
         "Open the inbox in \\(.applicationName)"
-      ], shortTitle: "Open the inbox", systemImageName: "sparkles")
+      ], shortTitle: LocalizedStringResource("Open the inbox", table: "IntentLane"), systemImageName: "sparkles")
   }
 }
 "
@@ -72,15 +72,15 @@ enum IntentLaneRoute {
 }
 
 struct CreateIdea: AppIntent {
-  static let title: LocalizedStringResource = "Create an idea"
-  static let description = IntentDescription("Add a new idea")
+  static let title: LocalizedStringResource = LocalizedStringResource("Create an idea", table: "IntentLane")
+  static let description = IntentDescription(LocalizedStringResource("Add a new idea", table: "IntentLane"))
 
-  @Parameter(title: "title")
+  @Parameter(title: LocalizedStringResource("title", table: "IntentLane"))
   var title: String
 
   func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {
     let url = IntentLaneRoute.make(scheme: "example", path: "/ideas/new", query: ["title": title])
-    return .result(opensIntent: OpenURLIntent(url), dialog: "Your idea is ready")
+    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")))
   }
 }
 
@@ -88,7 +88,7 @@ struct IntentLaneShortcuts: AppShortcutsProvider {
   static var appShortcuts: [AppShortcut] {
       AppShortcut(intent: CreateIdea(), phrases: [
         "Create an idea in \\(.applicationName)"
-      ], shortTitle: "Create an idea", systemImageName: "sparkles")
+      ], shortTitle: LocalizedStringResource("Create an idea", table: "IntentLane"), systemImageName: "sparkles")
   }
 }
 "

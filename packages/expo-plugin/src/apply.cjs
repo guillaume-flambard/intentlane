@@ -1,12 +1,14 @@
 "use strict";
 
 const { execFileSync } = require("node:child_process");
-const { existsSync } = require("node:fs");
+const { existsSync, readFileSync } = require("node:fs");
 const { dirname, join, resolve } = require("node:path");
 
 const CLI_PACKAGE = "@intentlane/cli";
 const GENERATED_SOURCE = "IntentLaneGenerated.swift";
 const GENERATED_GROUP = "IntentLaneGenerated";
+const MANIFEST_FILE = "intentlane.manifest.json";
+const LOCALIZATION_DIRECTORY_SUFFIX = ".lproj";
 
 function generatorResolutionError(missing, projectRoot, cause) {
   const error = new Error(`IntentLane could not start the code generator: '${missing}' is not installed in ${projectRoot}. Install it with 'npm install --save-dev ${missing}'.`);
@@ -60,6 +62,58 @@ function ensureGeneratedSourceRegistered({ project, projectName, xcodeUtils }) {
   return true;
 }
 
+function localeResources(manifestFile) {
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
+  } catch {
+    return [];
+  }
+
+  const files = Array.isArray(manifest?.files) ? manifest.files : [];
+  const resources = [];
+  for (const entry of files) {
+    if (!entry || typeof entry.path !== "string") continue;
+    const segments = entry.path.split("/");
+    if (segments.length !== 2) continue;
+    const directory = segments[0];
+    const file = segments[1];
+    if (!directory || !file) continue;
+    if (!directory.endsWith(LOCALIZATION_DIRECTORY_SUFFIX)) continue;
+    resources.push({
+      locale: directory.slice(0, -LOCALIZATION_DIRECTORY_SUFFIX.length),
+      file,
+      path: entry.path
+    });
+  }
+
+  return resources.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+}
+
+function ensureLocaleResourcesRegistered({ project, projectName, outputDirectory, xcodeUtils }) {
+  const resources = localeResources(join(outputDirectory, MANIFEST_FILE));
+  let registered = 0;
+
+  for (const resource of resources) {
+    const groupName = `${projectName}/${GENERATED_GROUP}/${resource.locale}${LOCALIZATION_DIRECTORY_SUFFIX}`;
+    const group = xcodeUtils.ensureGroupRecursively(project, groupName);
+    if (group && Array.isArray(group.children) && group.children.some((child) => child.comment === resource.file)) {
+      continue;
+    }
+    xcodeUtils.addResourceFileToGroup({
+      filepath: join(projectName, GENERATED_GROUP, resource.path),
+      groupName,
+      project,
+      isBuildFile: true,
+      verbose: true,
+      targetUuid: xcodeUtils.getApplicationNativeTarget({ project, projectName }).uuid
+    });
+    registered += 1;
+  }
+
+  return registered;
+}
+
 function applyIntentLane(config, options, dependencies) {
   const { plugins, xcodeUtils, projectRoot, runGenerator } = dependencies;
   const configFile = options.configFile ?? "intentlane.yaml";
@@ -75,9 +129,17 @@ function applyIntentLane(config, options, dependencies) {
   ]);
 
   return plugins.withXcodeProject(withDangerousMod, (modConfig) => {
+    const projectName = modConfig.modRequest.projectName;
+    const outputDirectory = join(modConfig.modRequest.platformProjectRoot, projectName, GENERATED_GROUP);
     ensureGeneratedSourceRegistered({
       project: modConfig.modResults,
-      projectName: modConfig.modRequest.projectName,
+      projectName,
+      xcodeUtils
+    });
+    ensureLocaleResourcesRegistered({
+      project: modConfig.modResults,
+      projectName,
+      outputDirectory,
       xcodeUtils
     });
     return modConfig;
@@ -97,8 +159,11 @@ function runGenerator({ projectRoot, configFile, outputDirectory, resolveModule 
 module.exports = {
   CLI_PACKAGE,
   GENERATED_SOURCE,
+  MANIFEST_FILE,
   applyIntentLane,
   ensureGeneratedSourceRegistered,
+  ensureLocaleResourcesRegistered,
+  localeResources,
   resolveGeneratorInvocation,
   runGenerator
 };

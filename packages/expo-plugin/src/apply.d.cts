@@ -15,21 +15,52 @@ export type GeneratorRequest = Readonly<{
 
 export type XcodeGroup = { children?: readonly { comment?: string }[] } | null | undefined;
 
-export type XcodeUtils = Readonly<{
+export type XcodeGroupUtils = Readonly<{
   ensureGroupRecursively: (project: unknown, groupName: string) => XcodeGroup;
-  addBuildSourceFileToGroup: (options: {
-    filepath: string;
-    groupName: string;
-    project: unknown;
-    targetUuid: string;
-  }) => unknown;
   getApplicationNativeTarget: (options: { project: unknown; projectName: string }) => { uuid: string };
 }>;
+
+export type XcodeSourceUtils = XcodeGroupUtils &
+  Readonly<{
+    addBuildSourceFileToGroup: (options: {
+      filepath: string;
+      groupName: string;
+      project: unknown;
+      targetUuid: string;
+    }) => unknown;
+  }>;
+
+export type XcodeResourceUtils = XcodeGroupUtils &
+  Readonly<{
+    addResourceFileToGroup: (options: {
+      filepath: string;
+      groupName: string;
+      project: unknown;
+      isBuildFile: boolean;
+      verbose: boolean;
+      targetUuid: string;
+    }) => unknown;
+  }>;
+
+export type XcodeUtils = XcodeSourceUtils & XcodeResourceUtils;
 
 export type EnsureSourceOptions = Readonly<{
   project: unknown;
   projectName: string;
-  xcodeUtils: XcodeUtils;
+  xcodeUtils: XcodeSourceUtils;
+}>;
+
+export type LocaleResource = Readonly<{
+  locale: string;
+  file: string;
+  path: string;
+}>;
+
+export type EnsureLocaleResourcesOptions = Readonly<{
+  project: unknown;
+  projectName: string;
+  outputDirectory: string;
+  xcodeUtils: XcodeResourceUtils;
 }>;
 
 export type ExpoPluginApi = Readonly<{
@@ -48,8 +79,11 @@ export type ApplyDependencies = Readonly<{
 
 export declare const CLI_PACKAGE: string;
 export declare const GENERATED_SOURCE: string;
+export declare const MANIFEST_FILE: string;
 
 export declare function resolveGeneratorInvocation(request: GeneratorRequest): GeneratorInvocation;
 export declare function ensureGeneratedSourceRegistered(options: EnsureSourceOptions): boolean;
+export declare function localeResources(manifestFile: string): readonly LocaleResource[];
+export declare function ensureLocaleResourcesRegistered(options: EnsureLocaleResourcesOptions): number;
 export declare function runGenerator(request: GeneratorRequest): void;
 export declare function applyIntentLane(config: unknown, options: ApplyOptions, dependencies: ApplyDependencies): unknown;
