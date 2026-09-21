@@ -1,0 +1,54 @@
+schema: "0.1"
+app:
+  id: "dev.intentlane.example"
+  name: "IntentLane Example"
+  url_scheme: "intentlaneexample"
+  min_ios: "18.0"
+  locales: [en, fr]
+
+intents:
+  - id: open_inbox
+    title:
+      en: Open the inbox
+      fr: Ouvrir la boîte de réception
+    description:
+      en: Show the inbox screen
+      fr: Afficher l'écran de réception
+    parameters: []
+    execution:
+      mode: open_app
+      route: /inbox
+
+  - id: create_idea
+    title:
+      en: Create an idea
+      fr: Créer une idée
+    description:
+      en: Add a new idea
+      fr: Ajouter une nouvelle idée
+    parameters:
+      - id: title
+        type: string
+        required: true
+        prompt:
+          en: What is the idea?
+          fr: Quelle est l'idée ?
+    execution:
+      mode: open_app
+      route: /ideas/new
+      mapping:
+        title: title
+    risk:
+      level: write
+      confirmation: optional
+      authentication: inherited
+    result:
+      dialog:
+        en: Your idea is ready
+        fr: Votre idée est prête
+    shortcuts:
+      phrases:
+        en:
+          - Create an idea in ${appName}
+        fr:
+          - Créer une idée dans ${appName}

@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "IntentLane Example",
+    "slug": "intentlane-example",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "intentlaneexample",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.intentlane.example"
+    },
+    "plugins": [
+      [
+        "@intentlane/expo",
+        {
+          "configFile": "intentlane.yaml"
+        }
+      ]
+    ]
+  }
+}

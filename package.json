@@ -1,0 +1,24 @@
+{
+  "name": "intentlane",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.27.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "validate": "tsx packages/cli/src/index.ts validate",
+    "generate": "tsx packages/cli/src/index.ts generate"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.0"
+  }
+}

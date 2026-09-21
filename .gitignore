@@ -1,0 +1,7 @@
+node_modules/
+.intentlane/
+coverage/
+*.tsbuildinfo
+apps/*/ios/
+apps/*/android/
+apps/*/.expo/

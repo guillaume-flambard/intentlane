@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://intentlane.dev/schema/0.1.json",
+  "title": "IntentLane 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "app", "intents"],
+  "properties": {
+    "schema": { "const": "0.1" },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "url_scheme", "min_ios", "locales"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9.-]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "url_scheme": { "type": "string", "pattern": "^[a-z][a-z0-9+.-]*$" },
+        "min_ios": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+        "locales": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } },
+    "intents": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/intent" } }
+  },
+  "$defs": {
+    "localized": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "entity": {
+      "type": "object",
+      "required": ["id", "title", "identifier", "display", "query"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "title": { "$ref": "#/$defs/localized" },
+        "identifier": { "$ref": "#/$defs/identifier" },
+        "display": { "type": "object" },
+        "query": { "type": "object" }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "required": ["id", "type", "required"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": { "enum": ["string", "integer", "number", "boolean", "date", "datetime", "enum", "entity"] },
+        "required": { "type": "boolean" },
+        "prompt": { "$ref": "#/$defs/localized" }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "execution"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "title": { "$ref": "#/$defs/localized" },
+        "description": { "$ref": "#/$defs/localized" },
+        "parameters": { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+        "execution": { "type": "object", "required": ["mode"], "properties": { "mode": { "enum": ["open_app", "native", "http"] } } },
+        "risk": { "type": "object" },
+        "result": { "type": "object" },
+        "shortcuts": { "type": "object" }
+      }
+    }
+  }
+}
