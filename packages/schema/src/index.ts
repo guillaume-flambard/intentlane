@@ -20,7 +20,8 @@ const parameterSchema = z.object({
   type: parameterTypeSchema,
   required: z.boolean(),
   prompt: localizedSchema.optional(),
-  values: z.record(identifierSchema, localizedSchema).optional()
+  values: z.record(identifierSchema, localizedSchema).optional(),
+  entity: identifierSchema.optional()
 }).strict();
 
 const executionSchema = z.object({

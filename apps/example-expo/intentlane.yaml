@@ -6,6 +6,18 @@ app:
   min_ios: "18.0"
   locales: [en, fr]
 
+entities:
+  - id: idea
+    title:
+      en: Idea
+      fr: Idée
+    identifier: id
+    display:
+      title: title
+      subtitle: status
+    query:
+      mode: static
+
 intents:
   - id: open_inbox
     title:
@@ -83,3 +95,30 @@ intents:
           - Create an idea in ${appName}
         fr:
           - Créer une idée dans ${appName}
+
+  - id: open_idea
+    title:
+      en: Open an idea
+      fr: Ouvrir une idée
+    description:
+      en: Open a saved idea
+      fr: Ouvrir une idée enregistrée
+    parameters:
+      - id: idea
+        type: entity
+        entity: idea
+        required: true
+        prompt:
+          en: Which idea?
+          fr: Quelle idée ?
+    execution:
+      mode: open_app
+      route: /ideas
+      mapping:
+        idea: idea
+    shortcuts:
+      phrases:
+        en:
+          - Open an idea in ${appName}
+        fr:
+          - Ouvrir une idée dans ${appName}

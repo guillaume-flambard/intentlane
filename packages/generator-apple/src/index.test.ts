@@ -263,3 +263,111 @@ describe("typed parameters", () => {
     expect(strings).toContain('"High" = "Haute";');
   });
 });
+
+const entityConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  entities: [
+    {
+      id: "idea",
+      title: { en: "Idea", fr: "Idée" },
+      identifier: "id",
+      display: { title: "title", subtitle: "status" },
+      query: { mode: "static" }
+    },
+    {
+      id: "tag",
+      title: { en: "Tag", fr: "Étiquette" },
+      identifier: "id",
+      display: { title: "name" },
+      query: { mode: "static" }
+    }
+  ],
+  intents: [{
+    id: "open_idea",
+    title: { en: "Open an idea", fr: "Ouvrir une idée" },
+    parameters: [
+      { id: "idea", type: "entity", required: true, entity: "idea" },
+      { id: "tag", type: "entity", required: false, entity: "tag" }
+    ],
+    execution: { mode: "open_app", route: "/ideas", mapping: { idea: "idea" } },
+    shortcuts: { phrases: { en: ["Open an idea in ${appName}"], fr: ["Ouvrir une idée dans ${appName}"] } }
+  }]
+};
+
+describe("entities", () => {
+  const swift = (): string => {
+    const result = parseConfig(entityConfig);
+    if (!result.ir) throw new Error("Entity fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("emits an AppEntity with its display properties and default query", () => {
+    const source = swift();
+    expect(source).toContain("struct IntentLaneIdeaEntity: AppEntity {");
+    expect(source).toContain(
+      'static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: LocalizedStringResource("Idea", table: "IntentLane"))\n  }'
+    );
+    expect(source).toContain("static var defaultQuery = IntentLaneIdeaQuery()");
+    expect(source).toContain("  let id: String\n  let title: String\n  let status: String");
+    expect(source).toContain("title: LocalizedStringResource(stringLiteral: title)");
+    expect(source).toContain("subtitle: status.map { LocalizedStringResource(stringLiteral: $0) }");
+  });
+
+  it("emits a resolver protocol and an EntityQuery that delegates to it", () => {
+    const source = swift();
+    expect(source).toContain("protocol IntentLaneIdeaResolver {");
+    expect(source).toContain("func ideaEntities(for identifiers: [String]) async throws -> [IntentLaneIdeaEntity]");
+    expect(source).toContain("func suggestedIdeaEntities() async throws -> [IntentLaneIdeaEntity]");
+    expect(source).toContain("struct IntentLaneIdeaQuery: EntityQuery {");
+    expect(source).toContain("guard let resolver = await IntentLaneEntityResolvers.idea else { return [] }");
+    expect(source).toContain("return try await resolver.ideaEntities(for: identifiers)");
+    expect(source).toContain("return try await resolver.suggestedIdeaEntities()");
+  });
+
+  it("registers every entity in the generated holder", () => {
+    expect(swift()).toContain(
+      "@MainActor\nenum IntentLaneEntityResolvers {\n  static var idea: (any IntentLaneIdeaResolver)?\n  static var tag: (any IntentLaneTagResolver)?\n}"
+    );
+  });
+
+  it("omits the subtitle when the entity declares no display subtitle", () => {
+    const source = swift();
+    expect(source).toContain("struct IntentLaneTagEntity: AppEntity {");
+    expect(source).toContain("  let id: String\n  let name: String");
+    expect(source).not.toContain("subtitle: name");
+  });
+
+  it("reuses the identifier property when the display title names it", () => {
+    const result = parseConfig({
+      ...entityConfig,
+      entities: [{ ...entityConfig.entities[0], display: { title: "id", subtitle: "id" } }],
+      intents: [{ ...entityConfig.intents[0], parameters: [], execution: { mode: "open_app", route: "/ideas" }, shortcuts: undefined }]
+    });
+    if (!result.ir) throw new Error("Entity fixture must parse");
+    const source = generateSwift(result.ir);
+    expect(source).toContain("  let id: String\n\n  var displayRepresentation");
+    expect(source).toContain("title: LocalizedStringResource(stringLiteral: id)");
+    expect(source).toContain("subtitle: LocalizedStringResource(stringLiteral: id)");
+    expect(source.match(/let id: String/g)).toHaveLength(1);
+  });
+
+  it("types entity parameters and sends the identifier into the query", () => {
+    const source = swift();
+    expect(source).toContain("var idea: IntentLaneIdeaEntity");
+    expect(source).toContain("var tag: IntentLaneTagEntity");
+    expect(source).toContain('"idea": idea.id');
+  });
+
+  it("puts entity titles in the strings table", () => {
+    const result = parseConfig(entityConfig);
+    if (!result.ir) throw new Error("Entity fixture must parse");
+    const strings = generateStrings(result.ir, "fr");
+    expect(strings).toContain('"Idea" = "Idée";');
+    expect(strings).toContain('"Tag" = "Étiquette";');
+  });
+
+  it("matches the entity Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});

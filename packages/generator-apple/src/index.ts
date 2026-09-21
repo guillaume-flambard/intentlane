@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ConfigIR, IntentIR, LocalizedText, ParameterIR } from "../../core/src/index.js";
+import type { ConfigIR, EntityIR, IntentIR, LocalizedText, ParameterIR } from "../../core/src/index.js";
 
 export const GENERATED_SWIFT_FILE = "IntentLaneGenerated.swift";
 export const STRING_TABLE = "IntentLane";
@@ -29,15 +29,51 @@ function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
   return `IntentLane${intent.swiftName}${pascalCase(parameter.id)}`;
 }
 
-function swiftType(intent: IntentIR, parameter: ParameterIR): string {
+function swiftType(intent: IntentIR, parameter: ParameterIR, entities: readonly EntityIR[]): string {
   if (parameter.type === "enum") return enumTypeName(intent, parameter);
+  if (parameter.type === "entity") {
+    const entity = entities.find((candidate) => candidate.id === parameter.entity);
+    if (!entity) throw new Error(`IL1301: Entity parameter '${parameter.id}' references unknown entity '${parameter.entity ?? ""}'.`);
+    return `IntentLane${entity.swiftName}Entity`;
+  }
   const mapped = SWIFT_TYPES[parameter.type];
   if (!mapped) throw new Error(`IL1301: Parameter '${parameter.id}' uses unsupported type '${parameter.type}'.`);
   return mapped;
 }
 
-function parameterDeclaration(intent: IntentIR, parameter: ParameterIR): string {
-  return `  @Parameter(title: ${localizedResource(parameter.id)})\n  var ${parameter.id}: ${swiftType(intent, parameter)}`;
+function parameterDeclaration(intent: IntentIR, parameter: ParameterIR, entities: readonly EntityIR[]): string {
+  return `  @Parameter(title: ${localizedResource(parameter.id)})\n  var ${parameter.id}: ${swiftType(intent, parameter, entities)}`;
+}
+
+function emitEntity(entity: EntityIR, locale: string): string {
+  const typeName = `IntentLane${entity.swiftName}Entity`;
+  const resolverName = `IntentLane${entity.swiftName}Resolver`;
+  const queryName = `IntentLane${entity.swiftName}Query`;
+  const camelName = `${entity.swiftName.slice(0, 1).toLowerCase()}${entity.swiftName.slice(1)}`;
+  const titleProperty = entity.displayTitle === entity.identifier ? "id" : entity.displayTitle;
+  const subtitleProperty =
+    entity.displaySubtitle === undefined
+      ? undefined
+      : entity.displaySubtitle === entity.identifier
+        ? "id"
+        : entity.displaySubtitle === entity.displayTitle
+          ? titleProperty
+          : entity.displaySubtitle;
+  const names = ["id", titleProperty, ...(subtitleProperty === undefined ? [] : [subtitleProperty])];
+  const properties = [...new Set(names)].map((name) => ({ name, optional: name === subtitleProperty && name !== titleProperty && name !== "id" }));
+  const declarations = properties.map((property) => `  let ${property.name}: String${property.optional ? "?" : ""}`).join("\n");
+  const subtitleExpression =
+    subtitleProperty === undefined
+      ? ""
+      : `,\n      subtitle: ${subtitleProperty === titleProperty || subtitleProperty === "id" ? `LocalizedStringResource(stringLiteral: ${subtitleProperty})` : `${subtitleProperty}.map { LocalizedStringResource(stringLiteral: $0) }`}`;
+  return `struct ${typeName}: AppEntity {\n  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(localized(entity.title, locale))})\n  }\n\n  static var defaultQuery = ${queryName}()\n\n${declarations}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName} {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
+}
+
+function entityDeclarations(ir: ConfigIR, locale: string): string {
+  if (ir.entities.length === 0) return "";
+  const entities = [...ir.entities].sort((left, right) => left.id.localeCompare(right.id));
+  const registry = entities.map((entity) => `  static var ${entity.id}: (any IntentLane${entity.swiftName}Resolver)?`).join("\n");
+  return `${entities.map((entity) => emitEntity(entity, locale)).join("\n\n")}\n\n@MainActor\nenum IntentLaneEntityResolvers {\n${registry}\n}\n\n`;
 }
 
 function emitEnum(intent: IntentIR, parameter: ParameterIR, locale: string): string {
@@ -60,6 +96,7 @@ function queryValue(intent: IntentIR, source: string): string {
   if (type === "datetime") return `${source}.ISO8601Format()`;
   if (type === "date") return `String(format: "%04d-%02d-%02d", ${source}.year ?? 0, ${source}.month ?? 0, ${source}.day ?? 0)`;
   if (type === "enum") return `${source}.rawValue`;
+  if (type === "entity") return `${source}.id`;
   return source;
 }
 
@@ -70,10 +107,10 @@ function routeExpression(intent: IntentIR, scheme: string): string {
   return `IntentLaneRoute.make(scheme: ${swiftString(scheme)}, path: ${swiftString(intent.route)}, query: [${items}])`;
 }
 
-function emitIntent(intent: IntentIR, locale: string, scheme: string): string {
+function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: string): string {
   const title = localized(intent.title, locale);
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
-  const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter)).join("\n\n");
+  const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {\n    let url = ${routeExpression(intent, scheme)}\n    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
 }
@@ -90,10 +127,11 @@ function emitShortcuts(ir: ConfigIR, locale: string): string {
 export function generateSwift(ir: ConfigIR): string {
   const locale = defaultLocale(ir);
   const enums = enumDeclarations(ir, locale);
-  const intents = ir.intents.map((intent) => emitIntent(intent, locale, ir.app.urlScheme)).join("\n\n");
+  const entities = entityDeclarations(ir, locale);
+  const intents = ir.intents.map((intent) => emitIntent(ir, intent, locale, ir.app.urlScheme)).join("\n\n");
   const shortcuts = emitShortcuts(ir, locale);
   const shortcutsSection = shortcuts ? `\n\n${shortcuts}` : "";
-  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${enums}${intents}${shortcutsSection}\n`;
+  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${enums}${entities}${intents}${shortcutsSection}\n`;
 }
 
 export function generatedFileHash(contents: string): string {
@@ -120,6 +158,7 @@ function stringsEntries(ir: ConfigIR, locale: string): readonly (readonly [strin
     if (key.length === 0 || translation === key || entries.has(key)) return;
     entries.set(key, translation);
   };
+  for (const entity of ir.entities) consider(entity.title);
   for (const intent of ir.intents) {
     consider(intent.title);
     consider(intent.description);

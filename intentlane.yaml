@@ -33,11 +33,19 @@ intents:
         prompt:
           en: What is the idea?
           fr: Quelle est l'idée ?
+      - id: related
+        type: entity
+        entity: idea
+        required: false
+        prompt:
+          en: Which idea does it relate to?
+          fr: À quelle idée cela se rapporte-t-il ?
     execution:
       mode: open_app
       route: /ideas/new
       mapping:
         title: title
+        related: related
     risk:
       level: write
       confirmation: optional

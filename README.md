@@ -4,11 +4,11 @@ IntentLane is a deterministic compiler from a versioned YAML contract to Apple A
 
 ## Status
 
-Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string`, `integer`, `number`, `boolean`, `date`, `datetime` and `enum` parameters, plus an `AppShortcutsProvider` for intents that declare phrases.
+Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum` and `entity` parameters, plus an `AppShortcutsProvider` for intents that declare phrases.
 
 Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift and the `<locale>.lproj` resources in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to an installed simulator build. The gate (an external user following the quickstart in under 30 minutes) is not measured yet.
 
-Still out of scope: entities, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+Still out of scope: endpoint entity queries, native and HTTP execution, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
 ## Quickstart
 
@@ -78,6 +78,7 @@ A parameter declares an `id`, a `type` and `required`. The generator maps each t
 | `date` | `DateComponents` | `YYYY-MM-DD` |
 | `datetime` | `Date` | ISO 8601 |
 | `enum` | generated `AppEnum` | the case `rawValue` |
+| `entity` | generated `AppEntity` | `value.id` |
 
 An `enum` parameter declares its cases under `values`, one localized label per case:
 
@@ -91,7 +92,50 @@ parameters:
       high: { en: High, fr: Haute }
 ```
 
-The generator emits `enum IntentLane<Intent><Parameter>: String, AppEnum` with one `case` per value, and every label goes into the `IntentLane` strings table. Case names therefore stay stable identifiers while Siri and the Shortcuts app show the translated label. An enum without values is rejected (IL1301), `values` on a parameter that is not an enum is rejected too (IL1301), and `entity` is rejected with IL1401 until App Entities land.
+The generator emits `enum IntentLane<Intent><Parameter>: String, AppEnum` with one `case` per value, and every label goes into the `IntentLane` strings table. Case names therefore stay stable identifiers while Siri and the Shortcuts app show the translated label. An enum without values is rejected (IL1301), and `values` on a parameter that is not an enum is rejected too (IL1301).
+
+## Entities
+
+An entity describes a value the system can hand back to an intent, such as an idea selected from the app's own data:
+
+```yaml
+entities:
+  - id: idea
+    title: { en: Idea, fr: Idée }
+    identifier: id
+    display:
+      title: title
+      subtitle: status
+    query:
+      mode: static
+```
+
+The generator emits `struct IntentLane<Entity>Entity: AppEntity`, its `EntityQuery`, and a resolver protocol the app implements:
+
+```swift
+protocol IntentLaneIdeaResolver {
+  func ideaEntities(for identifiers: [String]) async throws -> [IntentLaneIdeaEntity]
+  func suggestedIdeaEntities() async throws -> [IntentLaneIdeaEntity]
+}
+```
+
+IntentLane never writes business logic. The app supplies the data and registers its resolver in the generated holder, which the query reads at runtime:
+
+```swift
+IntentLaneEntityResolvers.idea = MyIdeaResolver()
+```
+
+`display.title` and `display.subtitle` name the properties the system shows, `identifier` names the property that carries the stable identifier, and an entity parameter references an entity by id:
+
+```yaml
+parameters:
+  - id: related
+    type: entity
+    entity: idea
+    required: false
+```
+
+The version 0.1 only generates the `static` query. `query.mode: endpoint` is rejected with IL1401, an unknown or missing entity reference with IL1301, a duplicated entity id or Swift type name collision with IL1601, and an entity title missing its default locale with IL1201.
 
 ## Generated files
 
@@ -167,3 +211,6 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 - `required` is not reflected in the generated Swift. Every parameter is emitted as a plain `@Parameter` with no default, so `required: true` is a contract statement the compiler does not enforce yet.
 - An enum `typeDisplayRepresentation` uses the raw parameter id as its `LocalizedStringResource` key, the same limitation as `@Parameter(title:)`.
 - Generated enum type names are `IntentLane<Intent Swift name><PascalCase parameter id>`. Two intents whose names combine into the same identifier would collide, and no diagnostic covers that case.
+- The generated entity code compiles under Swift 5 and fails under Swift 6 strict concurrency: `defaultQuery` would need to be a `let`, and the resolver holder would need a `Sendable` protocol. The example project builds with `SWIFT_VERSION = 5.0`.
+- An entity query returns nothing until the app registers its resolver. `IntentLaneEntityResolvers.<entity>` starts `nil`, so the generated query returns an empty list rather than failing, and Siri shows no entity suggestion until the app assigns an implementation.
+- Entity property names come straight from `display.title` and `display.subtitle`. The generator neither verifies that the app's own model uses those names nor reads any data source.

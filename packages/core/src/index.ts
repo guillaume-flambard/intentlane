@@ -13,6 +13,7 @@ export type ParameterIR = Readonly<{
   required: boolean;
   prompt?: LocalizedText;
   values?: Readonly<Record<string, LocalizedText>>;
+  entity?: string;
 }>;
 export type IntentIR = Readonly<{
   id: string;
@@ -25,11 +26,19 @@ export type IntentIR = Readonly<{
   dialog?: LocalizedText;
   phrases: Readonly<Record<string, readonly string[]>>;
 }>;
+export type EntityIR = Readonly<{
+  id: string;
+  swiftName: string;
+  title: LocalizedText;
+  identifier: string;
+  displayTitle: string;
+  displaySubtitle?: string;
+}>;
 export type ConfigIR = Readonly<{
   schemaVersion: "0.1";
   app: Readonly<{ id: string; name: string; urlScheme: string; minIos: string; locales: readonly string[] }>;
   intents: readonly IntentIR[];
-  entities: IntentLaneConfig["entities"];
+  entities: readonly EntityIR[];
 }>;
 export type ParseResult = Readonly<{ ir?: ConfigIR; diagnostics: readonly Diagnostic[] }>;
 
@@ -54,6 +63,18 @@ function localizedDiagnostics(value: LocalizedText | undefined, locales: readonl
 
 function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
+  const entityIds = new Set<string>();
+  const entityNames = new Set<string>();
+  for (const [index, entity] of config.entities.entries()) {
+    const path = `entities[${index}]`;
+    diagnostics.push(...localizedDiagnostics(entity.title, config.app.locales, `${path}.title`));
+    if (entityIds.has(entity.id)) diagnostics.push(error("IL1601", `Entity id '${entity.id}' is declared twice.`, `${path}.id`));
+    entityIds.add(entity.id);
+    const entityName = swiftName(entity.id);
+    if (entityNames.has(entityName)) diagnostics.push(error("IL1601", `Swift type name '${entityName}' collides with another entity.`, `${path}.id`));
+    entityNames.add(entityName);
+    if (entity.query.mode === "endpoint") diagnostics.push(error("IL1401", `Entity '${entity.id}' declares an endpoint query, which is not generated yet. Use a static query and provide the data through the resolver protocol.`, `${path}.query.mode`));
+  }
   const swiftNames = new Set<string>();
   for (const [index, intent] of config.intents.entries()) {
     const path = `intents[${index}]`;
@@ -66,7 +87,9 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       for (const [value, labels] of Object.entries(parameter.values ?? {})) {
         diagnostics.push(...localizedDiagnostics(labels, config.app.locales, `${parameterPath}.values.${value}`));
       }
-      if (parameter.type === "entity") diagnostics.push(error("IL1401", `Parameter '${parameter.id}' uses type 'entity', which is not supported yet.`, `${parameterPath}.type`));
+      if (parameter.type === "entity" && !parameter.entity) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' must reference an entity with 'entity'.`, `${parameterPath}.entity`));
+      if (parameter.type === "entity" && parameter.entity && !entityIds.has(parameter.entity)) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' references unknown entity '${parameter.entity}'.`, `${parameterPath}.entity`));
+      if (parameter.type !== "entity" && parameter.entity) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares an entity reference but its type is '${parameter.type}'.`, `${parameterPath}.entity`));
       if (parameter.type === "enum" && Object.keys(parameter.values ?? {}).length === 0) diagnostics.push(error("IL1301", `Enum parameter '${parameter.id}' must declare at least one value.`, `${parameterPath}.values`));
       if (parameter.type !== "enum" && parameter.values) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares values but its type is '${parameter.type}'.`, `${parameterPath}.values`));
     }
@@ -100,7 +123,14 @@ export function parseConfig(value: unknown): ParseResult {
   const ir: ConfigIR = {
     schemaVersion: parsed.data.schema,
     app: { id: parsed.data.app.id, name: parsed.data.app.name, urlScheme: parsed.data.app.url_scheme, minIos: parsed.data.app.min_ios, locales: [...parsed.data.app.locales] },
-    entities: parsed.data.entities,
+    entities: [...parsed.data.entities].sort((left, right) => left.id.localeCompare(right.id)).map((entity) => ({
+      id: entity.id,
+      swiftName: swiftName(entity.id),
+      title: entity.title,
+      identifier: entity.identifier,
+      displayTitle: entity.display.title,
+      ...(entity.display.subtitle ? { displaySubtitle: entity.display.subtitle } : {})
+    })),
     intents: parsed.data.intents.map((intent) => ({
       id: intent.id,
       swiftName: swiftName(intent.id),
@@ -111,7 +141,8 @@ export function parseConfig(value: unknown): ParseResult {
         type: parameter.type,
         required: parameter.required,
         ...(parameter.prompt ? { prompt: parameter.prompt } : {}),
-        ...(parameter.values ? { values: parameter.values } : {})
+        ...(parameter.values ? { values: parameter.values } : {}),
+        ...(parameter.entity ? { entity: parameter.entity } : {})
       })),
       route: intent.execution.route ?? "",
       mapping: intent.execution.mapping ?? {},

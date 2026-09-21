@@ -89,12 +89,6 @@ describe("parameter types", () => {
     intents: [{ ...base.intents[0], parameters, execution: { mode: "open_app", route: "/ideas/new" } }]
   });
 
-  it("rejects the entity type with a capability diagnostic", () => {
-    const result = parseConfig(withParameters([{ id: "idea", type: "entity", required: true }]));
-    expect(result.ir).toBeUndefined();
-    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1401", path: "intents[0].parameters[0].type" }));
-  });
-
   it("requires at least one value on an enum parameter", () => {
     const result = parseConfig(withParameters([{ id: "priority", type: "enum", required: true }]));
     expect(result.ir).toBeUndefined();
@@ -124,5 +118,82 @@ describe("parameter types", () => {
     const result = parseConfig(withParameters(types.map((type, index) => ({ id: `value_${index}`, type, required: false }))));
     expect(result.diagnostics).toEqual([]);
     expect(result.ir?.intents[0]?.parameters.map((parameter) => parameter.type)).toEqual(types);
+  });
+});
+
+describe("entities", () => {
+  const idea = {
+    id: "idea",
+    title: { en: "Idea", fr: "Idée" },
+    identifier: "id",
+    display: { title: "title", subtitle: "status" },
+    query: { mode: "static" }
+  };
+
+  const withEntities = (entities: unknown, parameters: unknown = []): unknown => ({
+    ...base,
+    entities,
+    intents: [{ ...base.intents[0], parameters, execution: { mode: "open_app", route: "/ideas/new" } }]
+  });
+
+  it("projects entities into the IR in canonical order", () => {
+    const result = parseConfig(withEntities([{ ...idea, id: "zeta" }, idea]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.entities.map((entity) => entity.id)).toEqual(["idea", "zeta"]);
+    expect(result.ir?.entities[0]).toMatchObject({ swiftName: "Idea", identifier: "id", displayTitle: "title", displaySubtitle: "status" });
+  });
+
+  it("omits the subtitle when the contract does not declare one", () => {
+    const result = parseConfig(withEntities([{ ...idea, display: { title: "title" } }]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.entities[0]).not.toHaveProperty("displaySubtitle");
+  });
+
+  it("rejects an endpoint query with a capability diagnostic", () => {
+    const result = parseConfig(withEntities([{ ...idea, query: { mode: "endpoint", endpoint: "/api/ideas" } }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1401", path: "entities[0].query.mode" }));
+  });
+
+  it("rejects the same entity id twice", () => {
+    const result = parseConfig(withEntities([idea, { ...idea }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1601", path: "entities[1].id" }));
+  });
+
+  it("rejects two entities that produce the same Swift type name", () => {
+    const result = parseConfig(withEntities([{ ...idea, id: "a_b" }, { ...idea, id: "a__b" }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1601", path: "entities[1].id" }));
+  });
+
+  it("errors when an entity title misses its default locale", () => {
+    const result = parseConfig(withEntities([{ ...idea, title: { fr: "Idée" } }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", path: "entities[0].title" }));
+  });
+
+  it("requires an entity reference on entity parameters", () => {
+    const result = parseConfig(withEntities([idea], [{ id: "related", type: "entity", required: false }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" }));
+  });
+
+  it("rejects an unknown entity reference", () => {
+    const result = parseConfig(withEntities([idea], [{ id: "related", type: "entity", required: false, entity: "missing" }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" }));
+  });
+
+  it("rejects an entity reference on a parameter that is not an entity", () => {
+    const result = parseConfig(withEntities([idea], [{ id: "title", type: "string", required: true, entity: "idea" }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" }));
+  });
+
+  it("normalizes the entity reference into the IR", () => {
+    const result = parseConfig(withEntities([idea], [{ id: "related", type: "entity", required: false, entity: "idea" }]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({ id: "related", type: "entity", entity: "idea" });
   });
 });

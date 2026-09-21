@@ -49,7 +49,7 @@ intents:
 
 Types de paramètre : `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`.
 
-Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré. `entity` est réservé aux App Entities et refusé en 0.1 (IL1401).
+Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré, `entity` vers l'`AppEntity` généré de l'entité référencée.
 
 Un paramètre `enum` déclare ses valeurs sous `values`, une map identifiant vers map locale. Les identifiants de valeurs suivent la règle des autres identifiants et deviennent les noms de cas Swift.
 
@@ -64,6 +64,18 @@ parameters:
 ```
 
 Un `enum` sans aucune valeur est refusé (IL1301), et un paramètre qui déclare `values` sans être de type `enum` l'est aussi (IL1301).
+
+Un paramètre `entity` référence une entité déclarée et se convertit en `<valeur>.id` dans la query.
+
+```yaml
+parameters:
+  - id: related
+    type: entity
+    entity: idea
+    required: false
+```
+
+Une référence absente, une référence inconnue, ou une référence portée par un paramètre qui n'est pas de type `entity` sont refusées (IL1301).
 
 Les listes, unions, fichiers et médias sont réservés à une version ultérieure.
 
@@ -82,11 +94,18 @@ entities:
       title: title
       subtitle: status
     query:
-      mode: endpoint
-      endpoint: /api/intentlane/entities/ideas
+      mode: static
 ```
 
-Le MVP accepte `static` et `endpoint`. Un endpoint renvoie une enveloppe JSON versionnée. Les valeurs privées ne doivent pas être indexées dans Spotlight sans opt-in.
+L'entité génère une `AppEntity`, une `EntityQuery` et un protocole de résolution Swift que l'application implémente. IntentLane n'émet jamais la logique métier : l'application fournit les données et enregistre son implémentation dans le registre généré.
+
+```swift
+IntentLaneEntityResolvers.idea = MyIdeaResolver()
+```
+
+`display.title` et `display.subtitle` nomment les propriétés de l'entité affichées par le système, et `identifier` nomme la propriété qui porte l'identifiant. Une entité dont le titre manque dans la locale par défaut est refusée (IL1201), un identifiant déclaré deux fois ou un nom de type Swift en collision aussi (IL1601).
+
+La version 0.1 ne génère que la requête `static`. Un `query.mode` valant `endpoint` est refusé (IL1401) : les données passent par le protocole de résolution. Les valeurs privées ne doivent pas être indexées dans Spotlight sans opt-in.
 
 ## Exécution
 
