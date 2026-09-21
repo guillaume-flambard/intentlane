@@ -30,6 +30,9 @@ intents:
       - id: title
         type: string
         required: true
+        title:
+          en: Idea title
+          fr: Titre de l'idée
         prompt:
           en: What is the idea?
           fr: Quelle est l'idée ?

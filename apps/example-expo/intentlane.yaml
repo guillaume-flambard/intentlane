@@ -42,24 +42,36 @@ intents:
       - id: title
         type: string
         required: true
+        title:
+          en: Idea title
+          fr: Titre de l'idée
         prompt:
           en: What is the idea?
           fr: Quelle est l'idée ?
       - id: effort
         type: integer
         required: true
+        title:
+          en: Effort
+          fr: Effort
         prompt:
           en: How much effort?
           fr: Combien d'effort ?
       - id: due
         type: date
         required: false
+        title:
+          en: Due date
+          fr: Échéance
         prompt:
           en: When is it due?
           fr: Pour quand ?
       - id: priority
         type: enum
         required: true
+        title:
+          en: Priority
+          fr: Priorité
         prompt:
           en: Which priority?
           fr: Quelle priorité ?
@@ -108,6 +120,9 @@ intents:
         type: entity
         entity: idea
         required: true
+        title:
+          en: Idea
+          fr: Idée
         prompt:
           en: Which idea?
           fr: Quelle idée ?
@@ -135,6 +150,9 @@ intents:
         type: entity
         entity: idea
         required: true
+        title:
+          en: Idea
+          fr: Idée
         prompt:
           en: Which idea?
           fr: Quelle idée ?

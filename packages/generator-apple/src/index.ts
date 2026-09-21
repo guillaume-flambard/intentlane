@@ -30,6 +30,8 @@ const pascalCase = (value: string): string => value.split("_").map((part) => `${
 
 const labelsFor = (parameter: ParameterIR, value: string): LocalizedText => parameter.values?.[value] ?? {};
 
+const parameterTitle = (parameter: ParameterIR, locale: string): string => (parameter.title ? localized(parameter.title, locale) : parameter.id);
+
 function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
   return `IntentLane${intent.swiftName}${pascalCase(parameter.id)}`;
 }
@@ -46,8 +48,9 @@ function swiftType(intent: IntentIR, parameter: ParameterIR, entities: readonly 
   return mapped;
 }
 
-function parameterDeclaration(intent: IntentIR, parameter: ParameterIR, entities: readonly EntityIR[]): string {
-  return `  @Parameter(title: ${localizedResource(parameter.id)})\n  var ${parameter.id}: ${swiftType(intent, parameter, entities)}`;
+function parameterDeclaration(intent: IntentIR, parameter: ParameterIR, entities: readonly EntityIR[], locale: string): string {
+  const prompt = parameter.prompt ? `, requestValueDialog: IntentDialog(${localizedResource(localized(parameter.prompt, locale))})` : "";
+  return `  @Parameter(title: ${localizedResource(parameterTitle(parameter, locale))}${prompt})\n  var ${parameter.id}: ${swiftType(intent, parameter, entities)}`;
 }
 
 function emitEntity(entity: EntityIR, locale: string): string {
@@ -86,7 +89,7 @@ function emitEnum(intent: IntentIR, parameter: ParameterIR, locale: string): str
   const values = Object.keys(parameter.values ?? {}).sort((left, right) => left.localeCompare(right));
   const cases = values.map((value) => `  case ${value}`).join("\n");
   const representations = values.map((value) => `    .${value}: DisplayRepresentation(title: ${localizedResource(localized(labelsFor(parameter, value), locale))})`).join(",\n");
-  return `enum ${name}: String, AppEnum {\n${cases}\n\n  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(parameter.id)})\n  }\n\n  static var caseDisplayRepresentations: [${name}: DisplayRepresentation] {\n    [\n${representations}\n    ]\n  }\n}`;
+  return `enum ${name}: String, AppEnum {\n${cases}\n\n  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(parameterTitle(parameter, locale))})\n  }\n\n  static var caseDisplayRepresentations: [${name}: DisplayRepresentation] {\n    [\n${representations}\n    ]\n  }\n}`;
 }
 
 function enumDeclarations(ir: ConfigIR, locale: string): string {
@@ -128,7 +131,7 @@ function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: stri
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
   const authentication = authenticationLine(intent);
   const confirmation = confirmationStatement(intent, locale);
-  const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities)).join("\n\n");
+  const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities, locale)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   return `struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog & OpensIntent {\n${confirmation}    let url = ${routeExpression(intent, scheme)}\n    return .result(opensIntent: OpenURLIntent(url), dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
 }
@@ -183,6 +186,8 @@ function stringsEntries(ir: ConfigIR, locale: string): readonly (readonly [strin
     consider(intent.risk?.confirmationPrompt);
     consider(intent.dialog);
     for (const parameter of intent.parameters) {
+      consider(parameter.title);
+      consider(parameter.prompt);
       for (const labels of Object.values(parameter.values ?? {})) consider(labels);
     }
   }

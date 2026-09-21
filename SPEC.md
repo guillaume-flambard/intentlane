@@ -51,6 +51,17 @@ Types de paramètre : `string`, `integer`, `number`, `boolean`, `date`, `datetim
 
 Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré, `entity` vers l'`AppEntity` généré de l'entité référencée.
 
+Chaque paramètre peut déclarer un `title` et un `prompt`, tous deux des maps locales. Le `title` devient le libellé affiché par le système et le nom du type d'un `enum` ; à défaut, l'identifiant brut sert de libellé. Le `prompt` devient le dialogue que Siri pose pour obtenir la valeur.
+
+```yaml
+parameters:
+  - id: title
+    type: string
+    required: true
+    title: { en: Idea title, fr: Titre de l'idée }
+    prompt: { en: What is the idea?, fr: Quelle est l'idée ? }
+```
+
 Un paramètre `enum` déclare ses valeurs sous `values`, une map identifiant vers map locale. Les identifiants de valeurs suivent la règle des autres identifiants et deviennent les noms de cas Swift.
 
 ```yaml
@@ -81,7 +92,7 @@ Les listes, unions, fichiers et médias sont réservés à une version ultérieu
 
 ## Intention
 
-Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required`.
+Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required` ; `title` et `prompt` sont optionnels.
 
 ## Entité
 

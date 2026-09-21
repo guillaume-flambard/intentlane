@@ -94,6 +94,19 @@ parameters:
 
 The generator emits `enum IntentLane<Intent><Parameter>: String, AppEnum` with one `case` per value, and every label goes into the `IntentLane` strings table. Case names therefore stay stable identifiers while Siri and the Shortcuts app show the translated label. An enum without values is rejected (IL1301), and `values` on a parameter that is not an enum is rejected too (IL1301).
 
+A parameter may also declare a `title` and a `prompt`, both localized maps:
+
+```yaml
+parameters:
+  - id: title
+    type: string
+    required: true
+    title: { en: Idea title, fr: Titre de l'idée }
+    prompt: { en: What is the idea?, fr: Quelle est l'idée ? }
+```
+
+The `title` becomes the label the system shows and the display name of a generated `AppEnum`, and the `prompt` becomes the dialog Siri asks for the value (`requestValueDialog`). Both go into the `IntentLane` strings table. Without a `title`, the generator falls back to the raw parameter id; without a `prompt`, no value dialog is emitted. A `title` missing its default locale is rejected with IL1201.
+
 ## Entities
 
 An entity describes a value the system can hand back to an intent, such as an idea selected from the app's own data:
@@ -228,14 +241,12 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 
 - An intent without `shortcuts.phrases` for the default locale is reachable programmatically but never from Siri, and it is intentionally left out of the `AppShortcutsProvider`. Whether that deserves its own diagnostic is undecided.
 - A phrase that omits `${appName}` produces a shortcut iOS will not register. The generator substitutes `${appName}` with `\(.applicationName)` but does not yet warn on phrases that never use it.
-- `@Parameter(title:)` still uses the raw parameter id; localized titles and prompts are Phase 3 work.
 - The generated Swift hardcodes the default locale. Per-locale Swift output is not implemented; the Swift always carries default-locale text as the strings-table keys.
 - Shortcut phrases stay literal in the default locale. Localizing `AppShortcut` phrases through a strings file does not work (Apple developer forums, "App Intents Siri Phrases Localization"), and WWDC25 session 244 requires the `applicationName` placeholder in every phrase. Titles, descriptions, dialogs and shortcut titles are localized; `shortcuts.phrases` are not.
 - `knownRegions` is left untouched. The plugin mirrors what Expo does for `expo.locales` on iOS (`@expo/config-plugins/build/ios/Locales.js`), which registers `<locale>.lproj` groups and resources without editing `knownRegions`. Whether iOS selects `fr.lproj/IntentLane.strings` while `fr` is absent from `knownRegions` was not verified on a device.
 - Stale localization directories are not pruned. Dropping a locale from `app.locales` leaves its `<locale>.lproj` directory on disk and its Xcode registration in place. Expo has the same limitation (`TODO: Should we delete all before running?` in `Locales.js`).
 - Two intents that share the same default-locale text but carry different translations collide in the strings table. The first one in canonical intent order wins; the other keeps its default-locale text.
 - `required` is not reflected in the generated Swift. Every parameter is emitted as a plain `@Parameter` with no default, so `required: true` is a contract statement the compiler does not enforce yet.
-- An enum `typeDisplayRepresentation` uses the raw parameter id as its `LocalizedStringResource` key, the same limitation as `@Parameter(title:)`.
 - Generated enum type names are `IntentLane<Intent Swift name><PascalCase parameter id>`. Two intents whose names combine into the same identifier would collide, and no diagnostic covers that case.
 - The generated entity code compiles under Swift 5 and fails under Swift 6 strict concurrency: `defaultQuery` would need to be a `let`, and the resolver holder would need a `Sendable` protocol. The example project builds with `SWIFT_VERSION = 5.0`.
 - An entity query returns nothing until the app registers its resolver. `IntentLaneEntityResolvers.<entity>` starts `nil`, so the generated query returns an empty list rather than failing, and Siri shows no entity suggestion until the app assigns an implementation.

@@ -119,6 +119,35 @@ describe("parameter types", () => {
     expect(result.diagnostics).toEqual([]);
     expect(result.ir?.intents[0]?.parameters.map((parameter) => parameter.type)).toEqual(types);
   });
+
+  it("normalizes a localized parameter title into the IR", () => {
+    const result = parseConfig(withParameters([
+      { id: "title", type: "string", required: true, title: { en: "Idea title", fr: "Titre de l'idée" }, prompt: { en: "What is the idea?", fr: "Quelle est l'idée ?" } }
+    ]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({
+      title: { en: "Idea title", fr: "Titre de l'idée" },
+      prompt: { en: "What is the idea?", fr: "Quelle est l'idée ?" }
+    });
+  });
+
+  it("omits the title when the contract declares none", () => {
+    const result = parseConfig(withParameters([{ id: "title", type: "string", required: true }]));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters[0]).not.toHaveProperty("title");
+  });
+
+  it("errors when a parameter title misses its default locale", () => {
+    const result = parseConfig(withParameters([{ id: "title", type: "string", required: true, title: { fr: "Titre de l'idée" } }]));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", path: "intents[0].parameters[0].title" }));
+  });
+
+  it("warns when a parameter title misses a secondary locale", () => {
+    const result = parseConfig(withParameters([{ id: "title", type: "string", required: true, title: { en: "Idea title" } }]));
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1201", severity: "warning", path: "intents[0].parameters[0].title" }));
+    expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({ title: { en: "Idea title" } });
+  });
 });
 
 describe("entities", () => {

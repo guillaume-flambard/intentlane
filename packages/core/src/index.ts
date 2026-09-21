@@ -11,6 +11,7 @@ export type ParameterIR = Readonly<{
   id: string;
   type: ParameterType;
   required: boolean;
+  title?: LocalizedText;
   prompt?: LocalizedText;
   values?: Readonly<Record<string, LocalizedText>>;
   entity?: string;
@@ -90,6 +91,7 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
     diagnostics.push(...localizedDiagnostics(intent.result?.dialog, config.app.locales, `${path}.result.dialog`));
     for (const [parameterIndex, parameter] of intent.parameters.entries()) {
       const parameterPath = `${path}.parameters[${parameterIndex}]`;
+      diagnostics.push(...localizedDiagnostics(parameter.title, config.app.locales, `${parameterPath}.title`));
       diagnostics.push(...localizedDiagnostics(parameter.prompt, config.app.locales, `${parameterPath}.prompt`));
       for (const [value, labels] of Object.entries(parameter.values ?? {})) {
         diagnostics.push(...localizedDiagnostics(labels, config.app.locales, `${parameterPath}.values.${value}`));
@@ -148,6 +150,7 @@ export function parseConfig(value: unknown): ParseResult {
         id: parameter.id,
         type: parameter.type,
         required: parameter.required,
+        ...(parameter.title ? { title: parameter.title } : {}),
         ...(parameter.prompt ? { prompt: parameter.prompt } : {}),
         ...(parameter.values ? { values: parameter.values } : {}),
         ...(parameter.entity ? { entity: parameter.entity } : {})

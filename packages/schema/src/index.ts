@@ -19,6 +19,7 @@ const parameterSchema = z.object({
   id: identifierSchema,
   type: parameterTypeSchema,
   required: z.boolean(),
+  title: localizedSchema.optional(),
   prompt: localizedSchema.optional(),
   values: z.record(identifierSchema, localizedSchema).optional(),
   entity: identifierSchema.optional()

@@ -463,3 +463,67 @@ describe("risk policy", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+const localizedParameterConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  intents: [{
+    id: "create_idea",
+    title: { en: "Create an idea", fr: "Créer une idée" },
+    parameters: [
+      {
+        id: "title",
+        type: "string",
+        required: true,
+        title: { en: "Idea title", fr: "Titre de l'idée" },
+        prompt: { en: "What is the idea?", fr: "Quelle est l'idée ?" }
+      },
+      { id: "effort", type: "integer", required: false, prompt: { en: "How much effort?", fr: "Quel effort ?" } },
+      {
+        id: "priority",
+        type: "enum",
+        required: true,
+        title: { en: "Priority", fr: "Priorité" },
+        values: { low: { en: "Low", fr: "Basse" } }
+      }
+    ],
+    execution: { mode: "open_app", route: "/ideas/new", mapping: { title: "title" } }
+  }]
+};
+
+describe("localized parameters", () => {
+  const ir = () => {
+    const result = parseConfig(localizedParameterConfig);
+    if (!result.ir) throw new Error("Localized parameter fixture must parse");
+    return result.ir;
+  };
+  const swift = () => generateSwift(ir());
+
+  it("emits the declared title and the prompt as the value dialog", () => {
+    expect(swift()).toContain('@Parameter(title: LocalizedStringResource("Idea title", table: "IntentLane"), requestValueDialog: IntentDialog(LocalizedStringResource("What is the idea?", table: "IntentLane")))');
+  });
+
+  it("falls back to the raw parameter id when no title is declared", () => {
+    expect(swift()).toContain('@Parameter(title: LocalizedStringResource("effort", table: "IntentLane"), requestValueDialog: IntentDialog(LocalizedStringResource("How much effort?", table: "IntentLane")))');
+  });
+
+  it("emits no value dialog when the parameter declares no prompt", () => {
+    expect(swift()).toContain('@Parameter(title: LocalizedStringResource("Priority", table: "IntentLane"))\n  var priority: IntentLaneCreateIdeaPriority');
+  });
+
+  it("names the enum type display after the parameter title", () => {
+    expect(swift()).toContain('TypeDisplayRepresentation(name: LocalizedStringResource("Priority", table: "IntentLane"))');
+  });
+
+  it("puts titles and prompts in the strings table", () => {
+    const strings = generateStrings(ir(), "fr");
+    expect(strings).toContain('"Idea title" = "Titre de l\'idée";');
+    expect(strings).toContain('"What is the idea?" = "Quelle est l\'idée ?";');
+    expect(strings).toContain('"How much effort?" = "Quel effort ?";');
+    expect(strings).toContain('"Priority" = "Priorité";');
+  });
+
+  it("matches the localized parameter Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});
