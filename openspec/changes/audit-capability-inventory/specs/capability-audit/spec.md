@@ -68,3 +68,14 @@ The system SHALL state whether the project resolves its content locally, through
 #### Scenario: Nothing recognizable
 - **WHEN** no store, sync or network signal is found
 - **THEN** the architecture is unknown with the confidence the collected evidence allows
+
+### Requirement: Capability test conditions
+The system SHALL record the conditions a capability test depends on, and SHALL name the ones a person still has to confirm.
+
+#### Scenario: A machine that answers for itself
+- **WHEN** the audit runs where the operating system, the toolchain and the locale can be read
+- **THEN** the operating system version, the Xcode version, the architecture, the locale and the region are recorded
+
+#### Scenario: Conditions only a person can confirm
+- **WHEN** the conditions a machine cannot prove are still open
+- **THEN** the Apple Intelligence hardware, the signed-in account, the granted permissions and the test data are named as unknown, so a Siri result cannot be attributed to the client code without them

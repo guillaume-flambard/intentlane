@@ -7,6 +7,7 @@ import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSche
 export * from "./audit.js";
 export * from "./audit-project.js";
 export * from "./audit-architecture.js";
+export * from "./audit-conditions.js";
 export * from "./audit-data.js";
 export * from "./audit-route.js";
 export * from "./audit-catalogue.js";

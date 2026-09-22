@@ -4,6 +4,7 @@ import { CAPABILITY_CATALOGUE, availableOn } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
 import { detectDataArchitecture } from "./audit-architecture.js";
+import { describeConditions, type AuditEnvironment } from "./audit-conditions.js";
 import { classifyData } from "./audit-data.js";
 import { detectIntegrationRoute } from "./audit-route.js";
 import { compareVersions, readSdkInfo } from "./audit-sdk.js";
@@ -27,6 +28,7 @@ export type AuditOptions = Readonly<{
   deploymentTarget?: string;
   buildMetadata?: string;
   sdkPath?: string;
+  environment?: AuditEnvironment;
 }>;
 
 const METADATA_FILE = "Metadata.appintents/extract.actionsdata";
@@ -72,6 +74,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
   const data = classifyData(files, sources);
   const architecture = detectDataArchitecture(files, sources);
+  const conditions = describeConditions(options.environment);
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
@@ -167,7 +170,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       ...(sdk ? { sdk: { version: sdk.version, canonicalName: sdk.canonicalName } } : {}),
       route,
       data,
-      architecture
+      architecture,
+      conditions
     }
   );
 }

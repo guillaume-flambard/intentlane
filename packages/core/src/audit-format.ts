@@ -1,4 +1,5 @@
 import type { AuditFinding, AuditReport } from "./audit.js";
+import { recordedConditionCount } from "./audit-conditions.js";
 import { scoreAuditReport } from "./audit-score.js";
 
 export const AUDIT_FORMATS = ["text", "json", "sarif"] as const;
@@ -29,6 +30,11 @@ export function formatText(report: AuditReport): string {
   if (report.route) lines.push(`route ${report.route.route} (${report.route.confidence})`);
   if (report.data) lines.push(`data ${report.data.classes.join("+")} (privacy ${report.data.privacy})`);
   if (report.architecture) lines.push(`architecture ${report.architecture.architecture} (${report.architecture.confidence})`);
+  if (report.conditions) {
+    lines.push(
+      `conditions ${recordedConditionCount(report.conditions)}/${report.conditions.conditions.length} recorded`
+    );
+  }
   for (const finding of report.findings) {
     lines.push(`${finding.platform} ${finding.state} ${finding.capability} (${finding.confidence})`);
     for (const gap of finding.gaps) lines.push(`  ${gap.code} ${gap.message}`);
@@ -83,7 +89,8 @@ export function formatSarif(report: AuditReport): string {
           score: scoreAuditReport(report),
           ...(report.route ? { route: report.route } : {}),
           ...(report.data ? { data: report.data } : {}),
-          ...(report.architecture ? { architecture: report.architecture } : {})
+          ...(report.architecture ? { architecture: report.architecture } : {}),
+          ...(report.conditions ? { conditions: report.conditions } : {})
         }
       }
     ]

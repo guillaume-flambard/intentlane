@@ -67,6 +67,37 @@ function commandAvailable(command: string): boolean {
   return spawnSync(command, ["--version"], { stdio: "ignore" }).status === 0;
 }
 
+function environmentFacts(): {
+  osVersion?: string;
+  xcodeVersion?: string;
+  architecture?: string;
+  locale?: string;
+  region?: string;
+} {
+  const facts: {
+    osVersion?: string;
+    xcodeVersion?: string;
+    architecture?: string;
+    locale?: string;
+    region?: string;
+  } = { architecture: process.arch };
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+  if (locale.length > 0) {
+    facts.locale = locale;
+    const region = locale.split("-")[1];
+    if (region !== undefined) facts.region = region;
+  }
+  if (process.platform === "darwin") {
+    const version = spawnSync("sw_vers", ["-productVersion"], { encoding: "utf8" });
+    const osVersion = version.status === 0 ? version.stdout.trim() : "";
+    if (osVersion.length > 0) facts.osVersion = osVersion;
+    const xcode = spawnSync("xcodebuild", ["-version"], { encoding: "utf8" });
+    const xcodeVersion = xcode.status === 0 ? xcode.stdout.trim().split("\n").pop()?.replace("Build version ", "") ?? "" : "";
+    if (xcodeVersion.length > 0) facts.xcodeVersion = xcodeVersion;
+  }
+  return facts;
+}
+
 const MANIFEST_FILE = "intentlane.manifest.json";
 
 type ArtifactSet = Readonly<{ files: readonly GeneratedArtifact[]; manifest: string }>;
@@ -241,7 +272,8 @@ program.command("audit")
       platform,
       ...(deploymentTarget ? { deploymentTarget } : {}),
       ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {}),
-      ...(options.sdkPath ? { sdkPath: resolve(options.sdkPath) } : {})
+      ...(options.sdkPath ? { sdkPath: resolve(options.sdkPath) } : {}),
+      environment: environmentFacts()
     });
     if (options.sdkPath !== undefined && report.sdk === undefined) {
       process.stderr.write(

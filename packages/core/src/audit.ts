@@ -1,4 +1,5 @@
 import type { AuditArchitectureReport } from "./audit-architecture.js";
+import type { AuditConditionsReport } from "./audit-conditions.js";
 import type { AuditDataReport } from "./audit-data.js";
 import type { AuditRouteReport } from "./audit-route.js";
 
@@ -80,6 +81,7 @@ export type AuditReportExtras = Readonly<{
   route?: AuditRouteReport;
   data?: AuditDataReport;
   architecture?: AuditArchitectureReport;
+  conditions?: AuditConditionsReport;
 }>;
 
 export type AuditReport = Readonly<{
@@ -89,6 +91,7 @@ export type AuditReport = Readonly<{
   route?: AuditRouteReport;
   data?: AuditDataReport;
   architecture?: AuditArchitectureReport;
+  conditions?: AuditConditionsReport;
   findings: readonly AuditFinding[];
 }>;
 
@@ -119,6 +122,7 @@ export function createAuditReport(
     ...(extras.route ? { route: extras.route } : {}),
     ...(extras.data ? { data: extras.data } : {}),
     ...(extras.architecture ? { architecture: extras.architecture } : {}),
+    ...(extras.conditions ? { conditions: extras.conditions } : {}),
     findings: [...findings].sort(compareFindings)
   };
 }
