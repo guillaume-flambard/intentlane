@@ -1,5 +1,17 @@
 # IntentLane — guide pour agent de code
 
+## Cadrage : iOS 27 et macOS 27
+
+La cible est la génération d'OS **iOS 27 et macOS 27** : Siri AI, Apple
+Intelligence, App Schemas, App Intents.
+
+Nommer la cible par sa version d'OS, jamais autrement. Écrire « macOS 27 »,
+« iOS 27 », « le SDK macOS 27 », « Xcode 27 ». Ne jamais nommer la cible par une
+année de calendrier, et ne jamais la nommer « 26 » : une année ne désigne pas la
+cible, et 26 désigne la génération précédente. Les mentions d'une version
+antérieure (image de CI `macos-26`, SDK 26.5, Xcode 26.6) ne sont légitimes que
+pour décrire un outil ou une comparaison, jamais la cible du produit.
+
 ## Programme Siri 27
 
 Pour les tâches d'audit d'applications existantes, App Schemas, Siri, Apple
