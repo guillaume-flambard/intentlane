@@ -57,3 +57,14 @@ The system SHALL name the data classes it can see in the declared properties and
 #### Scenario: Sensitive and personal properties
 - **WHEN** declared property names match a sensitive or a personal signal
 - **THEN** both classes are reported in the published class order, each citing the file and the line it came from
+
+### Requirement: Data architecture qualification
+The system SHALL state whether the project resolves its content locally, through a sync, through a remote service, or through nothing it can recognize.
+
+#### Scenario: Local store and a network client
+- **WHEN** the project declares a local store and a network client
+- **THEN** the architecture is local, because the store is what a Siri journey resolves against
+
+#### Scenario: Nothing recognizable
+- **WHEN** no store, sync or network signal is found
+- **THEN** the architecture is unknown with the confidence the collected evidence allows

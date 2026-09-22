@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { CAPABILITY_CATALOGUE, availableOn } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
+import { detectDataArchitecture } from "./audit-architecture.js";
 import { classifyData } from "./audit-data.js";
 import { detectIntegrationRoute } from "./audit-route.js";
 import { compareVersions, readSdkInfo } from "./audit-sdk.js";
@@ -70,6 +71,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
   const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
   const data = classifyData(files, sources);
+  const architecture = detectDataArchitecture(files, sources);
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
@@ -164,7 +166,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
     {
       ...(sdk ? { sdk: { version: sdk.version, canonicalName: sdk.canonicalName } } : {}),
       route,
-      data
+      data,
+      architecture
     }
   );
 }

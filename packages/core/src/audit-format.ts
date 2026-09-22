@@ -28,6 +28,7 @@ export function formatText(report: AuditReport): string {
   ];
   if (report.route) lines.push(`route ${report.route.route} (${report.route.confidence})`);
   if (report.data) lines.push(`data ${report.data.classes.join("+")} (privacy ${report.data.privacy})`);
+  if (report.architecture) lines.push(`architecture ${report.architecture.architecture} (${report.architecture.confidence})`);
   for (const finding of report.findings) {
     lines.push(`${finding.platform} ${finding.state} ${finding.capability} (${finding.confidence})`);
     for (const gap of finding.gaps) lines.push(`  ${gap.code} ${gap.message}`);
@@ -81,7 +82,8 @@ export function formatSarif(report: AuditReport): string {
         properties: {
           score: scoreAuditReport(report),
           ...(report.route ? { route: report.route } : {}),
-          ...(report.data ? { data: report.data } : {})
+          ...(report.data ? { data: report.data } : {}),
+          ...(report.architecture ? { architecture: report.architecture } : {})
         }
       }
     ]
