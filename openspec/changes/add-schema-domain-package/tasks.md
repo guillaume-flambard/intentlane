@@ -1,6 +1,6 @@
 ## 1. Scope
 
-- [ ] 1.1 Select a domain from paid or pilot demand and document complete Apple requirements.
+- [x] 1.1 Select a domain from paid or pilot demand and document complete Apple requirements.
 - [ ] 1.2 Add positive and missing-requirement fixtures before generator changes.
 
 ## 2. Implementation

@@ -13,7 +13,8 @@ const parameterTypeSchema = z.enum([
   "date",
   "datetime",
   "enum",
-  "entity"
+  "entity",
+  "entity_list"
 ]);
 
 const parameterSchema = z.object({
