@@ -11,6 +11,10 @@ schema for the desired action.
 Record upstream revision, licence, target and deployment floor, Xcode and OS
 build, device or simulator, selected domain, selected journeys and schema fit.
 
+[AUDIT-GUIDE.md](AUDIT-GUIDE.md) documents the baseline recipe: run the audit on
+the pinned revision in all three formats, keep the JSON next to the evidence
+ledger, and compare the delta after the implementation.
+
 ## Isolation
 
 1. Use a disposable fork or worktree outside IntentLane.
