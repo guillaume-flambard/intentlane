@@ -12,7 +12,7 @@ required rather than invented.
 | Licence | `LICENSE` (MIT), `"license": "MIT"` in `package.json` and in the two publishable packages. |
 | Contribution guide | `CONTRIBUTING.md`: what helps most, what to include in an issue, the development commands, the ten rules the code follows, and the commit and pull request rules. |
 | Agent guide | `AGENT-GUIDE.md`, plus the programme section that points at the Siri 27 documents. |
-| Documentation | `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `MIGRATION.md`, `PRD.md`, `MARKET-STUDY.md`, `ROADMAP.md`, `AUDIT-GUIDE.md`, `PILOT-PLAYBOOK.md`, `COMMERCIAL-READINESS.md`, `AUDITOR-SPEC.md`, `APPLE-27-APP-INTENTS-RESEARCH.md`, `SIRI-27-ROADMAP.md`, `UNEXPLORED-ANGLES.md`, `OPEN-CORE-READINESS.md`, `AUDIT-OFFER.md`. |
+| Documentation | `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `MIGRATION.md`, `PRD.md`, `MARKET-STUDY.md`, `ROADMAP.md`, `AUDIT-GUIDE.md`, `PILOT-PLAYBOOK.md`, `COMMERCIAL-READINESS.md`, `AUDITOR-SPEC.md`, `APPLE-27-APP-INTENTS-RESEARCH.md`, `SIRI-27-ROADMAP.md`, `UNEXPLORED-ANGLES.md`, `OPEN-CORE-READINESS.md`, `AUDIT-OFFER.md`, `PILOT-NETNEWSWIRE.md`. |
 | Machine-readable contract | `intentlane.schema.json`. |
 | CI | `.github/workflows/ci.yml` with four jobs: `checks` (typecheck, build the CLI bundle, 277 tests, validate, determinism), `swift` (matrix `macos-15` and `macos-26`), `macos` (`xcode-27`: four passes of `verify.mjs`, then audit the shelf, studio and reader fixtures), `simulator` (bundle, prebuild, Release build, metadata assertions). |
 | Issue intake | `.github/ISSUE_TEMPLATE/pilot-report.yml`, a form that asks for the contract excerpt, the toolchain, the goal, the outcome, `intentlane doctor`, the diagnostics, the contract gaps and any hand-written Swift. |

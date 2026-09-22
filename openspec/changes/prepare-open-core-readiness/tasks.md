@@ -11,7 +11,7 @@
 
 ## 3. Communication and commercial discovery
 
-- [ ] 3.1 Produce a very short NetNewsWire before-and-after artifact backed by a reproducible evidence ledger; verify it contains no upstream endorsement claim.
+- [x] 3.1 Produce a very short NetNewsWire before-and-after artifact backed by a reproducible evidence ledger; verify it contains no upstream endorsement claim.
 - [ ] 3.2 Release OSS only after pilot proof, with a quickstart and `intentlane audit`; verify the explanation separates shortcuts from schema-backed readiness.
 - [ ] 3.3 Publish evidence-based Apple and Swift technical content before targeted outreach; verify every claim names platform, version and proof.
 - [ ] 3.4 Target maintainers only when their public app audit shows a relevant gap; verify no generic mass outreach or catalog-first acquisition occurs.
