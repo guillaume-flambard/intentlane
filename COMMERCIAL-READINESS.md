@@ -38,6 +38,8 @@ The delivery template for this offer, including the report blocks the auditor
 produces, the engagement checklist and the handoff, is in
 [AUDIT-OFFER.md](AUDIT-OFFER.md).
 
+Every statement this repository publishes, with its evidence and its status, is in [CLAIMS-REGISTRY.md](CLAIMS-REGISTRY.md). A claim is only publishable at or below its status.
+
 ## Implementation offer
 
 One domain package and two or three named journeys. Include customer-owned
