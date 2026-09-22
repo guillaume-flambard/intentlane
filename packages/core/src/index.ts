@@ -229,9 +229,10 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       for (const [value, labels] of Object.entries(parameter.values ?? {})) {
         diagnostics.push(...localizedDiagnostics(labels, config.app.locales, `${parameterPath}.values.${value}`));
       }
-      if (parameter.type === "entity" && !parameter.entity) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' must reference an entity with 'entity'.`, `${parameterPath}.entity`));
-      if (parameter.type === "entity" && parameter.entity && !entityIds.has(parameter.entity)) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' references unknown entity '${parameter.entity}'.`, `${parameterPath}.entity`));
-      if (parameter.type !== "entity" && parameter.entity) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares an entity reference but its type is '${parameter.type}'.`, `${parameterPath}.entity`));
+      const isEntityType = parameter.type === "entity" || parameter.type === "entity_list";
+      if (isEntityType && !parameter.entity) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' must reference an entity with 'entity'.`, `${parameterPath}.entity`));
+      if (isEntityType && parameter.entity && !entityIds.has(parameter.entity)) diagnostics.push(error("IL1301", `Entity parameter '${parameter.id}' references unknown entity '${parameter.entity}'.`, `${parameterPath}.entity`));
+      if (!isEntityType && parameter.entity) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares an entity reference but its type is '${parameter.type}'.`, `${parameterPath}.entity`));
       if (parameter.type === "enum" && Object.keys(parameter.values ?? {}).length === 0) diagnostics.push(error("IL1301", `Enum parameter '${parameter.id}' must declare at least one value.`, `${parameterPath}.values`));
       if (parameter.type !== "enum" && parameter.values) diagnostics.push(error("IL1301", `Parameter '${parameter.id}' declares values but its type is '${parameter.type}'.`, `${parameterPath}.values`));
     }

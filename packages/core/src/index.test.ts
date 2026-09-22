@@ -603,6 +603,58 @@ describe("schema protocols", () => {
       expect.objectContaining({ code: "IL1401", path: "intents[0].result" })
     );
   });
+
+  it("normalizes an entity list parameter into the IR", () => {
+    const result = parseConfig({
+      ...base,
+      entities: [page],
+      intents: [
+        {
+          ...base.intents[0],
+          parameters: [{ id: "pages", type: "entity_list", required: true, entity: "page" }],
+          execution: { mode: "native", handler: "RotatePagesHandler" }
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]?.parameters[0]).toMatchObject({ id: "pages", type: "entity_list", entity: "page" });
+  });
+
+  it("requires an entity reference on an entity list parameter", () => {
+    const result = parseConfig({
+      ...base,
+      entities: [page],
+      intents: [
+        {
+          ...base.intents[0],
+          parameters: [{ id: "pages", type: "entity_list", required: true }],
+          execution: { mode: "native", handler: "RotatePagesHandler" }
+        }
+      ]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" })
+    );
+  });
+
+  it("rejects an unknown entity on an entity list parameter", () => {
+    const result = parseConfig({
+      ...base,
+      entities: [page],
+      intents: [
+        {
+          ...base.intents[0],
+          parameters: [{ id: "pages", type: "entity_list", required: true, entity: "missing" }],
+          execution: { mode: "native", handler: "RotatePagesHandler" }
+        }
+      ]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" })
+    );
+  });
 });
 
 describe("diagnostic codes", () => {
