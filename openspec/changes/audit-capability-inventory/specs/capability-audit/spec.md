@@ -79,3 +79,14 @@ The system SHALL record the conditions a capability test depends on, and SHALL n
 #### Scenario: Conditions only a person can confirm
 - **WHEN** the conditions a machine cannot prove are still open
 - **THEN** the Apple Intelligence hardware, the signed-in account, the granted permissions and the test data are named as unknown, so a Siri result cannot be attributed to the client code without them
+
+### Requirement: Action quality signals
+The system SHALL report the action surfaces it can see in the sources and SHALL flag a shortcut phrase that cannot be registered.
+
+#### Scenario: A complete action
+- **WHEN** an intent returns a result, shows a view, registers a shortcut and carries the applicationName placeholder
+- **THEN** every signal is reported with the file and the line it came from
+
+#### Scenario: A phrase without the placeholder
+- **WHEN** a shortcut phrase omits the applicationName placeholder
+- **THEN** the report raises an issue, because the system does not register that phrase

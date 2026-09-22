@@ -1,5 +1,6 @@
 import type { AuditFinding, AuditReport } from "./audit.js";
 import { recordedConditionCount } from "./audit-conditions.js";
+import { AUDIT_QUALITY_SIGNALS } from "./audit-quality.js";
 import { scoreAuditReport } from "./audit-score.js";
 
 export const AUDIT_FORMATS = ["text", "json", "sarif"] as const;
@@ -33,6 +34,11 @@ export function formatText(report: AuditReport): string {
   if (report.conditions) {
     lines.push(
       `conditions ${recordedConditionCount(report.conditions)}/${report.conditions.conditions.length} recorded`
+    );
+  }
+  if (report.quality) {
+    lines.push(
+      `quality ${report.quality.signals.length}/${AUDIT_QUALITY_SIGNALS.length} signals (${report.quality.issues.length} issue(s))`
     );
   }
   for (const finding of report.findings) {
@@ -90,7 +96,8 @@ export function formatSarif(report: AuditReport): string {
           ...(report.route ? { route: report.route } : {}),
           ...(report.data ? { data: report.data } : {}),
           ...(report.architecture ? { architecture: report.architecture } : {}),
-          ...(report.conditions ? { conditions: report.conditions } : {})
+          ...(report.conditions ? { conditions: report.conditions } : {}),
+          ...(report.quality ? { quality: report.quality } : {})
         }
       }
     ]

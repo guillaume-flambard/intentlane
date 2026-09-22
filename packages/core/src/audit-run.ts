@@ -6,6 +6,7 @@ import { discoverProjects, listProjectFiles } from "./audit-project.js";
 import { detectDataArchitecture } from "./audit-architecture.js";
 import { describeConditions, type AuditEnvironment } from "./audit-conditions.js";
 import { classifyData } from "./audit-data.js";
+import { detectActionQuality } from "./audit-quality.js";
 import { detectIntegrationRoute } from "./audit-route.js";
 import { compareVersions, readSdkInfo } from "./audit-sdk.js";
 import {
@@ -75,6 +76,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const data = classifyData(files, sources);
   const architecture = detectDataArchitecture(files, sources);
   const conditions = describeConditions(options.environment);
+  const quality = detectActionQuality(sources);
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
@@ -171,7 +173,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       route,
       data,
       architecture,
-      conditions
+      conditions,
+      quality
     }
   );
 }

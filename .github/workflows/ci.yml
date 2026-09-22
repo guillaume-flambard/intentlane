@@ -127,6 +127,8 @@ jobs:
           assert any(condition["name"] == "operatingSystem" and condition["state"] == "recorded" for condition in report["conditions"]["conditions"]), report["conditions"]
           assert any(condition["name"] == "xcode" and condition["state"] == "recorded" for condition in report["conditions"]["conditions"]), report["conditions"]
           assert report["conditions"]["nextAction"], report["conditions"]
+          assert report["quality"]["signals"], report["quality"]
+          assert report["quality"]["issues"] == [], report["quality"]
           assert shelf["foundation.app-intent"] == "implemented", shelf["foundation.app-intent"]
           assert shelf["semantics.app-schema"] == "unknown", shelf["semantics.app-schema"]
           assert shelf["proof.siri-surface"] == "unknown", shelf["proof.siri-surface"]
@@ -140,6 +142,7 @@ jobs:
           print("data:", report["data"]["classes"], report["data"]["privacy"])
           print("architecture:", report["architecture"]["architecture"], shelf_report["architecture"]["architecture"])
           print("conditions:", [(condition["name"], condition["state"]) for condition in report["conditions"]["conditions"]])
+          print("quality:", report["quality"]["signals"], report["quality"]["issues"])
           print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
           print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
           PY
