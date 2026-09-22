@@ -70,6 +70,11 @@ macos implemented foundation.app-intent (high)
   before a risky action. A phrase without the placeholder is raised as an issue.
 - **`catalogue`** names the catalogue version and whether the inspected SDK is
   older or newer than it.
+- **`targets`** scopes the findings to the Xcode targets that compile for the
+  requested platform. It follows each target's `.xcconfig` chain for `SDKROOT`
+  and expands the synchronized folders it compiles, so an intent only the iOS
+  target builds is not reported as implemented on macOS. A file no target owns
+  is kept, because its platform is ambiguous.
 
 Each capability line carries a state, and the states are ordered:
 `unsupported` (the target platform does not ship it), `unknown` (no evidence

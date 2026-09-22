@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { CAPABILITY_CATALOGUE, availableOn, describeCatalogue } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
@@ -9,6 +10,7 @@ import { classifyData } from "./audit-data.js";
 import { detectActionQuality } from "./audit-quality.js";
 import { detectIntegrationRoute } from "./audit-route.js";
 import { compareVersions, readSdkInfo } from "./audit-sdk.js";
+import { describeTargets, filesForPlatform, readTargetMembership } from "./audit-targets.js";
 import {
   createAuditReport,
   type AuditConfidence,
@@ -66,7 +68,19 @@ async function readSources(
 
 export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const files = await listProjectFiles(options.directory);
-  const sources = await readSources(options.directory, files);
+  const pbxproj = files.find((file) => file.endsWith(".xcodeproj/project.pbxproj"));
+  const projectDirectory = pbxproj ? dirname(dirname(pbxproj)) : "";
+  const targets = pbxproj
+    ? readTargetMembership(readFileSync(join(options.directory, pbxproj), "utf8"), (path) => {
+        try {
+          return readFileSync(join(options.directory, projectDirectory, path), "utf8");
+        } catch {
+          return undefined;
+        }
+      })
+    : [];
+  const scoped = filesForPlatform(targets, options.platform, files, projectDirectory);
+  const sources = await readSources(options.directory, scoped);
   const detections = detectSources(sources);
   const detected = detectedCapabilities(detections);
   const schemaEvidence = hasSchemaEvidence(detections);
@@ -176,7 +190,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       architecture,
       conditions,
       quality,
-      catalogue
+      catalogue,
+      targets: describeTargets(targets, options.platform)
     }
   );
 }

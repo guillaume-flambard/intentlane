@@ -112,3 +112,18 @@ The system SHALL accept `both` as a platform selection and SHALL emit one comple
 #### Scenario: Single platform output is unchanged
 - **WHEN** the audit runs with `--platform macos` or `--platform ios`
 - **THEN** the JSON document is a single report, exactly as before
+
+### Requirement: Target-scoped capability evidence
+The system SHALL scope the evidence of every capability to the Xcode targets that compile for the requested platform, and SHALL report the targets it inspected.
+
+#### Scenario: An intent only the iOS target compiles
+- **WHEN** the project requests macOS and the only App Intent is compiled by an iOS target
+- **THEN** the report does not mark the App Intent capability implemented for macOS, while the iOS report still does
+
+#### Scenario: Platform read from the build configuration
+- **WHEN** the project keeps its build settings in `.xcconfig` files
+- **THEN** the system follows the configuration includes to read the platform, and expands the synchronized folders a target compiles
+
+#### Scenario: A file no target owns
+- **WHEN** a Swift file belongs to no target
+- **THEN** the report still inspects it, because its platform is ambiguous
