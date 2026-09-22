@@ -1,3 +1,4 @@
+import type { AuditDataReport } from "./audit-data.js";
 import type { AuditRouteReport } from "./audit-route.js";
 
 export const AUDIT_REPORT_VERSION = "1.0";
@@ -76,6 +77,7 @@ export type AuditTarget = Readonly<{
 export type AuditReportExtras = Readonly<{
   sdk?: Readonly<{ version: string; canonicalName: string }>;
   route?: AuditRouteReport;
+  data?: AuditDataReport;
 }>;
 
 export type AuditReport = Readonly<{
@@ -83,6 +85,7 @@ export type AuditReport = Readonly<{
   target: AuditTarget;
   sdk?: Readonly<{ version: string; canonicalName: string }>;
   route?: AuditRouteReport;
+  data?: AuditDataReport;
   findings: readonly AuditFinding[];
 }>;
 
@@ -111,6 +114,7 @@ export function createAuditReport(
     target,
     ...(extras.sdk ? { sdk: extras.sdk } : {}),
     ...(extras.route ? { route: extras.route } : {}),
+    ...(extras.data ? { data: extras.data } : {}),
     findings: [...findings].sort(compareFindings)
   };
 }

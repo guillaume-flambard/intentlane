@@ -119,6 +119,9 @@ jobs:
           assert report["score"]["discovery"] == "schema-backed", report["score"]
           assert report["route"]["route"] == "native", report["route"]
           assert shelf_report["route"]["route"] == "native", shelf_report["route"]
+          assert report["data"]["privacy"] == "unknown", report["data"]
+          assert shelf_report["data"]["privacy"] == "unknown", shelf_report["data"]
+          assert report["data"]["indexed"] is False, report["data"]
           assert shelf["foundation.app-intent"] == "implemented", shelf["foundation.app-intent"]
           assert shelf["semantics.app-schema"] == "unknown", shelf["semantics.app-schema"]
           assert shelf["proof.siri-surface"] == "unknown", shelf["proof.siri-surface"]
@@ -129,6 +132,7 @@ jobs:
           print("sdk:", report["sdk"])
           print("score:", report["score"])
           print("route:", report["route"]["route"], shelf_report["route"]["route"])
+          print("data:", report["data"]["classes"], report["data"]["privacy"])
           print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
           print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
           PY

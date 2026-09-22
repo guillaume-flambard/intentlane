@@ -46,3 +46,14 @@ The system SHALL state whether the project is native, bridged, ineligible or unk
 #### Scenario: Web-only project
 - **WHEN** the project has neither a native target nor a bridge marker
 - **THEN** the route is ineligible and the report explains that App Intents need a native target or a bridge
+
+### Requirement: Indexed data classification
+The system SHALL name the data classes it can see in the declared properties and SHALL report whether the project ships a privacy manifest when it indexes entities.
+
+#### Scenario: Indexed entities without a privacy manifest
+- **WHEN** the project conforms an entity to IndexedEntity and ships no PrivacyInfo.xcprivacy
+- **THEN** the report states the missing manifest and asks for one
+
+#### Scenario: Sensitive and personal properties
+- **WHEN** declared property names match a sensitive or a personal signal
+- **THEN** both classes are reported in the published class order, each citing the file and the line it came from
