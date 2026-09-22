@@ -46,3 +46,46 @@ with an evidence ledger, not a promise about future Apple model behaviour.
 Publish a broad landing page only after one reproducible macOS 27 and one
 reproducible iOS 27 pilot. Case studies need app-owner permission and name
 actions, platform versions and observed surfaces.
+
+## Future direction: IntentLane Observe
+
+IntentLane Observe is a future, post-integration capability, envisaged later. It
+is not a current feature and it is not an implementation commitment. It is
+planned as a Pro module or add-on rather than a separate brand at the start, and
+it does not change the main promise: turning an existing app that is not
+Siri-compatible into one that is, by auditing, generating, integrating and
+verifying the App Intents and the native components they need.
+
+### What it would cover
+
+Observe, on the application side, which intents were actually received and
+executed in production. Where it is relevant and safe to collect, it would
+expose:
+
+- execution volume per action;
+- successes and failures;
+- latency and timeouts;
+- friction around confirmations;
+- regressions tied to an app release, an OS release or a schema change;
+- execution context, when that context can be collected safely.
+
+### Why the gap exists
+
+Apple provides the system foundations: it executes and routes App Intents, it
+offers system suggestions and donations, and it ships pre-production testing
+through `AppIntentsTesting`. The public Apple framework does not give an app
+publisher production product observability per intent: no execution volumes, no
+outcomes, no latency or timeouts, no confirmation friction and no regressions by
+app, OS or schema version.
+
+Observe would cover that gap and nothing else. It would be app-side telemetry,
+recorded after an intent has reached the application.
+
+### Privacy limits
+
+- It never claims access to raw Siri utterances.
+- It never claims knowledge of Siri's private routing decisions.
+- It never claims to see requests Siri never routes to the application.
+- Its telemetry must be minimised and privacy-respecting, and it does not change
+  the auditor, which stays local: no source, telemetry, secret or proprietary
+  data leaves the machine.
