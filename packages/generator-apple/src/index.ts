@@ -64,15 +64,16 @@ function targetEntity(ir: ConfigIR, intent: IntentIR): EntityIR {
 }
 
 function schemaParameterDeclarations(ir: ConfigIR, intent: IntentIR): readonly Readonly<{ name: string; swiftType: string }>[] {
-  if (!protocolOf(intent)) {
+  const entry = intent.schema ? findAppSchema("intent", intent.schema) : undefined;
+  if (!entry || entry.parameters.length === 0) {
     return intent.parameters.map((parameter) => ({ name: parameter.id, swiftType: swiftType(intent, parameter, ir.entities) }));
   }
-  const entry = findAppSchema("intent", intent.schema ?? "");
   const typeName = `IntentLane${targetEntity(ir, intent).swiftName}Entity`;
-  return (entry?.parameters ?? []).map((parameter) => ({
-    name: parameter.name,
-    swiftType: parameter.type === "entityArray" ? `[${typeName}]` : typeName
-  }));
+  return entry.parameters.map((parameter) => {
+    if (parameter.type === "entity") return { name: parameter.name, swiftType: typeName };
+    if (parameter.type === "entityArray") return { name: parameter.name, swiftType: `[${typeName}]` };
+    return { name: parameter.name, swiftType: SWIFT_TYPES[parameter.type] ?? "String" };
+  });
 }
 
 function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
@@ -234,8 +235,27 @@ function emitProtocolIntent(ir: ConfigIR, intent: IntentIR, locale: string): str
   return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n  static var parameterSummary: some ParameterSummary {\n    Summary("Delete \\(\\.$entities)")\n  }\n\n  var entities: [${typeName}]\n\n  func perform() async throws -> some IntentResult & ProvidesDialog {\n    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n    try await handler.perform(entities: entities)\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
 }
 
+function emitSchemaIntent(ir: ConfigIR, intent: IntentIR, locale: string): string {
+  const title = localized(intent.title, locale);
+  const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
+  const authentication = authenticationLine(intent);
+  const annotation = intent.schema ? `@AppIntent(schema: .${intent.schema})\n` : "";
+  const parameters = schemaParameterDeclarations(ir, intent);
+  const declarations = parameters.map((parameter) => `  @Parameter(title: ${localizedResource(parameter.name)})\n  var ${parameter.name}: ${parameter.swiftType}`).join("\n\n");
+  const argumentsList = parameters.map((parameter) => `${parameter.name}: ${parameter.name}`).join(", ");
+  const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
+  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${declarations}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog {\n    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n    try await handler.perform(${argumentsList})\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
+}
+
+function schemaDeclaresParameters(intent: IntentIR): boolean {
+  if (!intent.schema) return false;
+  const entry = findAppSchema("intent", intent.schema);
+  return (entry?.parameters.length ?? 0) > 0;
+}
+
 function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: string): string {
   if (protocolOf(intent)) return emitProtocolIntent(ir, intent, locale);
+  if (schemaDeclaresParameters(intent)) return emitSchemaIntent(ir, intent, locale);
   if (intent.mode === "native") return emitNativeIntent(ir, intent, locale);
   const title = localized(intent.title, locale);
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";

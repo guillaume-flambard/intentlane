@@ -1,0 +1,55 @@
+schema: "0.1"
+
+app:
+  id: dev.intentlane.reader
+  name: Reader
+  url_scheme: reader
+  min_ios: "27.0"
+  locales:
+    - en
+    - fr
+
+entities:
+  - id: page
+    title:
+      en: Page
+      fr: Page
+    identifier: id
+    display:
+      title: label
+    query:
+      mode: static
+    schema: reader.page
+
+intents:
+  - id: open_page
+    title:
+      en: Open page
+      fr: Ouvrir la page
+    parameters: []
+    execution:
+      mode: native
+    schema: reader.openPage
+    target: page
+
+  - id: delete_pages
+    title:
+      en: Delete pages
+      fr: Supprimer les pages
+    parameters: []
+    execution:
+      mode: native
+      handler: DeletePagesHandler
+    schema: reader.deletePages
+    target: page
+
+  - id: rotate_pages
+    title:
+      en: Rotate pages
+      fr: Pivoter les pages
+    parameters: []
+    execution:
+      mode: native
+      handler: RotatePagesHandler
+    schema: reader.rotatePages
+    target: page

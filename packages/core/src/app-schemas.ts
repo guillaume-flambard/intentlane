@@ -62,6 +62,7 @@ export const APP_SCHEMAS: readonly AppSchemaEntry[] = [
   { kind: "intent", reference: "photos.deleteAssets", identifier: "DeleteMediaAssetsIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "presentation.deleteSlide", identifier: "DeletePresentationSlideIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "reader.deletePages", identifier: "ReaderDeletePagesIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "reader.rotatePages", identifier: "ReaderRotatePagesIntent", minIos: 18, parameters: [{ name: "pages", type: "entityArray" }, { name: "isClockwise", type: "boolean" }], properties: [] },
   { kind: "intent", reference: "reminders.deleteReminders", identifier: "DeleteRemindersIntent", minIos: 27, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "spreadsheet.delete", identifier: "DeleteSpreadsheetIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "spreadsheet.deleteSheet", identifier: "DeleteSheetIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },

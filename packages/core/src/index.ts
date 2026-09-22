@@ -183,12 +183,24 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       if (intent.result !== undefined) {
         diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own result, so intent '${intent.id}' must not declare one.`, `${intentPath}.result`));
       }
+    } else if (entry.parameters.length > 0) {
+      if (!intent.target) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must name the entity it acts on with 'target'.`, `${intentPath}.target`));
+      } else if (!entityIds.has(intent.target)) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' target references unknown entity '${intent.target}'.`, `${intentPath}.target`));
+      }
+      if (intent.execution.mode !== "native") {
+        diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must use native execution with a handler.`, `${intentPath}.execution.mode`));
+      }
+      if (intent.result !== undefined) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own result, so intent '${intent.id}' must not declare one.`, `${intentPath}.result`));
+      }
     } else {
       if (intent.target !== undefined) {
         diagnostics.push(error("IL1401", `Schema '${reference}' declares no action, so intent '${intent.id}' must not name a target.`, `${intentPath}.target`));
       }
       if (intent.parameters.length > 0) {
-        diagnostics.push(error("IL1401", `Schema '${reference}' declares no parameter, and the generated shape cannot carry one yet, so intent '${intent.id}' must declare none.`, path));
+        diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own parameters, so intent '${intent.id}' must declare none.`, `${intentPath}.parameters`));
       }
       if (intent.result?.returns !== undefined) {
         diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${intentPath}.result.returns`));

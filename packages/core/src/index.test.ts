@@ -489,7 +489,7 @@ describe("app schemas", () => {
     });
     expect(result.ir).toBeUndefined();
     expect(result.diagnostics).toContainEqual(
-      expect.objectContaining({ code: "IL1401", path: "intents[0].schema", message: expect.stringContaining("must declare none") })
+      expect.objectContaining({ code: "IL1401", path: "intents[0].parameters", message: expect.stringContaining("must declare none") })
     );
   });
 
@@ -653,6 +653,63 @@ describe("schema protocols", () => {
     expect(result.ir).toBeUndefined();
     expect(result.diagnostics).toContainEqual(
       expect.objectContaining({ code: "IL1301", path: "intents[0].parameters[0].entity" })
+    );
+  });
+});
+
+describe("schema parameters", () => {
+  const page = {
+    id: "page",
+    title: { en: "Page", fr: "Page" },
+    identifier: "id",
+    display: { title: "label" },
+    query: { mode: "static" },
+    schema: "reader.page"
+  };
+
+  const withRotate = (overrides: Record<string, unknown> = {}): unknown => ({
+    ...base,
+    app: { ...base.app, min_ios: "27.0" },
+    entities: [page],
+    intents: [
+      {
+        ...base.intents[0],
+        parameters: [],
+        execution: { mode: "native", handler: "RotatePagesHandler" },
+        schema: "reader.rotatePages",
+        target: "page",
+        ...overrides
+      }
+    ]
+  });
+
+  it("accepts a schema that supplies its own parameters", () => {
+    const result = parseConfig(withRotate());
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]).toMatchObject({ mode: "native", schema: "reader.rotatePages", target: "page" });
+  });
+
+  it("requires a target on a parameter schema", () => {
+    const result = parseConfig(withRotate({ target: undefined }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].target" })
+    );
+  });
+
+  it("requires native execution on a parameter schema", () => {
+    const result = parseConfig(withRotate({ execution: { mode: "open_app", route: "/rotate" } }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].execution.mode" })
+    );
+  });
+
+  it("rejects a declared result on a parameter schema", () => {
+    const result = parseConfig(withRotate({ result: { dialog: { en: "Done", fr: "Termine" } } }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].result" })
     );
   });
 });

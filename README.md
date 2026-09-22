@@ -245,9 +245,11 @@ intents:
     schema: reader.openPage
 ```
 
-Today the table holds 34 intents (three without a protocol, sixteen `open` and fifteen `delete`) and twenty entities. Enum conformances are not generated yet.
+A schema without a protocol can still take parameters. `reader.rotatePages` supplies `pages` and `isClockwise`, so the intent declares no parameter and no result: it names the entity it acts on with `target`, runs natively with a handler, and the generator declares each `@Parameter` from the schema, mapping the schema types to `String`, `Bool`, `Int`, `Double`, the target entity, or an array of it.
 
-A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`. For a protocol-backed schema it also refuses a missing or unknown `target`, a `target` on a schema that has no protocol, an execution mode that is not `native`, and a declared parameter or result, because the schema provides all of them.
+Today the table holds 35 intents (four without a protocol, sixteen `open` and fifteen `delete`) and twenty entities. Enum conformances are not generated yet.
+
+A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`. For a protocol-backed schema it also refuses a missing or unknown `target`, a `target` on a schema that has no protocol, an execution mode that is not `native`, and a declared parameter or result, because the schema provides all of them. A schema that supplies its own parameters refuses the same way: a missing or unknown `target`, a mode that is not `native`, and a declared result.
 
 ## Risk policy
 

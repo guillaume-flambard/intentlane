@@ -849,3 +849,53 @@ describe("schema protocols", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+const parameterConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.reader", name: "Reader", url_scheme: "reader", min_ios: "27.0", locales: ["en"] },
+  entities: [
+    {
+      id: "page",
+      title: { en: "Page" },
+      identifier: "id",
+      display: { title: "label" },
+      query: { mode: "static" },
+      schema: "reader.page"
+    }
+  ],
+  intents: [
+    {
+      id: "rotate_pages",
+      title: { en: "Rotate pages" },
+      parameters: [],
+      execution: { mode: "native", handler: "RotatePagesHandler" },
+      schema: "reader.rotatePages",
+      target: "page"
+    }
+  ]
+};
+
+describe("schema parameters", () => {
+  const swift = (source: unknown = parameterConfig): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Schema parameter fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("declares the parameters the schema supplies", () => {
+    const source = swift();
+    expect(source).toContain("@AppIntent(schema: .reader.rotatePages)\nstruct RotatePages: AppIntent {");
+    expect(source).toContain('  @Parameter(title: LocalizedStringResource("pages", table: "IntentLane"))\n  var pages: [IntentLanePageEntity]');
+    expect(source).toContain('  @Parameter(title: LocalizedStringResource("isClockwise", table: "IntentLane"))\n  var isClockwise: Bool');
+  });
+
+  it("delegates to the handler with the schema parameters", () => {
+    const source = swift();
+    expect(source).toContain("protocol RotatePagesHandler: Sendable {\n  func perform(pages: [IntentLanePageEntity], isClockwise: Bool) async throws\n}");
+    expect(source).toContain("try await handler.perform(pages: pages, isClockwise: isClockwise)");
+  });
+
+  it("matches the schema parameter Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});
