@@ -81,10 +81,11 @@ function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
 
 function swiftType(intent: IntentIR, parameter: ParameterIR, entities: readonly EntityIR[]): string {
   if (parameter.type === "enum") return enumTypeName(intent, parameter);
-  if (parameter.type === "entity") {
+  if (parameter.type === "entity" || parameter.type === "entity_list") {
     const entity = entities.find((candidate) => candidate.id === parameter.entity);
     if (!entity) throw new Error(`IL1301: Entity parameter '${parameter.id}' references unknown entity '${parameter.entity ?? ""}'.`);
-    return `IntentLane${entity.swiftName}Entity`;
+    const name = `IntentLane${entity.swiftName}Entity`;
+    return parameter.type === "entity_list" ? `[${name}]` : name;
   }
   const mapped = SWIFT_TYPES[parameter.type];
   if (!mapped) throw new Error(`IL1301: Parameter '${parameter.id}' uses unsupported type '${parameter.type}'.`);
