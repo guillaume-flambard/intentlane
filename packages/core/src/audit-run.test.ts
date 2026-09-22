@@ -111,4 +111,34 @@ describe("runAudit", () => {
     });
     expect(finding(report, "proof.siri-surface")).toMatchObject({ state: "detected", confidence: "medium" });
   });
+
+  it("marks capabilities that need a newer SDK than the one inspected", async () => {
+    const directory = await fixture(schemaBacked);
+    const sdk = join(directory, "SDK");
+    await mkdir(sdk, { recursive: true });
+    await writeFile(
+      join(sdk, "SDKSettings.json"),
+      JSON.stringify({ Version: "26.5", CanonicalName: "macosx26.5" }),
+      "utf8"
+    );
+
+    const stale = await runAudit({ directory, platform: "macos", name: "App", sdkPath: sdk });
+
+    expect(stale.sdk).toEqual({ version: "26.5", canonicalName: "macosx26.5" });
+    expect(finding(stale, "semantics.app-schema")).toMatchObject({ state: "unsupported", confidence: "high" });
+    expect(finding(stale, "semantics.app-schema").gaps).toContainEqual({
+      code: "ILA100",
+      message: `semantics.app-schema requires macos 27.0, and the SDK at ${sdk} is 26.5.`
+    });
+
+    await writeFile(
+      join(sdk, "SDKSettings.json"),
+      JSON.stringify({ Version: "27.0", CanonicalName: "macosx27.0" }),
+      "utf8"
+    );
+
+    const current = await runAudit({ directory, platform: "macos", name: "App", sdkPath: sdk });
+
+    expect(finding(current, "semantics.app-schema")).toMatchObject({ state: "implemented", confidence: "high" });
+  });
 });

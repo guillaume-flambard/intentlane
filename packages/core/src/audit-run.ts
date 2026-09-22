@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { CAPABILITY_CATALOGUE, availableOn } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
 import { listProjectFiles } from "./audit-project.js";
+import { compareVersions, readSdkInfo } from "./audit-sdk.js";
 import {
   createAuditReport,
   type AuditConfidence,
@@ -22,6 +23,7 @@ export type AuditOptions = Readonly<{
   name?: string;
   deploymentTarget?: string;
   buildMetadata?: string;
+  sdkPath?: string;
 }>;
 
 const METADATA_FILE = "Metadata.appintents/extract.actionsdata";
@@ -60,10 +62,12 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const detected = detectedCapabilities(detections);
   const schemaEvidence = hasSchemaEvidence(detections);
   const metadata = options.buildMetadata ? await readBuildMetadata(options.buildMetadata) : undefined;
+  const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
     const version = availableOn(record, options.platform);
+    const sdkTooOld = version !== undefined && sdk !== undefined && compareVersions(version, sdk.version) > 0;
     const evidence: AuditEvidence[] = evidenceFor(detections, record.id).map((item) => ({
       kind: item.kind,
       path: item.path,
@@ -80,6 +84,14 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       confidence = "high";
       gaps.push({ code: "ILA100", message: `${record.id} is not available on ${options.platform}.` });
       nextAction = `Scope ${record.id} out of the ${options.platform} work.`;
+    } else if (sdkTooOld && sdk !== undefined) {
+      state = "unsupported";
+      confidence = "high";
+      gaps.push({
+        code: "ILA100",
+        message: `${record.id} requires ${options.platform} ${version}, and the SDK at ${sdk.path} is ${sdk.version}.`
+      });
+      nextAction = `Build against ${options.platform} ${version} or newer before relying on ${record.id}.`;
     } else {
       const missing = record.companions.filter((id) => !detected.has(id));
       if (detected.has(record.id)) {
@@ -141,6 +153,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       platform: options.platform,
       ...(options.deploymentTarget ? { deploymentTarget: options.deploymentTarget } : {})
     },
-    findings
+    findings,
+    sdk ? { version: sdk.version, canonicalName: sdk.canonicalName } : undefined
   );
 }

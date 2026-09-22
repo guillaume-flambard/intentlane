@@ -77,6 +77,18 @@ The program reports its version with `intentlane --version` (`-V`) and prints us
 - `--config <file>`: YAML source, default `intentlane.yaml`.
 - `--output <directory>`: generated-source directory, default `ios/IntentLaneGenerated`.
 
+`intentlane audit [directory]`
+
+- `--platform <macos|ios>`: target platform, default `macos`.
+- `--format <text|json|sarif>`: report format, default `text`; `sarif` emits SARIF 2.1.0.
+- `--output <file>`: write the report to a file instead of stdout.
+- `--min-macos <major.minor>`, `--min-ios <major.minor>`: record the deployment floor in the report target.
+- `--build-metadata <path>`: inspect an existing `Metadata.appintents` directory or `extract.actionsdata` file, which promotes `foundation` and `semantics` capabilities from `implemented` to `tested`.
+- `--sdk-path <path>`: read the installed SDK's `SDKSettings.json`, record its version in the report, and mark a capability `unsupported` when the SDK is older than the version that capability needs.
+- `--strict`: exit non-zero when a high-confidence blocker was found.
+
+`audit` analyses a project read-only and never writes to it. Every capability comes out as `unsupported`, `unknown`, `detected`, `implemented`, `tested` or `feasible`, with the evidence it used and the next action. A project that only declares an `AppShortcutsProvider` stays `implemented` for Shortcuts and `unknown` for Siri discovery: shortcuts alone never prove schema-backed Siri or Apple Intelligence. The auditor's diagnostics are prefixed `ILA`.
+
 ## Parameter types
 
 A parameter declares an `id`, a `type` and `required`. The generator maps each type to its Swift counterpart and, for `open_app` execution, converts the value into the URL query:

@@ -74,6 +74,7 @@ export type AuditTarget = Readonly<{
 export type AuditReport = Readonly<{
   reportVersion: string;
   target: AuditTarget;
+  sdk?: Readonly<{ version: string; canonicalName: string }>;
   findings: readonly AuditFinding[];
 }>;
 
@@ -92,10 +93,15 @@ export function compareFindings(left: AuditFinding, right: AuditFinding): number
   return STATE_RANK[left.state] - STATE_RANK[right.state];
 }
 
-export function createAuditReport(target: AuditTarget, findings: readonly AuditFinding[]): AuditReport {
+export function createAuditReport(
+  target: AuditTarget,
+  findings: readonly AuditFinding[],
+  sdk?: Readonly<{ version: string; canonicalName: string }>
+): AuditReport {
   return {
     reportVersion: AUDIT_REPORT_VERSION,
     target,
+    ...(sdk ? { sdk } : {}),
     findings: [...findings].sort(compareFindings)
   };
 }

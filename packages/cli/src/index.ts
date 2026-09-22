@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, type ConfigIR, type Diagnostic, type DoctorFacts } from "../../core/src/index.js";
 import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { AUDIT_FORMATS, AUDIT_PLATFORMS, blockingGaps, formatReport, runAudit, type AuditFormat, type AuditPlatform } from "../../core/src/index.js";
+import { AUDIT_FORMATS, AUDIT_PLATFORMS, SDK_SETTINGS_FILE, blockingGaps, formatReport, runAudit, type AuditFormat, type AuditPlatform } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
@@ -234,19 +234,20 @@ program.command("audit")
       process.exitCode = 1;
       return;
     }
-    if (options.sdkPath !== undefined) {
-      process.stderr.write("--sdk-path is not inspected yet. Run 'intentlane audit' without it.\n");
-      process.exitCode = 1;
-      return;
-    }
     const platform = options.platform as AuditPlatform;
     const deploymentTarget = platform === "macos" ? options.minMacos : options.minIos;
     const report = await runAudit({
       directory: resolve(directory),
       platform,
       ...(deploymentTarget ? { deploymentTarget } : {}),
-      ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {})
+      ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {}),
+      ...(options.sdkPath ? { sdkPath: resolve(options.sdkPath) } : {})
     });
+    if (options.sdkPath !== undefined && report.sdk === undefined) {
+      process.stderr.write(
+        `warning: no ${SDK_SETTINGS_FILE} under ${resolve(options.sdkPath)}, so the SDK version is not recorded.\n`
+      );
+    }
     const rendered = formatReport(report, options.format as AuditFormat);
     if (options.output) {
       await atomicWrite(resolve(options.output), rendered);
