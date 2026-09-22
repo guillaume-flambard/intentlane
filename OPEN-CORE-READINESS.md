@@ -14,9 +14,9 @@ required rather than invented.
 | Agent guide | `AGENT-GUIDE.md`, plus the programme section that points at the Siri 27 documents. |
 | Documentation | `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `MIGRATION.md`, `PRD.md`, `MARKET-STUDY.md`, `ROADMAP.md`, `AUDIT-GUIDE.md`, `PILOT-PLAYBOOK.md`, `COMMERCIAL-READINESS.md`, `AUDITOR-SPEC.md`, `APPLE-27-APP-INTENTS-RESEARCH.md`, `SIRI-27-ROADMAP.md`, `UNEXPLORED-ANGLES.md`. |
 | Machine-readable contract | `intentlane.schema.json`. |
-| CI | `.github/workflows/ci.yml` with four jobs: `checks` (typecheck, 233 tests, validate, determinism), `swift` (matrix `macos-15` and `macos-26`), `macos` (`xcode-27`: verify the example and audit both fixtures), `simulator` (bundle, prebuild, Release build, metadata assertions). |
+| CI | `.github/workflows/ci.yml` with four jobs: `checks` (typecheck, build the CLI bundle, 277 tests, validate, determinism), `swift` (matrix `macos-15` and `macos-26`), `macos` (`xcode-27`: four passes of `verify.mjs`, then audit the shelf, studio and reader fixtures), `simulator` (bundle, prebuild, Release build, metadata assertions). |
 | Issue intake | `.github/ISSUE_TEMPLATE/pilot-report.yml`, a form that asks for the contract excerpt, the toolchain, the goal, the outcome, `intentlane doctor`, the diagnostics, the contract gaps and any hand-written Swift. |
-| Repository settings | Public repository under MIT, default GitHub labels only. |
+| Repository settings | Public repository under MIT, default GitHub labels only. Verified with `gh api /repos/guillaume-flambard/intentlane` (`public`, `MIT`) and `gh label list` (ten default labels, no `pilot report`). |
 
 ## Gap matrix
 

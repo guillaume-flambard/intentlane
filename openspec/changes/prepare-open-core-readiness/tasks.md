@@ -1,7 +1,7 @@
 ## 1. Readiness baseline
 
-- [ ] 1.1 Inventory current contributor setup, CI, docs, issue templates and licence; verify every present claim by file or command.
-- [ ] 1.2 Create a gap matrix for governance, conduct, security, triage, releases and documentation ownership; label unresolved choices as decisions required.
+- [x] 1.1 Inventory current contributor setup, CI, docs, issue templates and licence; verify every present claim by file or command.
+- [x] 1.2 Create a gap matrix for governance, conduct, security, triage, releases and documentation ownership; label unresolved choices as decisions required.
 
 ## 2. Contributor journey
 
