@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, type ConfigIR, type Diagnostic, type DoctorFacts } from "../../core/src/index.js";
 import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
+import { AUDIT_FORMATS, AUDIT_PLATFORMS, blockingGaps, formatReport, runAudit, type AuditFormat, type AuditPlatform } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
@@ -210,6 +211,56 @@ program.command("generate")
     }
     for (const item of expected) await atomicWrite(item.file, item.contents);
     process.stdout.write(`Generated ${join(output, GENERATED_SWIFT_FILE)}\n`);
+  });
+
+program.command("audit")
+  .argument("[directory]", "Project directory to audit", ".")
+  .option("-p, --platform <platform>", "Target platform", "macos")
+  .option("-f, --format <format>", "Report format", "text")
+  .option("-o, --output <file>", "Write the report to a file")
+  .option("--min-macos <version>", "macOS deployment floor to record")
+  .option("--min-ios <version>", "iOS deployment floor to record")
+  .option("--sdk-path <path>", "SDK path to inspect")
+  .option("--build-metadata <path>", "Existing build metadata to inspect")
+  .option("--strict", "Exit non-zero on high-confidence blockers")
+  .action(async (directory: string, options: { platform: string; format: string; output?: string; minMacos?: string; minIos?: string; sdkPath?: string; buildMetadata?: string; strict?: boolean }) => {
+    if (!(AUDIT_PLATFORMS as readonly string[]).includes(options.platform)) {
+      process.stderr.write(`Unsupported platform '${options.platform}'. Use one of: ${AUDIT_PLATFORMS.join(", ")}.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (!(AUDIT_FORMATS as readonly string[]).includes(options.format)) {
+      process.stderr.write(`Unsupported format '${options.format}'. Use one of: ${AUDIT_FORMATS.join(", ")}.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (options.sdkPath !== undefined) {
+      process.stderr.write("--sdk-path is not inspected yet. Run 'intentlane audit' without it.\n");
+      process.exitCode = 1;
+      return;
+    }
+    const platform = options.platform as AuditPlatform;
+    const deploymentTarget = platform === "macos" ? options.minMacos : options.minIos;
+    const report = await runAudit({
+      directory: resolve(directory),
+      platform,
+      ...(deploymentTarget ? { deploymentTarget } : {}),
+      ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {})
+    });
+    const rendered = formatReport(report, options.format as AuditFormat);
+    if (options.output) {
+      await atomicWrite(resolve(options.output), rendered);
+      process.stdout.write(`Wrote ${resolve(options.output)}\n`);
+    } else {
+      process.stdout.write(rendered);
+    }
+    if (options.strict) {
+      const blockers = blockingGaps(report);
+      if (blockers.length > 0) {
+        for (const gap of blockers) process.stderr.write(`${gap.code} ${gap.message}\n`);
+        process.exitCode = 1;
+      }
+    }
   });
 
 program.parseAsync().catch((reason: unknown) => {

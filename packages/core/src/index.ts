@@ -4,6 +4,13 @@ import { ZodError } from "zod";
 import { intentLaneConfigSchema, type IntentLaneConfig, type ParameterType } from "../../schema/src/index.js";
 import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSchemaKind } from "./app-schemas.js";
 
+export * from "./audit.js";
+export * from "./audit-project.js";
+export * from "./audit-catalogue.js";
+export * from "./audit-detect.js";
+export * from "./audit-format.js";
+export * from "./audit-run.js";
+
 export type Severity = "error" | "warning";
 export const DIAGNOSTIC_CODES = [
   "IL1001",

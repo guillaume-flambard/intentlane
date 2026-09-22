@@ -23,6 +23,8 @@ La séquence normative est celle de `SIRI-27-ROADMAP.md` : **Phase A** livrer `i
 
 Les changements ouverts correspondants vivent dans `openspec/changes/` : `audit-capability-inventory`, `add-schema-domain-package`, `prove-macos-siri-journey`, `prove-ios-siri-journey`, `package-validated-service` et `add-advanced-app-intents-capabilities`.
 
+**Phase A, `intentlane audit`. fait** : le CLI expose `intentlane audit [directory]` (`--platform macos|ios`, `--format text|json|sarif`, `--output`, `--min-macos`, `--min-ios`, `--build-metadata`, `--strict`). Le core porte six modules : le contrat de rapport et les diagnostics `ILA` (`audit.ts`), la découverte en lecture seule des cibles Xcode, paquets Swift et apps Expo avec empreinte du worktree (`audit-project.ts`), le catalogue des capacités avec leur disponibilité par plateforme et leur niveau de revendication (`audit-catalogue.ts`), la détection des App Intents, raccourcis, schémas, entités, tests et valeurs transférables (`audit-detect.ts`), les sorties texte, JSON et SARIF déterministes (`audit-format.ts`), et l'orchestration qui classe chaque capacité `unsupported`, `unknown`, `detected`, `implemented`, `tested` ou `feasible` (`audit-run.ts`). Un projet qui n'a qu'un `AppShortcutsProvider` reste dans Raccourcis et sa découverte Siri est `unknown` ; une conformance de schéma sans ses compagnons reste `detected` ; `--build-metadata` promeut les capacités `foundation` et `semantics` à `tested` sans jamais promouvoir `proof.siri-surface`, ce qui est le critère d'acceptation 5 d'`AUDITOR-SPEC.md`. Prouvé par 181 tests, l'audit réel de la fixture Studio (`implemented` pour les capacités de schéma, `proof.siri-surface` en `detected`, `execution.live-activity` en `unsupported` avec `ILA100`), `--strict` qui sort en code 1, et l'audit des métadonnées du même build qui fait passer cinq capacités à `tested`. Reste à faire dans cette phase : `--sdk-path` est encore refusé, donc le catalogue n'est pas encore versionné depuis le SDK installé.
+
 ## Phase 0 — preuve technique (2–3 jours)
 
 - Projet Swift/Expo minimal.
@@ -119,5 +121,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(cli): publish the packages to npm`.
+Ticket suivant : `feat(audit): read the installed SDK through --sdk-path`.
 

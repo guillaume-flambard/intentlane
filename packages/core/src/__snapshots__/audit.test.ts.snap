@@ -1,0 +1,24 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`audit contract > matches the report snapshot 1`] = `
+{
+  "findings": [
+    {
+      "capability": "schema.system.open",
+      "confidence": "high",
+      "evidence": [],
+      "gaps": [],
+      "nextAction": "",
+      "platform": "macos",
+      "requirements": [],
+      "state": "feasible",
+    },
+  ],
+  "reportVersion": "1.0",
+  "target": {
+    "deploymentTarget": "27.0",
+    "name": "App",
+    "platform": "macos",
+  },
+}
+`;

@@ -1,0 +1,107 @@
+export const AUDIT_REPORT_VERSION = "1.0";
+
+export const AUDIT_STATES = [
+  "unsupported",
+  "unknown",
+  "detected",
+  "implemented",
+  "tested",
+  "feasible"
+] as const;
+
+export type AuditState = (typeof AUDIT_STATES)[number];
+
+export const AUDIT_PLATFORMS = ["macos", "ios"] as const;
+
+export type AuditPlatform = (typeof AUDIT_PLATFORMS)[number];
+
+export const AUDIT_CONFIDENCES = ["low", "medium", "high"] as const;
+
+export type AuditConfidence = (typeof AUDIT_CONFIDENCES)[number];
+
+export const AUDIT_EVIDENCE_KINDS = [
+  "project",
+  "swift",
+  "metadata",
+  "config",
+  "contract",
+  "test"
+] as const;
+
+export type AuditEvidenceKind = (typeof AUDIT_EVIDENCE_KINDS)[number];
+
+export const AUDIT_DIAGNOSTIC_CODES = [
+  "ILA100",
+  "ILA110",
+  "ILA120",
+  "ILA130",
+  "ILA140",
+  "ILA150",
+  "ILA160"
+] as const;
+
+export type AuditDiagnosticCode = (typeof AUDIT_DIAGNOSTIC_CODES)[number];
+
+export type AuditEvidence = Readonly<{
+  kind: AuditEvidenceKind;
+  path: string;
+  line?: number;
+  platform?: AuditPlatform;
+}>;
+
+export type AuditGap = Readonly<{
+  code: AuditDiagnosticCode;
+  message: string;
+}>;
+
+export type AuditFinding = Readonly<{
+  capability: string;
+  platform: AuditPlatform;
+  state: AuditState;
+  confidence: AuditConfidence;
+  evidence: readonly AuditEvidence[];
+  requirements: readonly string[];
+  gaps: readonly AuditGap[];
+  nextAction: string;
+}>;
+
+export type AuditTarget = Readonly<{
+  name: string;
+  platform: AuditPlatform;
+  deploymentTarget?: string;
+}>;
+
+export type AuditReport = Readonly<{
+  reportVersion: string;
+  target: AuditTarget;
+  findings: readonly AuditFinding[];
+}>;
+
+const STATE_RANK: Readonly<Record<AuditState, number>> = {
+  unsupported: 0,
+  unknown: 1,
+  detected: 2,
+  implemented: 3,
+  tested: 4,
+  feasible: 5
+};
+
+export function compareFindings(left: AuditFinding, right: AuditFinding): number {
+  if (left.capability !== right.capability) return left.capability < right.capability ? -1 : 1;
+  if (left.platform !== right.platform) return left.platform < right.platform ? -1 : 1;
+  return STATE_RANK[left.state] - STATE_RANK[right.state];
+}
+
+export function createAuditReport(target: AuditTarget, findings: readonly AuditFinding[]): AuditReport {
+  return {
+    reportVersion: AUDIT_REPORT_VERSION,
+    target,
+    findings: [...findings].sort(compareFindings)
+  };
+}
+
+export function blockingGaps(report: AuditReport): readonly AuditGap[] {
+  return report.findings
+    .filter((finding) => finding.confidence === "high")
+    .flatMap((finding) => finding.gaps);
+}
