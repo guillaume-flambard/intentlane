@@ -101,6 +101,8 @@ Finally the report records the conditions a capability test depends on, because 
 
 The report also reads the action quality signals it can see in the sources, because a Siri action that works is not the same as an action a person can use. It prints `quality <n>/<total> signals (<n> issue(s))` and the JSON output adds a `quality` object with the signals, the issues and the evidence. Five signals are looked for: a result the system can show (`.result(`), a view that works without a screen (`ShowsSnippetView` or the generated snippet view), a registered shortcut (`AppShortcut(`), the `applicationName` placeholder inside the phrases, and a confirmation before a risky action (`requestConfirmation(`). A shortcut phrase that omits the placeholder is raised as an issue, because the system does not register it.
 
+The report finally states which capability catalogue it used and whether the inspected SDK is older or newer than it, because the availability values in the catalogue are derived from Xcode 27 and a newer SDK may ship capabilities the catalogue does not know. It prints `catalogue <version> (<state>)` and the JSON output adds a `catalogue` object with the catalogue version, the number of capabilities it holds, the inspected SDK version when there is one, and a next action. The state is `current` on the SDK the catalogue was derived from, `older` when the SDK is newer, `newer` when the SDK is older, and `unknown` when no SDK path was given.
+
 ## Parameter types
 
 A parameter declares an `id`, a `type` and `required`. The generator maps each type to its Swift counterpart and, for `open_app` execution, converts the value into the URL query:

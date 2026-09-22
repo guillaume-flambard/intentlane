@@ -41,6 +41,9 @@ export function formatText(report: AuditReport): string {
       `quality ${report.quality.signals.length}/${AUDIT_QUALITY_SIGNALS.length} signals (${report.quality.issues.length} issue(s))`
     );
   }
+  if (report.catalogue) {
+    lines.push(`catalogue ${report.catalogue.version} (${report.catalogue.state})`);
+  }
   for (const finding of report.findings) {
     lines.push(`${finding.platform} ${finding.state} ${finding.capability} (${finding.confidence})`);
     for (const gap of finding.gaps) lines.push(`  ${gap.code} ${gap.message}`);
@@ -97,7 +100,8 @@ export function formatSarif(report: AuditReport): string {
           ...(report.data ? { data: report.data } : {}),
           ...(report.architecture ? { architecture: report.architecture } : {}),
           ...(report.conditions ? { conditions: report.conditions } : {}),
-          ...(report.quality ? { quality: report.quality } : {})
+          ...(report.quality ? { quality: report.quality } : {}),
+          ...(report.catalogue ? { catalogue: report.catalogue } : {})
         }
       }
     ]

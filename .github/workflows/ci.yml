@@ -129,6 +129,7 @@ jobs:
           assert report["conditions"]["nextAction"], report["conditions"]
           assert report["quality"]["signals"], report["quality"]
           assert report["quality"]["issues"] == [], report["quality"]
+          assert report["catalogue"]["state"] == "current", report["catalogue"]
           assert shelf["foundation.app-intent"] == "implemented", shelf["foundation.app-intent"]
           assert shelf["semantics.app-schema"] == "unknown", shelf["semantics.app-schema"]
           assert shelf["proof.siri-surface"] == "unknown", shelf["proof.siri-surface"]
@@ -143,6 +144,7 @@ jobs:
           print("architecture:", report["architecture"]["architecture"], shelf_report["architecture"]["architecture"])
           print("conditions:", [(condition["name"], condition["state"]) for condition in report["conditions"]["conditions"]])
           print("quality:", report["quality"]["signals"], report["quality"]["issues"])
+          print("catalogue:", report["catalogue"]["version"], report["catalogue"]["state"])
           print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
           print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
           PY

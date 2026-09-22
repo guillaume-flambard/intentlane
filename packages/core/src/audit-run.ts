@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { CAPABILITY_CATALOGUE, availableOn } from "./audit-catalogue.js";
+import { CAPABILITY_CATALOGUE, availableOn, describeCatalogue } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
 import { detectDataArchitecture } from "./audit-architecture.js";
@@ -77,6 +77,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const architecture = detectDataArchitecture(files, sources);
   const conditions = describeConditions(options.environment);
   const quality = detectActionQuality(sources);
+  const catalogue = describeCatalogue(sdk?.version);
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
@@ -174,7 +175,8 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       data,
       architecture,
       conditions,
-      quality
+      quality,
+      catalogue
     }
   );
 }

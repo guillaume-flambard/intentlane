@@ -90,3 +90,14 @@ The system SHALL report the action surfaces it can see in the sources and SHALL 
 #### Scenario: A phrase without the placeholder
 - **WHEN** a shortcut phrase omits the applicationName placeholder
 - **THEN** the report raises an issue, because the system does not register that phrase
+
+### Requirement: Catalogue version against the installed SDK
+The system SHALL report the version of the capability catalogue it used and SHALL compare it with the inspected SDK.
+
+#### Scenario: An SDK newer than the catalogue
+- **WHEN** the inspected SDK is newer than the catalogue was derived from
+- **THEN** the report asks for a refresh before a capability the newer SDK may ship is trusted
+
+#### Scenario: No SDK inspected
+- **WHEN** the audit runs without an SDK path
+- **THEN** the catalogue state stays unknown and the report says how to compare it

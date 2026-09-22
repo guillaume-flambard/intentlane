@@ -1,5 +1,7 @@
 import type { AuditEvidenceKind } from "./audit.js";
 
+import { compareVersions } from "./audit-sdk.js";
+
 export const CAPABILITY_CATALOGUE_VERSION = "27.0";
 
 export const CAPABILITY_GROUPS = [
@@ -343,4 +345,37 @@ export function capabilitiesInGroup(group: CapabilityGroup): readonly Capability
 
 export function availableOn(record: CapabilityRecord, platform: "macos" | "ios"): string | undefined {
   return platform === "macos" ? record.availability.macos : record.availability.ios;
+}
+
+export const AUDIT_CATALOGUE_STATES = ["current", "newer", "older", "unknown"] as const;
+
+export type AuditCatalogueState = (typeof AUDIT_CATALOGUE_STATES)[number];
+
+export type AuditCatalogueReport = Readonly<{
+  version: string;
+  capabilities: number;
+  sdkVersion?: string;
+  state: AuditCatalogueState;
+  nextAction: string;
+}>;
+
+export function describeCatalogue(sdkVersion?: string): AuditCatalogueReport {
+  const capabilities = CAPABILITY_CATALOGUE.length;
+  if (!sdkVersion) {
+    return {
+      version: CAPABILITY_CATALOGUE_VERSION,
+      capabilities,
+      state: "unknown",
+      nextAction: `Pass --sdk-path to compare the catalogue (${CAPABILITY_CATALOGUE_VERSION}) with the installed SDK.`
+    };
+  }
+  const difference = compareVersions(CAPABILITY_CATALOGUE_VERSION, sdkVersion);
+  const state: AuditCatalogueState = difference === 0 ? "current" : difference > 0 ? "newer" : "older";
+  const nextAction =
+    state === "current"
+      ? `Keep the catalogue in step with the installed SDK (${sdkVersion}).`
+      : state === "older"
+        ? `Refresh the catalogue, which was derived from ${CAPABILITY_CATALOGUE_VERSION}, before trusting a capability the SDK ${sdkVersion} may ship.`
+        : `The inspected SDK (${sdkVersion}) is older than the catalogue (${CAPABILITY_CATALOGUE_VERSION}), so a capability can read unsupported because of the SDK.`;
+  return { version: CAPABILITY_CATALOGUE_VERSION, capabilities, sdkVersion, state, nextAction };
 }
