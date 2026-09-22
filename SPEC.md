@@ -218,4 +218,4 @@ La liste des codes est une surface publique. Elle vit dans `DIAGNOSTIC_CODES`, e
 
 ## Versioning
 
-Le champ `schema` suit SemVer simplifié. Une évolution mineure reste lisible par les outils de la même version majeure. Les migrations sont explicites via `intentlane migrate`.
+Le champ `schema` suit SemVer simplifié. Une évolution mineure reste lisible par les outils de la même version majeure. Les migrations seront explicites via `intentlane migrate`, qui n'est pas encore livré : voir [MIGRATION.md](MIGRATION.md).

@@ -406,7 +406,7 @@ export function collectDoctorChecks(facts: DoctorFacts): readonly DoctorCheck[] 
     checks.push(
       facts.schemaVersion === "0.1"
         ? { id: "schema", status: "ok", message: 'Schema version "0.1" is supported.' }
-        : { id: "schema", status: "error", message: `Schema version "${facts.schemaVersion ?? "unknown"}" is not supported.`, hint: "Run 'intentlane migrate'." }
+        : { id: "schema", status: "error", message: `Schema version "${facts.schemaVersion ?? "unknown"}" is not supported.`, hint: "See MIGRATION.md. 'intentlane migrate' is not implemented yet." }
     );
   }
 

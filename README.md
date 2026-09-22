@@ -377,7 +377,7 @@ IntentLane is at the pilot stage, so the most useful thing you can do is run it 
 
 [CONTRIBUTING.md](CONTRIBUTING.md) says what helps most, what to include in a bug report, and the rules the code follows. The short version: a new capability starts in the schema with tests that reject the invalid shapes, generation stays deterministic and offline, and every Swift emission has a golden snapshot.
 
-This project is MIT licensed. See [LICENSE](LICENSE).
+This project is MIT licensed. See [LICENSE](LICENSE). The schema version policy and the future `intentlane migrate` command are described in [MIGRATION.md](MIGRATION.md).
 
 ## Open risks
 
