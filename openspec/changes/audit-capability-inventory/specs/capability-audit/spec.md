@@ -35,3 +35,14 @@ The system SHALL score every report deterministically and SHALL state whether th
 #### Scenario: Capability the platform does not ship
 - **WHEN** a capability is unavailable on the target platform
 - **THEN** it is left out of the score denominator instead of lowering the score
+
+### Requirement: Integration route qualification
+The system SHALL state whether the project is native, bridged, ineligible or unknown, and SHALL back that route with evidence.
+
+#### Scenario: Cross-platform app without a generated native target
+- **WHEN** the project carries a cross-platform marker but no native target yet
+- **THEN** the route is bridged with medium confidence
+
+#### Scenario: Web-only project
+- **WHEN** the project has neither a native target nor a bridge marker
+- **THEN** the route is ineligible and the report explains that App Intents need a native target or a bridge

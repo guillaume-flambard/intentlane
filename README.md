@@ -91,6 +91,8 @@ The program reports its version with `intentlane --version` (`-V`) and prints us
 
 Every report also carries a compatibility score. It is deterministic: each capability the target platform ships is worth up to three points, `detected` earns one, `implemented` two and `tested` three, and a capability the platform does not ship is left out of the denominator. The text output prints it on a `score <n>/100 (<band>, <discovery>) <points>/<maximum> points` line, and the JSON output adds a `score` object with the same numbers plus a count of every state. The band is `none` at zero, `early` up to 33, `partial` up to 66, `close` below 100 and `ready` at 100. `discovery` separates the two promises: `schema-backed` when a `semantics` capability is at least `implemented`, `shortcuts-only` when only the Shortcuts surface is, and `none` otherwise.
 
+The report also qualifies the integration route, because the same work costs a different amount depending on how the app is built. It prints `route <route> (<confidence>)`, and the JSON output adds a `route` object with the evidence and a next action. `native` means a Swift or Xcode target carries the code, `bridged` means a cross-platform framework does (Expo, React Native, Capacitor, Flutter, Tauri) and the native target comes out of its build, `ineligible` means a web-only project that can carry App Intents only through a native target or a bridge, and `unknown` means nothing recognizable was found. A bridge whose native target is not generated yet is `bridged` with medium confidence rather than a guess.
+
 ## Parameter types
 
 A parameter declares an `id`, a `type` and `required`. The generator maps each type to its Swift counterpart and, for `open_app` execution, converts the value into the URL query:

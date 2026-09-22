@@ -2,7 +2,8 @@ import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { CAPABILITY_CATALOGUE, availableOn } from "./audit-catalogue.js";
 import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
-import { listProjectFiles } from "./audit-project.js";
+import { discoverProjects, listProjectFiles } from "./audit-project.js";
+import { detectIntegrationRoute } from "./audit-route.js";
 import { compareVersions, readSdkInfo } from "./audit-sdk.js";
 import {
   createAuditReport,
@@ -42,8 +43,10 @@ async function readBuildMetadata(path: string): Promise<string | undefined> {
   return undefined;
 }
 
-async function readSources(directory: string): Promise<readonly Readonly<{ path: string; contents: string }>[]> {
-  const files = await listProjectFiles(directory);
+async function readSources(
+  directory: string,
+  files: readonly string[]
+): Promise<readonly Readonly<{ path: string; contents: string }>[]> {
   const sources: { path: string; contents: string }[] = [];
   for (const file of files) {
     if (!SOURCE_EXTENSIONS.some((extension) => file.endsWith(extension))) continue;
@@ -57,12 +60,14 @@ async function readSources(directory: string): Promise<readonly Readonly<{ path:
 }
 
 export async function runAudit(options: AuditOptions): Promise<AuditReport> {
-  const sources = await readSources(options.directory);
+  const files = await listProjectFiles(options.directory);
+  const sources = await readSources(options.directory, files);
   const detections = detectSources(sources);
   const detected = detectedCapabilities(detections);
   const schemaEvidence = hasSchemaEvidence(detections);
   const metadata = options.buildMetadata ? await readBuildMetadata(options.buildMetadata) : undefined;
   const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
+  const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
   const findings: AuditFinding[] = [];
 
   for (const record of CAPABILITY_CATALOGUE) {
@@ -154,6 +159,9 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       ...(options.deploymentTarget ? { deploymentTarget: options.deploymentTarget } : {})
     },
     findings,
-    sdk ? { version: sdk.version, canonicalName: sdk.canonicalName } : undefined
+    {
+      ...(sdk ? { sdk: { version: sdk.version, canonicalName: sdk.canonicalName } } : {}),
+      route
+    }
   );
 }
