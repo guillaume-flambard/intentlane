@@ -22,7 +22,7 @@ required rather than invented.
 
 | Area | State | Decision required |
 | --- | --- | --- |
-| Contributor setup | Reproducible: `pnpm install`, `pnpm test`, `pnpm build`, `pnpm validate`, `pnpm generate`, and the example commands in `CONTRIBUTING.md`. | Whether to verify the path from a clean checkout in CI, and who owns that check. |
+| Contributor setup | Reproducible and verified from a clean checkout: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm test` (277 tests), `pnpm validate`, then `pnpm generate --output .intentlane/generated` before `--check`. The documented commands failed before this check, because `.intentlane/` is not versioned and `--check` had no output to compare. | Whether to run the same path from a clean checkout in CI, and who owns that check. |
 | First contribution path | Described in prose, not as a guided list of first issues. | Whether to seed `good first issue` items and label them as such. |
 | Issue intake | One form for pilots. No bug or feature form. | Whether to add a shorter bug form and a feature form, and what each must ask. |
 | Pull request intake | No pull request template. | Whether to add one, and whether it repeats the definition of done or links it. |

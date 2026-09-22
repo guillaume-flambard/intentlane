@@ -21,8 +21,14 @@ pnpm install
 pnpm test
 pnpm build
 pnpm validate
-pnpm exec tsx packages/cli/src/index.ts generate --output .intentlane/generated --check
+pnpm generate --output .intentlane/generated
+node packages/cli/dist/index.cjs generate --output .intentlane/generated --check
 ```
+
+`.intentlane/` is not versioned, so a fresh clone has no generated output and
+`--check` fails until you generate once. `pnpm build` writes
+`packages/cli/dist/index.cjs`, which is the same bundle the published CLI
+ships, so the `node` command above checks the exact artifact a consumer runs.
 
 `apps/example-expo` is the end-to-end fixture. It needs an iOS toolchain:
 

@@ -5,7 +5,7 @@
 
 ## 2. Contributor journey
 
-- [ ] 2.1 Write reproducible setup and first-contribution path; verify it from a clean checkout.
+- [x] 2.1 Write reproducible setup and first-contribution path; verify it from a clean checkout.
 - [ ] 2.2 Add approved issue and pull request intake templates plus maintainer triage labels and workflow.
 - [ ] 2.3 Add approved security disclosure, conduct and release documents only after policy owners decide the content.
 
