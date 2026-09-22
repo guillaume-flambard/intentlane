@@ -49,6 +49,12 @@ These are not style preferences, they are the properties the project sells. A ch
 9. **No comments in the code.** The code and the docs carry the explanation.
 10. **Stable diagnostics.** The codes `IL1001` to `IL1701` are part of the public surface. Adding one means updating [SPEC.md](SPEC.md).
 
+## Repository readiness
+
+[OPEN-CORE-READINESS.md](OPEN-CORE-READINESS.md) records the contributor and
+maintainer inventory with the evidence behind every claim, and the choices that
+still need an owner decision before a policy is written.
+
 ## Commits and pull requests
 
 - One concern per pull request.
