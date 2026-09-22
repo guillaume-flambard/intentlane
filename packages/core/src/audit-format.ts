@@ -1,4 +1,5 @@
 import type { AuditFinding, AuditReport } from "./audit.js";
+import { scoreAuditReport } from "./audit-score.js";
 
 export const AUDIT_FORMATS = ["text", "json", "sarif"] as const;
 export type AuditFormat = (typeof AUDIT_FORMATS)[number];
@@ -20,7 +21,11 @@ function targetLine(report: AuditReport): string {
 }
 
 export function formatText(report: AuditReport): string {
-  const lines: string[] = [targetLine(report)];
+  const score = scoreAuditReport(report);
+  const lines: string[] = [
+    targetLine(report),
+    `score ${score.score}/100 (${score.band}, ${score.discovery}) ${score.points}/${score.maximum} points`
+  ];
   for (const finding of report.findings) {
     lines.push(`${finding.platform} ${finding.state} ${finding.capability} (${finding.confidence})`);
     for (const gap of finding.gaps) lines.push(`  ${gap.code} ${gap.message}`);
@@ -30,7 +35,7 @@ export function formatText(report: AuditReport): string {
 }
 
 export function formatJson(report: AuditReport): string {
-  return `${JSON.stringify(report, null, 2)}\n`;
+  return `${JSON.stringify({ ...report, score: scoreAuditReport(report) }, null, 2)}\n`;
 }
 
 export function formatSarif(report: AuditReport): string {
@@ -70,7 +75,10 @@ export function formatSarif(report: AuditReport): string {
             rules
           }
         },
-        results
+        results,
+        properties: {
+          score: scoreAuditReport(report)
+        }
       }
     ]
   };

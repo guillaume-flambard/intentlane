@@ -11,6 +11,7 @@ export * from "./audit-detect.js";
 export * from "./audit-format.js";
 export * from "./audit-run.js";
 export * from "./audit-sdk.js";
+export * from "./audit-score.js";
 
 export type Severity = "error" | "warning";
 export const DIAGNOSTIC_CODES = [

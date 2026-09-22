@@ -24,3 +24,14 @@ The system SHALL not classify generic App Shortcuts as schema-backed Siri or App
 #### Scenario: Shortcuts-only implementation
 - **WHEN** an app has AppShortcutsProvider but no required schema evidence
 - **THEN** the report labels Shortcuts implemented and Siri discovery unknown or detected
+
+### Requirement: Compatibility score
+The system SHALL score every report deterministically and SHALL state whether the evidence is schema-backed, shortcuts-only or absent.
+
+#### Scenario: Shortcuts without schema evidence
+- **WHEN** a project implements the Shortcuts surface but no schema capability
+- **THEN** the score names its band and reports shortcuts-only discovery
+
+#### Scenario: Capability the platform does not ship
+- **WHEN** a capability is unavailable on the target platform
+- **THEN** it is left out of the score denominator instead of lowering the score

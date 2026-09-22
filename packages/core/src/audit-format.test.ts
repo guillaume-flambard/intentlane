@@ -37,6 +37,7 @@ describe("audit output formats", () => {
   it("renders a stable text report", () => {
     const expected = [
       "target App (macos 27.0)",
+      "score 50/100 (partial, none) 3/6 points",
       "macos implemented foundation.app-intent (medium)",
       "macos detected semantics.app-schema (high)",
       "  ILA120 No schema-conformant open intent found.",
@@ -48,8 +49,11 @@ describe("audit output formats", () => {
     expect(formatText(report)).toBe(formatText(report));
   });
 
-  it("renders the report as parseable JSON", () => {
-    expect(JSON.parse(formatJson(report))).toEqual(report);
+  it("renders the report as parseable JSON with its compatibility score", () => {
+    const parsed = JSON.parse(formatJson(report));
+
+    expect(parsed).toMatchObject(report);
+    expect(parsed.score).toMatchObject({ score: 50, band: "partial", discovery: "none", points: 3, maximum: 6 });
     expect(formatJson(report)).toBe(formatJson(report));
   });
 
@@ -59,6 +63,7 @@ describe("audit output formats", () => {
     expect(sarif.version).toBe("2.1.0");
     expect(sarif.runs[0].tool.driver.name).toBe("IntentLane");
     expect(sarif.runs[0].tool.driver.rules).toEqual([{ id: "ILA120" }]);
+    expect(sarif.runs[0].properties.score.score).toBe(50);
     expect(sarif.runs[0].results).toHaveLength(1);
     expect(sarif.runs[0].results[0].ruleId).toBe("ILA120");
     expect(sarif.runs[0].results[0].level).toBe("error");
