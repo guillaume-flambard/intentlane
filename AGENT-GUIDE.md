@@ -1,5 +1,19 @@
 # IntentLane — guide pour agent de code
 
+## Programme Siri 27
+
+Pour les tâches d'audit d'applications existantes, App Schemas, Siri, Apple
+Intelligence, macOS 27, iOS 27, pilotes externes ou mise sur le marché, lire :
+
+1. `APPLE-27-APP-INTENTS-RESEARCH.md`
+2. `AUDITOR-SPEC.md`
+3. `SIRI-27-ROADMAP.md`
+4. `PILOT-PLAYBOOK.md`
+5. `COMMERCIAL-READINESS.md`
+
+Ce programme complète le MVP Expo historique ci-dessous. Il vise d'abord les
+applications macOS et iOS existantes et les App Schemas validés par Apple.
+
 ## Mission
 
 Construire la plus petite tranche verticale permettant à une app Expo d'exposer une App Intent Apple générée depuis `intentlane.yaml`.
@@ -53,4 +67,3 @@ Do not implement dashboard, Android, Flutter or AI discovery.
 Stop after the CLI can generate deterministic Swift for the reference fixture,
 then report tests, open risks and the exact next vertical slice.
 ```
-
