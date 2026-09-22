@@ -34,6 +34,10 @@ with acceptance evidence.
 Exclusions: implementation, App Store submission, production data access,
 guaranteed language outcomes, third-party credentials and unsupported domains.
 
+The delivery template for this offer, including the report blocks the auditor
+produces, the engagement checklist and the handoff, is in
+[AUDIT-OFFER.md](AUDIT-OFFER.md).
+
 ## Implementation offer
 
 One domain package and two or three named journeys. Include customer-owned

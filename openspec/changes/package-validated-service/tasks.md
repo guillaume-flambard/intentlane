@@ -1,7 +1,7 @@
 ## 1. Audit package
 
-- [ ] 1.1 Create report template and engagement checklist from auditor JSON.
-- [ ] 1.2 Define fixed scope, exclusions, acceptance evidence and handoff.
+- [x] 1.1 Create report template and engagement checklist from auditor JSON.
+- [x] 1.2 Define fixed scope, exclusions, acceptance evidence and handoff.
 
 ## 2. Marketing proof
 
