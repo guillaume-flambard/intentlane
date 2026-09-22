@@ -5,6 +5,6 @@
 
 ## 2. Marketing proof
 
-- [ ] 2.1 Build claims registry mapping every statement to pilot evidence.
+- [x] 2.1 Build claims registry mapping every statement to pilot evidence.
 - [ ] 2.2 Produce one macOS and one iOS case study with permission.
 - [ ] 2.3 Review landing page against the claims matrix before publication.
