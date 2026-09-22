@@ -100,6 +100,32 @@ jobs:
           xcrun --sdk macosx --show-sdk-version
       - name: Verify the macOS example
         run: node apps/example-macos/verify.mjs
+      - name: Audit the macOS fixtures
+        run: |
+          pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/shelf --platform macos --format json --output /tmp/intentlane-shelf.json
+          pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/studio --platform macos --sdk-path "$(xcrun --sdk macosx --show-sdk-path)" --build-metadata apps/example-macos/build/studio/metadata/Metadata.appintents --format json --output /tmp/intentlane-studio.json
+          python3 - <<'PY'
+          import json
+
+          def read(path):
+              report = json.loads(open(path).read())
+              return report, {finding["capability"]: finding["state"] for finding in report["findings"]}
+
+          _, shelf = read("/tmp/intentlane-shelf.json")
+          report, studio = read("/tmp/intentlane-studio.json")
+
+          assert report["sdk"]["version"], report.get("sdk")
+          assert shelf["foundation.app-intent"] == "implemented", shelf["foundation.app-intent"]
+          assert shelf["semantics.app-schema"] == "unknown", shelf["semantics.app-schema"]
+          assert shelf["proof.siri-surface"] == "unknown", shelf["proof.siri-surface"]
+          assert studio["semantics.app-schema"] == "tested", studio["semantics.app-schema"]
+          assert studio["proof.siri-surface"] == "detected", studio["proof.siri-surface"]
+          assert studio["execution.live-activity"] == "unsupported", studio["execution.live-activity"]
+
+          print("sdk:", report["sdk"])
+          print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
+          print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
+          PY
 
   simulator:
     name: Build the example app for the simulator
