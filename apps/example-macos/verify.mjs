@@ -48,6 +48,9 @@ const sdkVersion = capture("xcrun", ["--sdk", "macosx", "--show-sdk-version"]);
 const deploymentTarget = sdkVersion;
 const architecture = process.arch === "arm64" ? "arm64" : "x86_64";
 const target = `${architecture}-apple-macos${deploymentTarget}`;
+const sdkPathIOS = capture("xcrun", ["--sdk", "iphoneos", "--show-sdk-path"]);
+const sdkVersionIOS = capture("xcrun", ["--sdk", "iphoneos", "--show-sdk-version"]);
+const targetIOS = `${architecture}-apple-ios${sdkVersionIOS}`;
 const xcodeVersion = capture("xcodebuild", ["-version"]).split("\n").at(-1)?.replace("Build version ", "") ?? "";
 
 let processor;
@@ -64,7 +67,16 @@ assert(
   `Xcode ${xcodeVersion} cannot extract App Intents metadata: its swiftc has no '-const-gather-protocols-list'. Xcode 27 or newer is required.`
 );
 
-function extract({ contract, moduleName, directory }) {
+function extract({
+  contract,
+  moduleName,
+  directory,
+  sdk = "macosx",
+  sdkRoot = sdkPath,
+  triple = target,
+  family = "macOS",
+  floor = deploymentTarget
+}) {
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
 
@@ -84,12 +96,12 @@ function extract({ contract, moduleName, directory }) {
 
   run("xcrun", [
     "--sdk",
-    "macosx",
+    sdk,
     "swiftc",
     "-target",
-    target,
+    triple,
     "-sdk",
-    sdkPath,
+    sdkRoot,
     "-module-name",
     moduleName,
     "-emit-const-values",
@@ -122,15 +134,15 @@ function extract({ contract, moduleName, directory }) {
     "--module-name",
     moduleName,
     "--sdk-root",
-    sdkPath,
+    sdkRoot,
     "--xcode-version",
     xcodeVersion,
     "--platform-family",
-    "macOS",
+    family,
     "--deployment-target",
-    deploymentTarget,
+    floor,
     "--target-triple",
-    target,
+    triple,
     "--source-file-list",
     sourceList,
     "--swift-const-vals-list",
@@ -267,7 +279,7 @@ verifyStudio(await extract({
   directory: join(here, "build", "studio")
 }));
 
-function verifyReader(metadata) {
+function verifyReader(metadata, label = "reader") {
   const actions = metadata.actions;
   const open = actions.OpenPage;
   const remove = actions.DeletePages;
@@ -316,28 +328,27 @@ function verifyReader(metadata) {
   );
   assert(Object.hasOwn(metadata.queries, "IntentLanePageQuery"), "Missing IntentLanePageQuery in the extracted metadata.");
 
-  process.stdout.write(`reader actions: ${Object.keys(actions).join(", ")}\n`);
-  process.stdout.write(`reader open protocols: ${JSON.stringify(open.systemProtocols)}\n`);
-  process.stdout.write(`reader rotate parameters: ${JSON.stringify(rotateParameters)}\n`);
-  process.stdout.write(`reader entity schemas: ${JSON.stringify(metadata.entities.IntentLanePageEntity.assistantDefinedSchemas)}\n`);
+  process.stdout.write(`${label} actions: ${Object.keys(actions).join(", ")}\n`);
+  process.stdout.write(`${label} open protocols: ${JSON.stringify(open.systemProtocols)}\n`);
+  process.stdout.write(`${label} rotate parameters: ${JSON.stringify(rotateParameters)}\n`);
+  process.stdout.write(`${label} entity schemas: ${JSON.stringify(metadata.entities.IntentLanePageEntity.assistantDefinedSchemas)}\n`);
 }
 
-verifyShelf(await extract({
-  contract: join(here, "intentlane.yaml"),
-  moduleName: "IntentLaneShelf",
-  directory: join(here, "build", "shelf")
-}));
-
-verifyStudio(await extract({
-  contract: join(here, "schemas.yaml"),
-  moduleName: "IntentLaneStudio",
-  directory: join(here, "build", "studio")
-}));
-
-verifyReader(await extract({
+verifyReader(extract({
   contract: join(here, "reader.yaml"),
   moduleName: "IntentLaneReader",
   directory: join(here, "build", "reader")
 }));
+
+verifyReader(extract({
+  contract: join(here, "reader.yaml"),
+  moduleName: "IntentLaneReader",
+  directory: join(here, "build", "reader-ios"),
+  sdk: "iphoneos",
+  sdkRoot: sdkPathIOS,
+  triple: targetIOS,
+  family: "iOS",
+  floor: sdkVersionIOS
+}), "reader ios");
 
 process.stdout.write(`toolchain: Xcode ${xcodeVersion}, ${target}, sdk ${sdkVersion}\n`);

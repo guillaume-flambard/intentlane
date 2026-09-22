@@ -11,4 +11,4 @@
 
 ## 3. Proof
 
-- [ ] 3.1 Pass metadata and system evidence for the advertised domain on each platform.
+- [x] 3.1 Pass metadata and system evidence for the advertised domain on each platform.
