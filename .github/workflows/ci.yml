@@ -121,6 +121,8 @@ jobs:
         run: |
           xcodebuild -version
           pod --version
+      - name: Build the CLI bundle
+        run: pnpm bundle
       - name: Generate the iOS project and build the app
         working-directory: apps/example-expo
         env:

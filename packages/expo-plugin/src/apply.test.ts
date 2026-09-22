@@ -1,6 +1,6 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   applyIntentLane,
@@ -22,7 +22,14 @@ async function projectWithConfig(contents = 'schema: "0.1"\n'): Promise<string> 
 describe("resolveGeneratorInvocation", () => {
   it("builds a portable invocation rooted in the app project", async () => {
     const projectRoot = await projectWithConfig();
-    const resolveModule = (request: string): string => `/app/node_modules/${request}`;
+    const cliRoot = await mkdtemp(join(tmpdir(), "intentlane-cli-"));
+    const packageFile = join(cliRoot, "@intentlane", "cli", "package.json");
+    const bundle = join(cliRoot, "@intentlane", "cli", "dist", "index.cjs");
+    await mkdir(dirname(bundle), { recursive: true });
+    await writeFile(packageFile, "{}", "utf8");
+    await writeFile(bundle, "", "utf8");
+    const resolveModule = (request: string): string =>
+      request === "@intentlane/cli/package.json" ? packageFile : `/x/${request}`;
 
     const invocation = resolveGeneratorInvocation({
       projectRoot,
@@ -34,8 +41,7 @@ describe("resolveGeneratorInvocation", () => {
     expect(invocation.cwd).toBe(projectRoot);
     expect(invocation.command).toBe(process.execPath);
     expect(invocation.args).toEqual([
-      "/app/node_modules/tsx/cli",
-      "/app/node_modules/@intentlane/cli/src/index.ts",
+      bundle,
       "generate",
       "--config",
       join(projectRoot, "intentlane.yaml"),
@@ -43,6 +49,26 @@ describe("resolveGeneratorInvocation", () => {
       "/app/ios/Example/IntentLaneGenerated"
     ]);
     expect(invocation.args.some((argument) => argument.includes("packages/cli"))).toBe(false);
+    expect(invocation.args.some((argument) => argument.includes("tsx"))).toBe(false);
+  });
+
+  it("fails with an actionable message when the CLI bundle is missing", async () => {
+    const projectRoot = await projectWithConfig();
+    const cliRoot = await mkdtemp(join(tmpdir(), "intentlane-cli-"));
+    const packageFile = join(cliRoot, "@intentlane", "cli", "package.json");
+    await mkdir(dirname(packageFile), { recursive: true });
+    await writeFile(packageFile, "{}", "utf8");
+    const resolveModule = (request: string): string =>
+      request === "@intentlane/cli/package.json" ? packageFile : `/x/${request}`;
+
+    expect(() =>
+      resolveGeneratorInvocation({
+        projectRoot,
+        configFile: "intentlane.yaml",
+        outputDirectory: "/app/ios/Example/IntentLaneGenerated",
+        resolveModule
+      })
+    ).toThrow(/but not its bundle/);
   });
 
   it("fails with an actionable message when the config is missing", async () => {

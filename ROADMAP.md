@@ -55,8 +55,8 @@ Objectif : prouver que la sortie d'IntentLane n'est pas liée à iOS et qu'elle 
 ## Phase 4 — bêta open source (semaines 5–6)
 
 - Documentation publique. **partiel** : le dépôt est public et sous licence MIT, avec `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md` et `AGENT-GUIDE.md` dans le dépôt. Il n'y a pas encore de site de documentation ni de référence CLI publiée.
-- CLI publiée sur npm.
-- Plugin `@intentlane/expo`.
+- CLI publiée sur npm. **paquet prêt, publication à faire** : `@intentlane/cli` n'est plus privé, son `bin` pointe sur `dist/index.cjs` (un seul fichier produit par esbuild, 558 ko, qui absorbe `commander`, `yaml` et `zod`, donc aucune dépendance runtime pour le consommateur), et `files` limite la publication au dossier `dist`. Prouvé par `npm pack` puis `npm install` du tarball dans un dossier vierge : `npx intentlane init` puis `npx intentlane validate` répondent `Valid IntentLane 0.1: 2 intent(s) ready.` avec deux paquets installés au total. Il reste à publier sur le registre, ce qui est impossible depuis cette machine faute d'identifiants npm (`npm whoami` répond 401 Unauthorized).
+- Plugin `@intentlane/expo`. **paquet prêt, publication à faire** : plus privé, `files` limité à `app.plugin.cjs` et `src/apply.cjs`, `engines` node 22 ou plus. Il n'invoque plus `tsx src/index.ts` mais le bundle du CLI (`node <cli>/dist/index.cjs`), avec un message actionnable quand le paquet est installé mais que le bundle manque. Prouvé par `npm pack` (le tarball ne contient plus ni test ni déclaration de types) et par le job CI `simulator`, qui construit désormais le bundle avec `pnpm bundle` avant le prebuild.
 - Diagnostics stables.
 - Guide de migration.
 - Collecte volontaire de feedback.
@@ -96,5 +96,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(cli): ship the CLI and the plugin as publishable packages`.
+Ticket suivant : `feat(core): stabilize the diagnostic codes`.
 

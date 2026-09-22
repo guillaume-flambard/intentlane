@@ -2,6 +2,7 @@
   "name": "@intentlane/expo",
   "version": "0.1.0",
   "license": "MIT",
-  "private": true,
-  "main": "app.plugin.cjs"
+  "main": "app.plugin.cjs",
+  "files": ["app.plugin.cjs", "src/apply.cjs"],
+  "engines": { "node": ">=22" }
 }

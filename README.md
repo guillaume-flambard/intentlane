@@ -14,7 +14,15 @@ Still out of scope: endpoint entity queries, HTTP execution, enum schema conform
 
 ## Quickstart
 
-From an Expo app directory:
+From an Expo app directory, install the two packages:
+
+```sh
+npm install --save-dev @intentlane/cli @intentlane/expo
+```
+
+`@intentlane/cli` is one bundled file with no runtime dependency, so it pulls in neither `commander`, nor `yaml`, nor `zod`. `@intentlane/expo` is the Expo config plugin that runs the generator during a prebuild. Install both, because the plugin resolves the CLI from your app directory.
+
+Then:
 
 ```sh
 npx intentlane init
@@ -44,6 +52,8 @@ npx intentlane doctor
 `doctor` reports `node`, `config`, `schema`, `generated`, `xcode`, and `plugin` checks and exits non-zero only on errors.
 
 ## CLI
+
+The program reports its version with `intentlane --version` (`-V`) and prints usage with `intentlane --help`.
 
 `intentlane init`
 
@@ -354,10 +364,10 @@ The contract is defined in [SPEC.md](SPEC.md); [intentlane.yaml](intentlane.yaml
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main`, on every pull request, and on demand. It has four jobs.
 
-- `checks`, on `ubuntu-latest`: installs from the lockfile, typechecks, runs the test suite, validates the reference contract, regenerates the artifacts, fails when they are stale, and generates a second copy in `/tmp` to prove the output is byte-for-byte deterministic.
+- `checks`, on `ubuntu-latest`: installs from the lockfile, typechecks, builds the CLI bundle, runs the test suite, validates the reference contract, regenerates the artifacts, fails when they are stale, and generates a second copy in `/tmp` to prove the output is byte-for-byte deterministic.
 - `swift`, a matrix over `macos-15` and `macos-26`: compiles the generated Swift for both the reference fixture and the example app with `swiftc` against the iOS simulator SDK. This is the minimal Xcode matrix, and each run prints the Xcode and SDK versions it used.
 - `macos`, on `xcode-27` (the only hosted image that ships Xcode 27, and therefore the macOS 27 SDK): runs `node apps/example-macos/verify.mjs`, which generates the macOS contract, compiles it for the runner's macOS SDK, extracts the App Intents metadata with `appintentsmetadataprocessor`, and asserts the actions, the flags, the authentication policy, the entity, the query, the enum and the shortcuts. The script reads the SDK version and the Xcode build from the machine, so it adapts to whatever toolchain the runner ships, and it fails with an actionable message when that toolchain predates Xcode 27.
-- `simulator`, on `macos-26`: prebuilds `apps/example-expo`, builds the Release app for the simulator with `xcodebuild`, then reads `Metadata.appintents/extract.actionsdata` and the compiled `fr.lproj/IntentLane.strings` from the product. It asserts the four actions exist, that every action carries `outputFlags: 7` (dialog, snippet view and opened URL), that `DeleteIdea` is the only one with an explicit authentication policy, that the entity and its query are indexed, that the shortcuts are registered, and that the French table holds the translated confirmation prompt and parameter title.
+- `simulator`, on `macos-26`: builds the CLI bundle with `pnpm bundle` (the plugin runs `node <cli>/dist/index.cjs`, not the TypeScript source), prebuilds `apps/example-expo`, builds the Release app for the simulator with `xcodebuild`, then reads `Metadata.appintents/extract.actionsdata` and the compiled `fr.lproj/IntentLane.strings` from the product. It asserts the four actions exist, that every action carries `outputFlags: 7` (dialog, snippet view and opened URL), that `DeleteIdea` is the only one with an explicit authentication policy, that the entity and its query are indexed, that the shortcuts are registered, and that the French table holds the translated confirmation prompt and parameter title.
 
 The generated Swift is compiled and built on macOS runners only; the fast checks run everywhere.
 
@@ -395,3 +405,4 @@ This project is MIT licensed. See [LICENSE](LICENSE).
 - A `native` intent throws `IntentLaneHandlerError.missingHandler` until the app registers its handler. The registry is main-actor isolated and starts empty, so an app that forgets the registration gets a runtime error rather than a compile error.
 - The generator never checks that a native handler really returns the entity named by `result.returns`. The protocol states the type, the metadata carries the output type, and the app's implementation is on its own.
 - A schema is validated against iOS availability only. The contract has no macOS deployment floor, so a schema that macOS does not support passes validation and fails later, at build or at runtime. `min_ios` is compared numerically against the schema's iOS availability, and the schema table is versioned on Xcode 27.0 (27A266a).
+- The CLI reports its version from a constant in `packages/cli/src/index.ts`, because the bundled file cannot read `package.json` at runtime. That constant can drift from `packages/cli/package.json` when the version is bumped.

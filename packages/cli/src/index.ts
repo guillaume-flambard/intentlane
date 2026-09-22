@@ -107,6 +107,7 @@ async function doctorFacts(config: string, output: string): Promise<DoctorFacts>
 }
 
 const program = new Command();
+program.version("0.1.0");
 program.name("intentlane").description("IntentLane deterministic App Intents compiler");
 
 program.command("init")
@@ -182,4 +183,7 @@ program.command("generate")
     process.stdout.write(`Generated ${join(output, GENERATED_SWIFT_FILE)}\n`);
   });
 
-await program.parseAsync();
+program.parseAsync().catch((reason: unknown) => {
+  process.stderr.write(`${reason instanceof Error ? reason.message : String(reason)}\n`);
+  process.exitCode = 1;
+});

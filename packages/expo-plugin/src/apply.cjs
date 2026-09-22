@@ -24,25 +24,18 @@ function resolveGeneratorInvocation({ projectRoot, configFile, outputDirectory, 
 
   let cliEntry;
   try {
-    cliEntry = join(dirname(resolveModule(`${CLI_PACKAGE}/package.json`)), "src", "index.ts");
+    cliEntry = join(dirname(resolveModule(`${CLI_PACKAGE}/package.json`)), "dist", "index.cjs");
   } catch (cause) {
     throw generatorResolutionError(CLI_PACKAGE, projectRoot, cause);
   }
 
-  let tsxCli;
-  try {
-    tsxCli = resolveModule("tsx/cli");
-  } catch (tsxError) {
-    try {
-      tsxCli = join(dirname(resolveModule("tsx/package.json")), "dist", "cli.mjs");
-    } catch (cause) {
-      throw generatorResolutionError("tsx", projectRoot, cause ?? tsxError);
-    }
+  if (!existsSync(cliEntry)) {
+    throw new Error(`IntentLane found '${CLI_PACKAGE}' but not its bundle at ${cliEntry}. Reinstall the package.`);
   }
 
   return {
     command: process.execPath,
-    args: [tsxCli, cliEntry, "generate", "--config", config, "--output", outputDirectory],
+    args: [cliEntry, "generate", "--config", config, "--output", outputDirectory],
     cwd: projectRoot
   };
 }

@@ -2,6 +2,7 @@ node_modules/
 .intentlane/
 coverage/
 *.tsbuildinfo
+packages/*/dist/
 apps/*/ios/
 apps/*/android/
 apps/*/.expo/

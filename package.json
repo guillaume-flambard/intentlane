@@ -6,13 +6,15 @@
   "packageManager": "pnpm@11.27.0",
   "engines": { "node": ">=22" },
   "scripts": {
-    "build": "tsc --noEmit",
+    "build": "tsc --noEmit && pnpm bundle",
+    "bundle": "esbuild packages/cli/src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=packages/cli/dist/index.cjs",
     "test": "vitest run",
     "validate": "tsx packages/cli/src/index.ts validate",
     "generate": "tsx packages/cli/src/index.ts generate"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "esbuild": "^0.28.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
