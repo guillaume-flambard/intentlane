@@ -106,8 +106,11 @@ export function createAuditReport(
   };
 }
 
+const INFORMATIONAL_GAP_CODES: ReadonlySet<AuditDiagnosticCode> = new Set(["ILA100"]);
+
 export function blockingGaps(report: AuditReport): readonly AuditGap[] {
   return report.findings
     .filter((finding) => finding.confidence === "high")
-    .flatMap((finding) => finding.gaps);
+    .flatMap((finding) => finding.gaps)
+    .filter((gap) => !INFORMATIONAL_GAP_CODES.has(gap.code));
 }

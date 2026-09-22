@@ -88,7 +88,7 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       state = "unsupported";
       confidence = "high";
       gaps.push({
-        code: "ILA100",
+        code: "ILA160",
         message: `${record.id} requires ${options.platform} ${version}, and the SDK at ${sdk.path} is ${sdk.version}.`
       });
       nextAction = `Build against ${options.platform} ${version} or newer before relying on ${record.id}.`;

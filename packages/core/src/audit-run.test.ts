@@ -127,7 +127,7 @@ describe("runAudit", () => {
     expect(stale.sdk).toEqual({ version: "26.5", canonicalName: "macosx26.5" });
     expect(finding(stale, "semantics.app-schema")).toMatchObject({ state: "unsupported", confidence: "high" });
     expect(finding(stale, "semantics.app-schema").gaps).toContainEqual({
-      code: "ILA100",
+      code: "ILA160",
       message: `semantics.app-schema requires macos 27.0, and the SDK at ${sdk} is 26.5.`
     });
 

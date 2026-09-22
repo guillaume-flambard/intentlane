@@ -85,7 +85,7 @@ The program reports its version with `intentlane --version` (`-V`) and prints us
 - `--min-macos <major.minor>`, `--min-ios <major.minor>`: record the deployment floor in the report target.
 - `--build-metadata <path>`: inspect an existing `Metadata.appintents` directory or `extract.actionsdata` file, which promotes `foundation` and `semantics` capabilities from `implemented` to `tested`.
 - `--sdk-path <path>`: read the installed SDK's `SDKSettings.json`, record its version in the report, and mark a capability `unsupported` when the SDK is older than the version that capability needs.
-- `--strict`: exit non-zero when a high-confidence blocker was found.
+- `--strict`: exit non-zero when a high-confidence blocker was found. A capability the target platform does not ship (`ILA100`) is informational and never blocks, so `--strict` stays usable on a clean macOS project; an SDK older than the capability needs (`ILA160`) does block.
 
 `audit` analyses a project read-only and never writes to it. Every capability comes out as `unsupported`, `unknown`, `detected`, `implemented`, `tested` or `feasible`, with the evidence it used and the next action. A project that only declares an `AppShortcutsProvider` stays `implemented` for Shortcuts and `unknown` for Siri discovery: shortcuts alone never prove schema-backed Siri or Apple Intelligence. The auditor's diagnostics are prefixed `ILA`.
 

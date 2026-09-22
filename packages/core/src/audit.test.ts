@@ -69,6 +69,22 @@ describe("audit contract", () => {
       { code: "ILA120", message: "No schema-conformant open intent found." }
     ]);
   });
+
+  it("keeps an informational gap out of the blockers", () => {
+    const report = createAuditReport({ name: "App", platform: "macos" }, [
+      {
+        ...finding("execution.live-activity", "unsupported"),
+        gaps: [{ code: "ILA100", message: "Not shipped on this platform." }]
+      },
+      {
+        ...finding("semantics.app-schema", "unsupported"),
+        gaps: [{ code: "ILA160", message: "The inspected SDK is older than the schema." }]
+      }
+    ]);
+    expect(blockingGaps(report)).toEqual([
+      { code: "ILA160", message: "The inspected SDK is older than the schema." }
+    ]);
+  });
 });
 
 describe("compareFindings", () => {
