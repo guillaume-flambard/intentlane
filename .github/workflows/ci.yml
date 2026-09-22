@@ -105,6 +105,7 @@ jobs:
           pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/shelf --platform macos --format json --output /tmp/intentlane-shelf.json
           pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/studio --platform macos --sdk-path "$(xcrun --sdk macosx --show-sdk-path)" --build-metadata apps/example-macos/build/studio/metadata/Metadata.appintents --format json --output /tmp/intentlane-studio.json
           pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/studio --platform both --format json --output /tmp/intentlane-both.json
+          pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/reader --platform macos --format json --output /tmp/intentlane-reader.json
           python3 - <<'PY'
           import json
 
@@ -114,10 +115,13 @@ jobs:
 
           shelf_report, shelf = read("/tmp/intentlane-shelf.json")
           report, studio = read("/tmp/intentlane-studio.json")
+          reader_report, reader = read("/tmp/intentlane-reader.json")
 
           assert report["sdk"]["version"], report.get("sdk")
           assert shelf_report["score"]["discovery"] == "shortcuts-only", shelf_report["score"]
           assert report["score"]["discovery"] == "schema-backed", report["score"]
+          assert reader["semantics.schema-completeness"] == "implemented", reader["semantics.schema-completeness"]
+          assert reader_report["score"]["discovery"] == "schema-backed", reader_report["score"]
           assert report["route"]["route"] == "native", report["route"]
           assert shelf_report["route"]["route"] == "native", shelf_report["route"]
           assert report["data"]["privacy"] == "unknown", report["data"]

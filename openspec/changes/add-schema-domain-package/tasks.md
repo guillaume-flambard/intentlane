@@ -7,7 +7,7 @@
 
 - [x] 2.1 Extend schema, IR and diagnostics; verify invalid contracts fail.
 - [x] 2.2 Generate Swift contracts and customer-owned adapter interfaces; verify snapshots and SDK compilation.
-- [ ] 2.3 Extend auditor rules and AppIntentsTesting fixtures.
+- [x] 2.3 Extend auditor rules and AppIntentsTesting fixtures.
 
 ## 3. Proof
 

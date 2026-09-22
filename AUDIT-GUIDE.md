@@ -91,10 +91,11 @@ work).
 | --- | --- | --- |
 | `ILA100` | The capability is not available on the target platform. | No, it is informational. |
 | `ILA110` | The capability is declared without the companions it requires. | Yes. |
+| `ILA130` | A schema domain conforms only one side, an action or its content. | Yes. |
 | `ILA140` | Shortcut-only evidence does not establish Siri or Apple Intelligence discovery. | Yes. |
 | `ILA160` | The capability needs a newer SDK than the one inspected. | Yes. |
 
-`ILA120`, `ILA130` and `ILA150` are reserved and not emitted yet.
+`ILA120` and `ILA150` are reserved and not emitted yet.
 
 ## Baseline a pilot candidate
 

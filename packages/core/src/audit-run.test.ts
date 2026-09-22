@@ -142,3 +142,36 @@ describe("runAudit", () => {
     expect(finding(current, "semantics.app-schema")).toMatchObject({ state: "implemented", confidence: "high" });
   });
 });
+
+describe("schema domain completeness", () => {
+  const domainSource = (entitySchema: boolean) => [
+    "import AppIntents",
+    "",
+    entitySchema ? "@AppEntity(schema: .reader.page)" : "@AppEntity",
+    "struct PageEntity: AppEntity {",
+    "  var id: String",
+    "  var label: String",
+    "}",
+    "",
+    "@AppIntent(schema: .reader.openPage)",
+    "struct OpenPage: AppIntent {",
+    "  var target: PageEntity",
+    "}"
+  ];
+
+  it("implements schema completeness when one domain has both sides", async () => {
+    const directory = await fixture(domainSource(true).join("\n"));
+    const report = await runAudit({ directory, platform: "macos", name: "App" });
+    expect(finding(report, "semantics.schema-completeness")).toMatchObject({ state: "implemented", confidence: "high" });
+  });
+
+  it("detects a one sided domain and asks for the missing side", async () => {
+    const directory = await fixture(domainSource(false).join("\n"));
+    const report = await runAudit({ directory, platform: "macos", name: "App" });
+    const completeness = finding(report, "semantics.schema-completeness");
+    expect(completeness).toMatchObject({ state: "detected", confidence: "high" });
+    expect(completeness.gaps).toContainEqual(
+      expect.objectContaining({ code: "ILA130", message: expect.stringContaining("reader conforms 1 intent(s) and 0 entity(ies)") })
+    );
+  });
+});

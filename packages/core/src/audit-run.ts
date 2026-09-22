@@ -2,7 +2,15 @@ import { readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { CAPABILITY_CATALOGUE, availableOn, describeCatalogue } from "./audit-catalogue.js";
-import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
+import {
+  completeSchemaDomains,
+  detectSchemaDomains,
+  detectSources,
+  detectedCapabilities,
+  evidenceFor,
+  hasSchemaEvidence,
+  partialSchemaDomains
+} from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
 import { detectDataArchitecture } from "./audit-architecture.js";
 import { describeConditions, type AuditEnvironment } from "./audit-conditions.js";
@@ -84,6 +92,9 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const detections = detectSources(sources);
   const detected = detectedCapabilities(detections);
   const schemaEvidence = hasSchemaEvidence(detections);
+  const domains = detectSchemaDomains(sources);
+  const completeDomains = completeSchemaDomains(domains);
+  const partialDomains = partialSchemaDomains(domains);
   const metadata = options.buildMetadata ? await readBuildMetadata(options.buildMetadata) : undefined;
   const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
   const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
@@ -134,6 +145,22 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
           gaps.push({ code: "ILA110", message: `${record.id} is declared without ${missing.join(", ")}.` });
           nextAction = `Implement ${missing.join(", ")} before relying on ${record.id}.`;
         }
+      } else if (record.id === "semantics.schema-completeness" && completeDomains.length > 0) {
+        const first = completeDomains[0];
+        state = "implemented";
+        confidence = "high";
+        evidence.push({ kind: "swift", path: first?.path ?? "", platform: options.platform });
+        nextAction = `Keep the ${completeDomains.map((domain) => domain.domain).join(", ")} domain complete.`;
+      } else if (record.id === "semantics.schema-completeness" && partialDomains.length > 0) {
+        state = "detected";
+        confidence = "high";
+        gaps.push({
+          code: "ILA130",
+          message: partialDomains
+            .map((domain) => `${domain.domain} conforms ${domain.intents} intent(s) and ${domain.entities} entity(ies)`)
+            .join("; ") + ", so a journey cannot resolve both the action and its content."
+        });
+        nextAction = "Conform an entity for every action domain before claiming the domain.";
       } else if (record.id === "proof.siri-surface" && schemaEvidence) {
         state = "detected";
         confidence = "medium";

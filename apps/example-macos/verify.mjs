@@ -267,4 +267,77 @@ verifyStudio(await extract({
   directory: join(here, "build", "studio")
 }));
 
+function verifyReader(metadata) {
+  const actions = metadata.actions;
+  const open = actions.OpenPage;
+  const remove = actions.DeletePages;
+  const rotate = actions.RotatePages;
+
+  assert(open, "Missing OpenPage in the extracted metadata.");
+  assert(remove, "Missing DeletePages in the extracted metadata.");
+  assert(rotate, "Missing RotatePages in the extracted metadata.");
+
+  assert(open.outputFlags === 0, `Expected OpenPage to open the app without a dialog, got ${open.outputFlags}.`);
+  assert(open.openAppWhenRun === true, "Expected OpenPage to open the app.");
+  assert(
+    JSON.stringify(open.assistantDefinedSchemas) === JSON.stringify([{ domain: "reader", name: "ReaderOpenPageIntent", version: "1.0.0" }]),
+    `Expected OpenPage to conform to reader.openPage, got ${JSON.stringify(open.assistantDefinedSchemas)}.`
+  );
+  assert(
+    (open.systemProtocols ?? []).includes("com.apple.link.systemProtocol.OpenEntity"),
+    `Expected OpenPage to carry the OpenEntity protocol, got ${JSON.stringify(open.systemProtocols)}.`
+  );
+
+  assert(
+    JSON.stringify(remove.assistantDefinedSchemas) === JSON.stringify([{ domain: "reader", name: "ReaderDeletePagesIntent", version: "1.0.0" }]),
+    `Expected DeletePages to conform to reader.deletePages, got ${JSON.stringify(remove.assistantDefinedSchemas)}.`
+  );
+  assert(
+    (remove.systemProtocols ?? []).includes("com.apple.link.systemProtocol.DeleteEntity"),
+    `Expected DeletePages to carry the DeleteEntity protocol, got ${JSON.stringify(remove.systemProtocols)}.`
+  );
+
+  assert(
+    JSON.stringify(rotate.assistantDefinedSchemas) === JSON.stringify([{ domain: "reader", name: "ReaderRotatePagesIntent", version: "1.0.0" }]),
+    `Expected RotatePages to conform to reader.rotatePages, got ${JSON.stringify(rotate.assistantDefinedSchemas)}.`
+  );
+  assert(rotate.outputFlags === 4, `Expected RotatePages to return a dialog, got ${rotate.outputFlags}.`);
+  const rotateParameters = (rotate.parameters ?? []).map((parameter) => parameter.name);
+  assert(
+    JSON.stringify(rotateParameters) === JSON.stringify(["pages", "isClockwise"]),
+    `Expected RotatePages to declare pages and isClockwise, got ${JSON.stringify(rotateParameters)}.`
+  );
+
+  assert(Object.hasOwn(metadata.entities, "IntentLanePageEntity"), "Missing IntentLanePageEntity in the extracted metadata.");
+  assert(
+    JSON.stringify(metadata.entities.IntentLanePageEntity.assistantDefinedSchemas) ===
+      JSON.stringify([{ domain: "reader", name: "ReaderPageEntity", version: "1.0.0" }]),
+    `Expected IntentLanePageEntity to conform to reader.page, got ${JSON.stringify(metadata.entities.IntentLanePageEntity.assistantDefinedSchemas)}.`
+  );
+  assert(Object.hasOwn(metadata.queries, "IntentLanePageQuery"), "Missing IntentLanePageQuery in the extracted metadata.");
+
+  process.stdout.write(`reader actions: ${Object.keys(actions).join(", ")}\n`);
+  process.stdout.write(`reader open protocols: ${JSON.stringify(open.systemProtocols)}\n`);
+  process.stdout.write(`reader rotate parameters: ${JSON.stringify(rotateParameters)}\n`);
+  process.stdout.write(`reader entity schemas: ${JSON.stringify(metadata.entities.IntentLanePageEntity.assistantDefinedSchemas)}\n`);
+}
+
+verifyShelf(await extract({
+  contract: join(here, "intentlane.yaml"),
+  moduleName: "IntentLaneShelf",
+  directory: join(here, "build", "shelf")
+}));
+
+verifyStudio(await extract({
+  contract: join(here, "schemas.yaml"),
+  moduleName: "IntentLaneStudio",
+  directory: join(here, "build", "studio")
+}));
+
+verifyReader(await extract({
+  contract: join(here, "reader.yaml"),
+  moduleName: "IntentLaneReader",
+  directory: join(here, "build", "reader")
+}));
+
 process.stdout.write(`toolchain: Xcode ${xcodeVersion}, ${target}, sdk ${sdkVersion}\n`);

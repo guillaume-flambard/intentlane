@@ -45,6 +45,46 @@ export function detectSources(sources: readonly AuditSourceFile[]): readonly Aud
   return detections;
 }
 
+export type AuditSchemaDomain = Readonly<{
+  domain: string;
+  intents: number;
+  entities: number;
+  path: string;
+}>;
+
+const DOMAIN_PATTERNS: readonly Readonly<{ kind: "intent" | "entity"; pattern: RegExp }>[] = [
+  { kind: "intent", pattern: /@AppIntent\s*\(\s*schema\s*:\s*\.([a-zA-Z][a-zA-Z0-9]*)\s*\./ },
+  { kind: "entity", pattern: /@AppEntity\s*\(\s*schema\s*:\s*\.([a-zA-Z][a-zA-Z0-9]*)\s*\./ }
+];
+
+export function detectSchemaDomains(sources: readonly AuditSourceFile[]): readonly AuditSchemaDomain[] {
+  const counts = new Map<string, { intents: number; entities: number; path: string }>();
+  for (const source of sources) {
+    for (const line of source.contents.split("\n")) {
+      for (const { kind, pattern } of DOMAIN_PATTERNS) {
+        const match = pattern.exec(line);
+        const domain = match?.[1];
+        if (!domain) continue;
+        const entry = counts.get(domain) ?? { intents: 0, entities: 0, path: source.path };
+        if (kind === "intent") entry.intents += 1;
+        else entry.entities += 1;
+        counts.set(domain, entry);
+      }
+    }
+  }
+  return [...counts.entries()]
+    .map(([domain, entry]) => ({ domain, intents: entry.intents, entities: entry.entities, path: entry.path }))
+    .sort((left, right) => (left.domain < right.domain ? -1 : left.domain > right.domain ? 1 : 0));
+}
+
+export function completeSchemaDomains(domains: readonly AuditSchemaDomain[]): readonly AuditSchemaDomain[] {
+  return domains.filter((domain) => domain.intents > 0 && domain.entities > 0);
+}
+
+export function partialSchemaDomains(domains: readonly AuditSchemaDomain[]): readonly AuditSchemaDomain[] {
+  return domains.filter((domain) => domain.intents === 0 || domain.entities === 0);
+}
+
 export function detectedCapabilities(detections: readonly AuditDetection[]): ReadonlySet<string> {
   return new Set(detections.map((detection) => detection.capability));
 }

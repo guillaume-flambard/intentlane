@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { detectSources, detectedCapabilities, evidenceFor, hasSchemaEvidence } from "./audit-detect.js";
+import {
+  completeSchemaDomains,
+  detectSchemaDomains,
+  detectSources,
+  detectedCapabilities,
+  evidenceFor,
+  hasSchemaEvidence,
+  partialSchemaDomains
+} from "./audit-detect.js";
 
 const providerOnly = {
   path: "Sources/App/Shortcuts.swift",
@@ -89,5 +97,33 @@ describe("audit detection", () => {
       { path: "Sources/App/Package.swift", contents: "struct Pkg: AppIntentsPackage {\n}" }
     ]);
     expect(detectedCapabilities(detections).has("foundation.app-intent")).toBe(false);
+  });
+});
+
+describe("schema domains", () => {
+  const source = (path: string, lines: readonly string[]) => ({ path, contents: lines.join("\n") });
+
+  it("counts the intents and the entities each domain conforms", () => {
+    const domains = detectSchemaDomains([
+      source("Sources/App/Reader.swift", [
+        "@AppEntity(schema: .reader.page)",
+        "@AppEntity(schema: .reader.document)",
+        "@AppIntent(schema: .reader.openPage)",
+        "@AppIntent(schema: .calendar.createEvent)"
+      ])
+    ]);
+    expect(domains).toEqual([
+      { domain: "calendar", intents: 1, entities: 0, path: "Sources/App/Reader.swift" },
+      { domain: "reader", intents: 1, entities: 2, path: "Sources/App/Reader.swift" }
+    ]);
+  });
+
+  it("separates a complete domain from a partial one", () => {
+    const domains = detectSchemaDomains([
+      source("Sources/App/Reader.swift", ["@AppEntity(schema: .reader.page)", "@AppIntent(schema: .reader.openPage)"]),
+      source("Sources/App/Calendar.swift", ["@AppIntent(schema: .calendar.createEvent)"])
+    ]);
+    expect(completeSchemaDomains(domains).map((domain) => domain.domain)).toEqual(["reader"]);
+    expect(partialSchemaDomains(domains).map((domain) => domain.domain)).toEqual(["calendar"]);
   });
 });
