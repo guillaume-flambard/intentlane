@@ -1,0 +1,78 @@
+name: Pilot report
+description: Run IntentLane on an app you already ship and report where the contract got in the way.
+title: "[Pilot] "
+labels: ["pilot report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying IntentLane on a real app. The Phase 3 gate needs five pilots, two of them existing apps, so this report is the most useful contribution you can make.
+
+        A report without the contract is hard to act on. Paste the relevant `intentlane.yaml` excerpt, the exact versions, and what `intentlane doctor` printed.
+  - type: input
+    id: intentlane-version
+    attributes:
+      label: IntentLane version
+      description: The output of `intentlane --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: toolchain
+    attributes:
+      label: Expo, React Native and Xcode versions
+      description: The relevant lines of your `package.json` and the output of `xcodebuild -version`.
+      placeholder: "expo 54.0.37, react-native 0.81.5, Xcode 27.0"
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Contract excerpt
+      description: The `intentlane.yaml` you wrote, trimmed to the part that matters.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What you wanted the app to do
+      description: The action or entity you tried to expose to Siri and the Shortcuts app.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened
+      description: The generated Swift, the build result, or the behaviour you observed. Paste the compiler error and the generated file when the Swift does not compile.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: "`intentlane doctor` output"
+      description: The full output, including the hint lines.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Any `ILxxxx` diagnostic you hit, and whether its message was actionable.
+    validations:
+      required: false
+  - type: textarea
+    id: gaps
+    attributes:
+      label: What the contract could not express
+      description: An intention, a parameter type, or an execution mode you could not declare in schema 0.1, with the YAML that should have worked.
+    validations:
+      required: false
+  - type: textarea
+    id: manual
+    attributes:
+      label: What you had to write by hand
+      description: Swift you edited after generation, or App Intents code you wrote yourself.
+    validations:
+      required: false

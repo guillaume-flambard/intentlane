@@ -59,7 +59,7 @@ Objectif : prouver que la sortie d'IntentLane n'est pas liée à iOS et qu'elle 
 - Plugin `@intentlane/expo`. **paquet prêt, publication à faire** : plus privé, `files` limité à `app.plugin.cjs` et `src/apply.cjs`, `engines` node 22 ou plus. Il n'invoque plus `tsx src/index.ts` mais le bundle du CLI (`node <cli>/dist/index.cjs`), avec un message actionnable quand le paquet est installé mais que le bundle manque. Prouvé par `npm pack` (le tarball ne contient plus ni test ni déclaration de types) et par le job CI `simulator`, qui construit désormais le bundle avec `pnpm bundle` avant le prebuild.
 - Diagnostics stables. **fait** : la liste des codes vit dans `DIAGNOSTIC_CODES`, exporté par `@intentlane/core`, `DiagnosticCode` en dérive et un test la verrouille, donc ajouter un code impose de mettre à jour la table de `SPEC.md`. `IL1701`, jusqu'ici documenté et jamais émis, est maintenant produit par `intentlane generate --check` quand un fichier généré ne correspond plus au hash enregistré dans le manifeste, avec un message distinct quand le contrat a simplement changé.
 - Guide de migration. **fait** : `MIGRATION.md` à la racine couvre la politique de versioning du champ `schema` (SemVer simplifié, une montée mineure reste lisible par la même version majeure, une montée majeure est cassante et livre un chemin de migration), ce que signifie `0.1` (seule version, rien à migrer), ce qui se passera à la prochaine version, et le fait que `intentlane migrate` est prévu et pas encore livré. Les références trompeuses ont été corrigées : `SPEC.md` ne présente plus la commande comme disponible, et le hint du check `schema` de `intentlane doctor` pointait vers une commande inexistante.
-- Collecte volontaire de feedback.
+- Collecte volontaire de feedback. **fait** : un formulaire d'issue GitHub (`.github/ISSUE_TEMPLATE/pilot-report.yml`) recueille la version d'IntentLane, la chaine d'outils Expo, React Native et Xcode, l'extrait de contrat en YAML, l'objectif, le resultat avec l'erreur de compilation le cas echeant, la sortie de `intentlane doctor`, les diagnostics obtenus, ce que le contrat 0.1 ne peut pas exprimer et le Swift ecrit a la main. Il est lie depuis `CONTRIBUTING.md` et `README.md`.
 
 ## Phase 5 — validation commerciale
 
@@ -96,5 +96,5 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `docs(oss): collect pilot feedback`.
+Ticket suivant : `feat(cli): publish the packages to npm`.
 

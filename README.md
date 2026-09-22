@@ -373,7 +373,7 @@ The generated Swift is compiled and built on macOS runners only; the fast checks
 
 ## Contributing
 
-IntentLane is at the pilot stage, so the most useful thing you can do is run it on an Expo app you already ship and report where the contract got in the way. The Phase 3 gate needs five pilots, two of them existing apps.
+IntentLane is at the pilot stage, so the most useful thing you can do is run it on an Expo app you already ship and report where the contract got in the way, ideally with the [pilot report form](.github/ISSUE_TEMPLATE/pilot-report.yml). The Phase 3 gate needs five pilots, two of them existing apps.
 
 [CONTRIBUTING.md](CONTRIBUTING.md) says what helps most, what to include in a bug report, and the rules the code follows. The short version: a new capability starts in the schema with tests that reject the invalid shapes, generation stays deterministic and offline, and every Swift emission has a golden snapshot.
 

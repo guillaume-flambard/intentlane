@@ -4,7 +4,7 @@ IntentLane compiles a versioned YAML contract into Apple App Intents for Expo ap
 
 ## What helps most
 
-- **Pilot reports.** Run the quickstart on an app you already ship and report what broke, what the contract could not express, and what you had to write by hand. The Phase 3 gate needs five pilots, two of them existing apps.
+- **Pilot reports.** Run the quickstart on an app you already ship and report what broke, what the contract could not express, and what you had to write by hand. The Phase 3 gate needs five pilots, two of them existing apps. Use the [pilot report form](.github/ISSUE_TEMPLATE/pilot-report.yml) so the report carries the details below.
 - **Contract gaps.** If an intent, a parameter type or an execution mode cannot be declared in `0.1`, open an issue with the YAML you wish worked.
 - **Diagnostics.** A confusing message, a missing code, or a case that should be rejected and is not.
 - **Docs.** Anything in [README.md](README.md), [SPEC.md](SPEC.md) or [ARCHITECTURE.md](ARCHITECTURE.md) that does not match what the code does.
