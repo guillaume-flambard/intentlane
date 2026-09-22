@@ -98,7 +98,7 @@ function emitEntity(entity: EntityIR, locale: string): string {
     subtitleProperty === undefined
       ? ""
       : `,\n      subtitle: ${subtitleProperty === titleProperty || subtitleProperty === "id" ? `LocalizedStringResource(stringLiteral: ${subtitleProperty})` : `${subtitleProperty}.map { LocalizedStringResource(stringLiteral: $0) }`}`;
-  return `${annotation}struct ${typeName}: AppEntity {\n${typeDisplay}  static var defaultQuery = ${queryName}()\n\n${declarations}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName} {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
+  return `${annotation}struct ${typeName}: AppEntity {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
 }
 
 function entityDeclarations(ir: ConfigIR, locale: string): string {
@@ -168,7 +168,7 @@ function nativeHandlerDeclarations(ir: ConfigIR): string {
   const protocols = natives.map((intent) => {
     const parameters = intent.parameters.map((parameter) => `${parameter.id}: ${swiftType(intent, parameter, ir.entities)}`).join(", ");
     const returns = nativeReturnType(ir, intent);
-    return `protocol ${nativeHandlerName(intent)} {\n  func perform(${parameters}) async throws${returns ? ` -> ${returns}` : ""}\n}`;
+    return `protocol ${nativeHandlerName(intent)}: Sendable {\n  func perform(${parameters}) async throws${returns ? ` -> ${returns}` : ""}\n}`;
   });
   const registry = natives.map((intent) => `  static var ${intent.id}: (any ${nativeHandlerName(intent)})?`).join("\n");
   return `${protocols.join("\n\n")}\n\nenum IntentLaneHandlerError: Error {\n  case missingHandler(String)\n}\n\n@MainActor\nenum IntentLaneIntentHandlers {\n${registry}\n}\n\n`;

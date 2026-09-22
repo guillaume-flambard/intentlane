@@ -308,7 +308,7 @@ describe("entities", () => {
     expect(source).toContain(
       'static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: LocalizedStringResource("Idea", table: "IntentLane"))\n  }'
     );
-    expect(source).toContain("static var defaultQuery = IntentLaneIdeaQuery()");
+    expect(source).toContain("static let defaultQuery = IntentLaneIdeaQuery()");
     expect(source).toContain("  let id: String\n  let title: String\n  let status: String");
     expect(source).toContain("title: LocalizedStringResource(stringLiteral: title)");
     expect(source).toContain("subtitle: status.map { LocalizedStringResource(stringLiteral: $0) }");
@@ -316,7 +316,7 @@ describe("entities", () => {
 
   it("emits a resolver protocol and an EntityQuery that delegates to it", () => {
     const source = swift();
-    expect(source).toContain("protocol IntentLaneIdeaResolver {");
+    expect(source).toContain("protocol IntentLaneIdeaResolver: Sendable {");
     expect(source).toContain("func ideaEntities(for identifiers: [String]) async throws -> [IntentLaneIdeaEntity]");
     expect(source).toContain("func suggestedIdeaEntities() async throws -> [IntentLaneIdeaEntity]");
     expect(source).toContain("struct IntentLaneIdeaQuery: EntityQuery {");
@@ -654,9 +654,9 @@ describe("native execution", () => {
 
   it("declares a handler protocol per native intent", () => {
     const source = swift();
-    expect(source).toContain("protocol CreateNoteHandler {");
+    expect(source).toContain("protocol CreateNoteHandler: Sendable {");
     expect(source).toContain("func perform(title: String, pinned: Bool) async throws -> IntentLaneNoteEntity");
-    expect(source).toContain("protocol ArchiveNoteHandler {");
+    expect(source).toContain("protocol ArchiveNoteHandler: Sendable {");
     expect(source).toContain("func perform(note: IntentLaneNoteEntity) async throws");
   });
 
@@ -746,5 +746,26 @@ describe("app schemas", () => {
 
   it("matches the schema Swift snapshot", () => {
     expect(swift()).toMatchSnapshot();
+  });
+});
+
+describe("Swift 6 concurrency", () => {
+  const swift = (source: unknown): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("keeps the entity query and its resolver registry concurrency-safe", () => {
+    const source = swift(entityConfig);
+    expect(source).toContain("static let defaultQuery = IntentLaneIdeaQuery()");
+    expect(source).toContain("protocol IntentLaneIdeaResolver: Sendable {");
+    expect(source).not.toContain("static var defaultQuery");
+  });
+
+  it("makes every native handler protocol sendable", () => {
+    const source = swift(nativeConfig);
+    expect(source).toContain("protocol CreateNoteHandler: Sendable {");
+    expect(source).toContain("protocol ArchiveNoteHandler: Sendable {");
   });
 });

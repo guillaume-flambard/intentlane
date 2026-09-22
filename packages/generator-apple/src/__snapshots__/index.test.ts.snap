@@ -41,7 +41,7 @@ struct IntentLaneSnippetView: View {
 
 @AppEntity(schema: .audio.ambientSound)
 struct IntentLaneSoundEntity: AppEntity {
-  static var defaultQuery = IntentLaneSoundQuery()
+  static let defaultQuery = IntentLaneSoundQuery()
 
   var id: String
   var title: String
@@ -53,7 +53,7 @@ struct IntentLaneSoundEntity: AppEntity {
   }
 }
 
-protocol IntentLaneSoundResolver {
+protocol IntentLaneSoundResolver: Sendable {
   func soundEntities(for identifiers: [String]) async throws -> [IntentLaneSoundEntity]
   func suggestedSoundEntities() async throws -> [IntentLaneSoundEntity]
 }
@@ -137,7 +137,7 @@ struct IntentLaneIdeaEntity: AppEntity {
     TypeDisplayRepresentation(name: LocalizedStringResource("Idea", table: "IntentLane"))
   }
 
-  static var defaultQuery = IntentLaneIdeaQuery()
+  static let defaultQuery = IntentLaneIdeaQuery()
 
   let id: String
   let title: String
@@ -151,7 +151,7 @@ struct IntentLaneIdeaEntity: AppEntity {
   }
 }
 
-protocol IntentLaneIdeaResolver {
+protocol IntentLaneIdeaResolver: Sendable {
   func ideaEntities(for identifiers: [String]) async throws -> [IntentLaneIdeaEntity]
   func suggestedIdeaEntities() async throws -> [IntentLaneIdeaEntity]
 }
@@ -173,7 +173,7 @@ struct IntentLaneTagEntity: AppEntity {
     TypeDisplayRepresentation(name: LocalizedStringResource("Tag", table: "IntentLane"))
   }
 
-  static var defaultQuery = IntentLaneTagQuery()
+  static let defaultQuery = IntentLaneTagQuery()
 
   let id: String
   let name: String
@@ -185,7 +185,7 @@ struct IntentLaneTagEntity: AppEntity {
   }
 }
 
-protocol IntentLaneTagResolver {
+protocol IntentLaneTagResolver: Sendable {
   func tagEntities(for identifiers: [String]) async throws -> [IntentLaneTagEntity]
   func suggestedTagEntities() async throws -> [IntentLaneTagEntity]
 }
@@ -508,7 +508,7 @@ struct IntentLaneNoteEntity: AppEntity {
     TypeDisplayRepresentation(name: LocalizedStringResource("Note", table: "IntentLane"))
   }
 
-  static var defaultQuery = IntentLaneNoteQuery()
+  static let defaultQuery = IntentLaneNoteQuery()
 
   let id: String
   let title: String
@@ -522,7 +522,7 @@ struct IntentLaneNoteEntity: AppEntity {
   }
 }
 
-protocol IntentLaneNoteResolver {
+protocol IntentLaneNoteResolver: Sendable {
   func noteEntities(for identifiers: [String]) async throws -> [IntentLaneNoteEntity]
   func suggestedNoteEntities() async throws -> [IntentLaneNoteEntity]
 }
@@ -544,11 +544,11 @@ enum IntentLaneEntityResolvers {
   static var note: (any IntentLaneNoteResolver)?
 }
 
-protocol ArchiveNoteHandler {
+protocol ArchiveNoteHandler: Sendable {
   func perform(note: IntentLaneNoteEntity) async throws
 }
 
-protocol CreateNoteHandler {
+protocol CreateNoteHandler: Sendable {
   func perform(title: String, pinned: Bool) async throws -> IntentLaneNoteEntity
 }
 
