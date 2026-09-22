@@ -85,6 +85,16 @@ describe("audit contract", () => {
       { code: "ILA160", message: "The inspected SDK is older than the schema." }
     ]);
   });
+
+  it("keeps an advisory advanced capability out of the blockers", () => {
+    const report = createAuditReport({ name: "App", platform: "macos" }, [
+      {
+        ...finding("discovery.indexed-entity", "unknown", "low"),
+        gaps: [{ code: "ILA150", message: "An advanced capability stays advisory." }]
+      }
+    ]);
+    expect(blockingGaps(report)).toEqual([]);
+  });
 });
 
 describe("compareFindings", () => {

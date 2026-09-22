@@ -73,6 +73,15 @@ describe("runAudit", () => {
     expect(finding(report, "execution.live-activity").gaps.map((gap) => gap.code)).toEqual(["ILA100"]);
   });
 
+  it("keeps an advanced capability advisory until a pilot asks for it", async () => {
+    const report = await runAudit({ directory: await fixture(providerOnly), platform: "macos", name: "App" });
+
+    expect(finding(report, "discovery.indexed-entity")).toMatchObject({ state: "unknown", confidence: "low" });
+    expect(finding(report, "discovery.indexed-entity").gaps.map((gap) => gap.code)).toEqual(["ILA150"]);
+    expect(finding(report, "discovery.indexed-entity").nextAction).toContain("discovery");
+    expect(finding(report, "foundation.localization").gaps).toEqual([]);
+  });
+
   it("implements the schema capabilities when the companions are present", async () => {
     const report = await runAudit({ directory: await fixture(schemaBacked), platform: "macos", name: "App" });
 

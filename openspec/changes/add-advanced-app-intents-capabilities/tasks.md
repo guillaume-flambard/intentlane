@@ -1,6 +1,6 @@
 ## 1. Prioritisation
 
-- [ ] 1.1 Add audit-only advisory checks for every advanced group.
+- [x] 1.1 Add audit-only advisory checks for every advanced group.
 - [ ] 1.2 Select the first package from pilot evidence and document its target matrix.
 
 ## 2. Packages

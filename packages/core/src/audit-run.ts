@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { CAPABILITY_CATALOGUE, availableOn, describeCatalogue } from "./audit-catalogue.js";
+import { CAPABILITY_CATALOGUE, availableOn, describeCatalogue, isAdvancedCapability } from "./audit-catalogue.js";
 import {
   completeSchemaDomains,
   detectSchemaDomains,
@@ -173,6 +173,14 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
           message: "Shortcut-only evidence does not establish Siri or Apple Intelligence discovery."
         });
         nextAction = "Add schema-backed intents before claiming Siri discovery.";
+      } else if (isAdvancedCapability(record)) {
+        state = "unknown";
+        confidence = "low";
+        gaps.push({
+          code: "ILA150",
+          message: `${record.id} is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures.`
+        });
+        nextAction = `Scope the ${record.group} journey with a pilot before asking for ${record.id}.`;
       } else {
         state = "unknown";
         confidence = "low";

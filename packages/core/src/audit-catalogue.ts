@@ -15,6 +15,13 @@ export const CAPABILITY_GROUPS = [
 ] as const;
 export type CapabilityGroup = (typeof CAPABILITY_GROUPS)[number];
 
+export const ADVANCED_CAPABILITY_GROUPS = ["discovery", "cross-app", "relevance", "execution"] as const;
+export type AdvancedCapabilityGroup = (typeof ADVANCED_CAPABILITY_GROUPS)[number];
+
+export function isAdvancedCapability(record: CapabilityRecord): boolean {
+  return (ADVANCED_CAPABILITY_GROUPS as readonly string[]).includes(record.group);
+}
+
 export const CAPABILITY_CLAIMS = ["auditor", "build", "surfaces", "siri-journey", "domain-package"] as const;
 export type CapabilityClaim = (typeof CAPABILITY_CLAIMS)[number];
 

@@ -93,9 +93,10 @@ work).
 | `ILA110` | The capability is declared without the companions it requires. | Yes. |
 | `ILA130` | A schema domain conforms only one side, an action or its content. | Yes. |
 | `ILA140` | Shortcut-only evidence does not establish Siri or Apple Intelligence discovery. | Yes. |
+| `ILA150` | The capability belongs to an advanced group that IntentLane adds only with a pilot journey. | No, it is advisory. |
 | `ILA160` | The capability needs a newer SDK than the one inspected. | Yes. |
 
-`ILA120` and `ILA150` are reserved and not emitted yet.
+`ILA120` is reserved and not emitted yet.
 
 ## Baseline a pilot candidate
 
