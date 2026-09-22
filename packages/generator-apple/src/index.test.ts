@@ -737,6 +737,12 @@ describe("app schemas", () => {
     expect(entity).not.toContain("typeDisplayRepresentation");
   });
 
+  it("emits an explicit initializer on a conformed entity", () => {
+    const source = swift();
+    const entity = source.slice(source.indexOf("@AppEntity(schema:"));
+    expect(entity).toContain("  init(id: String, title: String) {\n    self.id = id\n    self.title = title\n  }");
+  });
+
   it("leaves an entity and an intent without a schema untouched", () => {
     const source = swift(entityConfig);
     expect(source).not.toContain("@AppEntity(schema:");

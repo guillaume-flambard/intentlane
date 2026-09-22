@@ -45,6 +45,10 @@ struct IntentLaneSoundEntity: AppEntity {
 
   var id: String
   var title: String
+  init(id: String, title: String) {
+    self.id = id
+    self.title = title
+  }
 
   var displayRepresentation: DisplayRepresentation {
     DisplayRepresentation(
