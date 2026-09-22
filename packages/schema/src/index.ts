@@ -65,6 +65,7 @@ export const intentLaneConfigSchema = z.object({
     execution: executionSchema,
     risk: riskSchema.optional(),
     schema: schemaReferenceSchema.optional(),
+    target: identifierSchema.optional(),
     result: z.object({ dialog: localizedSchema.optional(), returns: identifierSchema.optional() }).strict().optional(),
     shortcuts: z.object({ phrases: z.record(z.array(z.string().min(1)).min(1)) }).strict().optional()
   }).strict()).min(1)

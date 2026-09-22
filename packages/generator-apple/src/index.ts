@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { findAppSchema } from "../../core/src/index.js";
 import type { ConfigIR, EntityIR, IntentIR, LocalizedText, ParameterIR } from "../../core/src/index.js";
 
 export const GENERATED_SWIFT_FILE = "IntentLaneGenerated.swift";
@@ -51,6 +52,29 @@ const labelsFor = (parameter: ParameterIR, value: string): LocalizedText => para
 
 const parameterTitle = (parameter: ParameterIR, locale: string): string => (parameter.title ? localized(parameter.title, locale) : parameter.id);
 
+function protocolOf(intent: IntentIR): "open" | "delete" | undefined {
+  if (!intent.schema) return undefined;
+  return findAppSchema("intent", intent.schema)?.protocol;
+}
+
+function targetEntity(ir: ConfigIR, intent: IntentIR): EntityIR {
+  const entity = ir.entities.find((candidate) => candidate.id === intent.target);
+  if (!entity) throw new Error(`IL1401: Intent '${intent.id}' names unknown target entity '${intent.target ?? ""}'.`);
+  return entity;
+}
+
+function schemaParameterDeclarations(ir: ConfigIR, intent: IntentIR): readonly Readonly<{ name: string; swiftType: string }>[] {
+  if (!protocolOf(intent)) {
+    return intent.parameters.map((parameter) => ({ name: parameter.id, swiftType: swiftType(intent, parameter, ir.entities) }));
+  }
+  const entry = findAppSchema("intent", intent.schema ?? "");
+  const typeName = `IntentLane${targetEntity(ir, intent).swiftName}Entity`;
+  return (entry?.parameters ?? []).map((parameter) => ({
+    name: parameter.name,
+    swiftType: parameter.type === "entityArray" ? `[${typeName}]` : typeName
+  }));
+}
+
 function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
   return `IntentLane${intent.swiftName}${pascalCase(parameter.id)}`;
 }
@@ -72,7 +96,7 @@ function parameterDeclaration(intent: IntentIR, parameter: ParameterIR, entities
   return `  @Parameter(title: ${localizedResource(parameterTitle(parameter, locale))}${prompt})\n  var ${parameter.id}: ${swiftType(intent, parameter, entities)}`;
 }
 
-function emitEntity(entity: EntityIR, locale: string): string {
+function emitEntity(entity: EntityIR, locale: string, targeted: boolean): string {
   const typeName = `IntentLane${entity.swiftName}Entity`;
   const resolverName = `IntentLane${entity.swiftName}Resolver`;
   const queryName = `IntentLane${entity.swiftName}Query`;
@@ -91,6 +115,7 @@ function emitEntity(entity: EntityIR, locale: string): string {
   const conformed = entity.schema !== undefined;
   const declarations = properties.map((property) => `  ${conformed ? "var" : "let"} ${property.name}: String${property.optional ? "?" : ""}`).join("\n");
   const annotation = conformed ? `@AppEntity(schema: .${entity.schema})\n` : "";
+  const conformance = targeted ? "AppEntity, IndexedEntity" : "AppEntity";
   const typeDisplay = conformed
     ? ""
     : `  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(localized(entity.title, locale))})\n  }\n\n`;
@@ -101,14 +126,15 @@ function emitEntity(entity: EntityIR, locale: string): string {
   const initializer = conformed
     ? `\n  init(${properties.map((property) => `${property.name}: String${property.optional ? "?" : ""}`).join(", ")}) {\n${properties.map((property) => `    self.${property.name} = ${property.name}`).join("\n")}\n  }`
     : "";
-  return `${annotation}struct ${typeName}: AppEntity {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
+  return `${annotation}struct ${typeName}: ${conformance} {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\nprotocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\nstruct ${queryName}: EntityQuery {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }\n}`;
 }
 
 function entityDeclarations(ir: ConfigIR, locale: string): string {
   if (ir.entities.length === 0) return "";
+  const targeted = new Set(ir.intents.filter((intent) => protocolOf(intent) !== undefined).map((intent) => intent.target ?? ""));
   const entities = [...ir.entities].sort((left, right) => left.id.localeCompare(right.id));
   const registry = entities.map((entity) => `  static var ${entity.id}: (any IntentLane${entity.swiftName}Resolver)?`).join("\n");
-  return `${entities.map((entity) => emitEntity(entity, locale)).join("\n\n")}\n\n@MainActor\nenum IntentLaneEntityResolvers {\n${registry}\n}\n\n`;
+  return `${entities.map((entity) => emitEntity(entity, locale, targeted.has(entity.id))).join("\n\n")}\n\n@MainActor\nenum IntentLaneEntityResolvers {\n${registry}\n}\n\n`;
 }
 
 function emitEnum(intent: IntentIR, parameter: ParameterIR, locale: string): string {
@@ -166,10 +192,10 @@ function nativeReturnType(ir: ConfigIR, intent: IntentIR): string | undefined {
 }
 
 function nativeHandlerDeclarations(ir: ConfigIR): string {
-  const natives = ir.intents.filter((intent) => intent.mode === "native");
+  const natives = ir.intents.filter((intent) => intent.mode === "native" && intent.handler !== undefined);
   if (natives.length === 0) return "";
   const protocols = natives.map((intent) => {
-    const parameters = intent.parameters.map((parameter) => `${parameter.id}: ${swiftType(intent, parameter, ir.entities)}`).join(", ");
+    const parameters = schemaParameterDeclarations(ir, intent).map((parameter) => `${parameter.name}: ${parameter.swiftType}`).join(", ");
     const returns = nativeReturnType(ir, intent);
     return `protocol ${nativeHandlerName(intent)}: Sendable {\n  func perform(${parameters}) async throws${returns ? ` -> ${returns}` : ""}\n}`;
   });
@@ -186,7 +212,7 @@ function emitNativeIntent(ir: ConfigIR, intent: IntentIR, locale: string): strin
   const parameters = intent.parameters.map((parameter) => parameterDeclaration(intent, parameter, ir.entities, locale)).join("\n\n");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
   const returns = nativeReturnType(ir, intent);
-  const argumentsList = intent.parameters.map((parameter) => `${parameter.id}: ${parameter.id}`).join(", ");
+  const argumentsList = schemaParameterDeclarations(ir, intent).map((parameter) => `${parameter.name}: ${parameter.name}`).join(", ");
   const signature = `some IntentResult & ProvidesDialog${returns ? ` & ReturnsValue<${returns}>` : ""}`;
   const call = returns
     ? `    let value = try await handler.perform(${argumentsList})\n    return .result(value: value, dialog: IntentDialog(${localizedResource(dialog)}))`
@@ -194,7 +220,21 @@ function emitNativeIntent(ir: ConfigIR, intent: IntentIR, locale: string): strin
   return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n${parameters}\n\n  func perform() async throws -> ${signature} {\n${confirmation}    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n${call}\n  }\n}`;
 }
 
+function emitProtocolIntent(ir: ConfigIR, intent: IntentIR, locale: string): string {
+  const title = localized(intent.title, locale);
+  const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
+  const authentication = authenticationLine(intent);
+  const annotation = intent.schema ? `@AppIntent(schema: .${intent.schema})\n` : "";
+  const typeName = `IntentLane${targetEntity(ir, intent).swiftName}Entity`;
+  if (protocolOf(intent) === "open") {
+    return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n  var target: ${typeName}\n}`;
+  }
+  const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
+  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}\n\n  static var parameterSummary: some ParameterSummary {\n    Summary("Delete \\(\\.$entities)")\n  }\n\n  var entities: [${typeName}]\n\n  func perform() async throws -> some IntentResult & ProvidesDialog {\n    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n    try await handler.perform(entities: entities)\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
+}
+
 function emitIntent(ir: ConfigIR, intent: IntentIR, locale: string, scheme: string): string {
+  if (protocolOf(intent)) return emitProtocolIntent(ir, intent, locale);
   if (intent.mode === "native") return emitNativeIntent(ir, intent, locale);
   const title = localized(intent.title, locale);
   const description = intent.description ? `\n  static let description = IntentDescription(${localizedResource(localized(intent.description, locale))})` : "";
@@ -223,8 +263,9 @@ export function generateSwift(ir: ConfigIR): string {
   const handlers = nativeHandlerDeclarations(ir);
   const intents = ir.intents.map((intent) => emitIntent(ir, intent, locale, ir.app.urlScheme)).join("\n\n");
   const shortcuts = emitShortcuts(ir, locale);
+  const spotlight = ir.intents.some((intent) => protocolOf(intent) !== undefined) ? "import CoreSpotlight\n" : "";
   const shortcutsSection = shortcuts ? `\n\n${shortcuts}` : "";
-  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\nimport SwiftUI\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    if !query.isEmpty {\n      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${SNIPPET_VIEW}\n\n${enums}${entities}${handlers}${intents}${shortcutsSection}\n`;
+  return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n${spotlight}import SwiftUI\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    if !query.isEmpty {\n      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${SNIPPET_VIEW}\n\n${enums}${entities}${handlers}${intents}${shortcutsSection}\n`;
 }
 
 export function generatedFileHash(contents: string): string {

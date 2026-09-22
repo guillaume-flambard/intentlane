@@ -1,11 +1,27 @@
 export type AppSchemaKind = "intent" | "entity";
 
+export type AppSchemaParameterType =
+  | "string"
+  | "integer"
+  | "number"
+  | "boolean"
+  | "date"
+  | "datetime"
+  | "entity"
+  | "entityArray";
+
+export type AppSchemaParameter = Readonly<{
+  name: string;
+  type: AppSchemaParameterType;
+}>;
+
 export type AppSchemaEntry = Readonly<{
   kind: AppSchemaKind;
   reference: string;
   identifier: string;
   minIos: number;
-  parameters: readonly string[];
+  protocol?: "open" | "delete";
+  parameters: readonly AppSchemaParameter[];
   properties: readonly string[];
 }>;
 
@@ -20,6 +36,37 @@ export const APP_SCHEMAS: readonly AppSchemaEntry[] = [
   { kind: "intent", reference: "audio.createStation", identifier: "CreateStationIntent", minIos: 27, parameters: [], properties: [] },
   { kind: "intent", reference: "camera.stopCapture", identifier: "StopCaptureIntent", minIos: 18, parameters: [], properties: [] },
   { kind: "intent", reference: "camera.switchDevice", identifier: "FlipCameraIntent", minIos: 18, parameters: [], properties: [] },
+  { kind: "intent", reference: "books.openBook", identifier: "OpenBookIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "browser.switchTab", identifier: "SwitchToTabIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "files.openFile", identifier: "OpenFileIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "mail.openDraft", identifier: "MailOpenDraft", minIos: 27, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "mail.openMessage", identifier: "MailOpenMessage", minIos: 27, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "photos.openAlbum", identifier: "OpenMediaAlbumIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "photos.openAsset", identifier: "OpenMediaAssetIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "presentation.open", identifier: "OpenPresentationIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "presentation.openSlide", identifier: "OpenPresentationSlideIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "reader.openPage", identifier: "ReaderOpenPageIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "spreadsheet.open", identifier: "OpenSpreadsheetIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "spreadsheet.openSheet", identifier: "OpenSheetIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "system.open", identifier: "OpenIntent", minIos: 27, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "whiteboard.openBoard", identifier: "OpenCanvasBoardIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "wordProcessor.open", identifier: "OpenWordProcessorDocumentIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "wordProcessor.openPage", identifier: "OpenWordProcessorPageIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "browser.deleteBookmarks", identifier: "DeleteBookmarksIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "clock.deleteAlarm", identifier: "DeleteAlarmIntent", minIos: 27, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "files.deleteFiles", identifier: "DeleteFilesIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "journal.deleteEntry", identifier: "DeleteJournalEntryIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "mail.deleteDraft", identifier: "DeleteDraftIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "mail.deleteMail", identifier: "DeleteMailIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "photos.deleteAlbum", identifier: "DeleteMediaAlbumIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "photos.deleteAssets", identifier: "DeleteMediaAssetsIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "presentation.deleteSlide", identifier: "DeletePresentationSlideIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "reader.deletePages", identifier: "ReaderDeletePagesIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "reminders.deleteReminders", identifier: "DeleteRemindersIntent", minIos: 27, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "spreadsheet.delete", identifier: "DeleteSpreadsheetIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "spreadsheet.deleteSheet", identifier: "DeleteSheetIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "whiteboard.deleteBoard", identifier: "DeleteCanvasBoardIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
+  { kind: "intent", reference: "whiteboard.deleteItem", identifier: "DeleteCanvasItemIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "entity", reference: "audio.ambientSound", identifier: "AmbientSoundEntity", minIos: 27, parameters: [], properties: ["title"] },
   { kind: "entity", reference: "audio.artist", identifier: "ArtistEntity", minIos: 27, parameters: [], properties: ["name"] },
   { kind: "entity", reference: "audio.liveRadioStation", identifier: "LiveRadioStationEntity", minIos: 27, parameters: [], properties: ["title", "providerName"] },

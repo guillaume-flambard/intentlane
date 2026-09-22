@@ -45,6 +45,9 @@ macos implemented foundation.app-intent (high)
 ```
 
 - **`score`** measures how much of the capability catalogue the project reaches.
+  A conformance that moves a capability from `implemented` to `tested` therefore
+  moves the score, and a protocol-backed schema conformance shows up as the
+  `semantics` capabilities reaching `implemented`.
   Each capability the target platform ships is worth up to three points:
   `detected` earns one, `implemented` two and `tested` three. A capability the
   platform does not ship is left out of the denominator instead of lowering the

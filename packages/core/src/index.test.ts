@@ -526,6 +526,85 @@ describe("app schemas", () => {
   });
 });
 
+describe("schema protocols", () => {
+  const page = {
+    id: "page",
+    title: { en: "Page", fr: "Page" },
+    identifier: "id",
+    display: { title: "label" },
+    query: { mode: "static" },
+    schema: "reader.page"
+  };
+
+  const withProtocol = (overrides: Record<string, unknown> = {}): unknown => ({
+    ...base,
+    app: { ...base.app, min_ios: "27.0" },
+    entities: [page],
+    intents: [
+      {
+        ...base.intents[0],
+        parameters: [],
+        execution: { mode: "native" },
+        schema: "reader.openPage",
+        target: "page",
+        ...overrides
+      }
+    ]
+  });
+
+  it("normalizes a protocol intent and its target into the IR", () => {
+    const result = parseConfig(withProtocol());
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]).toMatchObject({ mode: "native", schema: "reader.openPage", target: "page" });
+  });
+
+  it("accepts a delete schema once the intent declares a handler", () => {
+    const result = parseConfig(withProtocol({ schema: "reader.deletePages", execution: { mode: "native", handler: "DeletePagesHandler" } }));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]).toMatchObject({ handler: "DeletePagesHandler", target: "page" });
+  });
+
+  it("requires a target on a protocol schema", () => {
+    const result = parseConfig(withProtocol({ target: undefined }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].target", message: expect.stringContaining("target") })
+    );
+  });
+
+  it("rejects a target that names no entity", () => {
+    const result = parseConfig(withProtocol({ target: "missing" }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].target", message: expect.stringContaining("missing") })
+    );
+  });
+
+  it("rejects a protocol schema that is not native", () => {
+    const result = parseConfig(withProtocol({ execution: { mode: "open_app", route: "/pages" } }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].execution.mode", message: expect.stringContaining("native") })
+    );
+  });
+
+  it("rejects a target on a schema without a protocol", () => {
+    const result = parseConfig(withProtocol({ schema: "camera.stopCapture" }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].target" })
+    );
+  });
+
+  it("rejects a declared result on a protocol schema", () => {
+    const result = parseConfig(withProtocol({ result: { dialog: { en: "Done", fr: "Termine" } } }));
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents[0].result" })
+    );
+  });
+});
+
 describe("diagnostic codes", () => {
   it("publishes the documented contract in order", () => {
     expect([...DIAGNOSTIC_CODES]).toEqual([

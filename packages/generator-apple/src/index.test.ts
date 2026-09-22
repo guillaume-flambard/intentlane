@@ -775,3 +775,77 @@ describe("Swift 6 concurrency", () => {
     expect(source).toContain("protocol ArchiveNoteHandler: Sendable {");
   });
 });
+
+const protocolConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.reader", name: "Reader", url_scheme: "reader", min_ios: "27.0", locales: ["en", "fr"] },
+  entities: [{
+    id: "page",
+    title: { en: "Page", fr: "Page" },
+    identifier: "id",
+    display: { title: "label" },
+    query: { mode: "static" },
+    schema: "reader.page"
+  }],
+  intents: [
+    {
+      id: "open_page",
+      title: { en: "Open page", fr: "Ouvrir la page" },
+      parameters: [],
+      execution: { mode: "native" },
+      schema: "reader.openPage",
+      target: "page"
+    },
+    {
+      id: "delete_pages",
+      title: { en: "Delete pages", fr: "Supprimer les pages" },
+      parameters: [],
+      execution: { mode: "native", handler: "DeletePagesHandler" },
+      schema: "reader.deletePages",
+      target: "page"
+    }
+  ]
+};
+
+describe("schema protocols", () => {
+  const swift = (source: unknown = protocolConfig): string => {
+    const result = parseConfig(source);
+    if (!result.ir) throw new Error("Protocol fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("emits an open intent that lets the system perform it", () => {
+    const source = swift();
+    expect(source).toContain("@AppIntent(schema: .reader.openPage)\nstruct OpenPage: AppIntent {");
+    expect(source).toContain("  var target: IntentLanePageEntity");
+    const block = source.slice(source.indexOf("@AppIntent(schema: .reader.openPage)"), source.indexOf("@AppIntent(schema: .reader.deletePages)"));
+    expect(block).not.toContain("func perform()");
+  });
+
+  it("emits a delete intent with a summary and a delegating perform", () => {
+    const source = swift();
+    expect(source).toContain("  static var parameterSummary: some ParameterSummary {");
+    expect(source).toContain('Summary("Delete \\(\\.$entities)")');
+    expect(source).toContain("  var entities: [IntentLanePageEntity]");
+    expect(source).toContain("try await handler.perform(entities: entities)");
+    expect(source).toContain("protocol DeletePagesHandler: Sendable {\n  func perform(entities: [IntentLanePageEntity]) async throws\n}");
+  });
+
+  it("makes the target entity resolvable and imports CoreSpotlight", () => {
+    const source = swift();
+    expect(source).toContain("struct IntentLanePageEntity: AppEntity, IndexedEntity {");
+    expect(source).toContain("import CoreSpotlight\n");
+  });
+
+  it("leaves a project without a protocol intent free of CoreSpotlight", () => {
+    const result = parseConfig(schemaConfig);
+    if (!result.ir) throw new Error("Schema fixture must parse");
+    const source = generateSwift(result.ir);
+    expect(source).not.toContain("CoreSpotlight");
+    expect(source).not.toContain("IndexedEntity");
+  });
+
+  it("matches the protocol Swift snapshot", () => {
+    expect(swift()).toMatchSnapshot();
+  });
+});

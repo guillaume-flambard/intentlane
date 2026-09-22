@@ -231,11 +231,23 @@ struct IntentLaneSoundEntity: AppEntity {
 struct StopCapture: AppIntent {
 ```
 
-A conformed entity emits `var` properties instead of `let`, drops its `typeDisplayRepresentation`, and declares an explicit initializer, because `@AppEntity(schema:)` applies a property wrapper and takes the display name from the schema. `@Property` inside an `AppEntity` is not a struct property wrapper: the SDK declares `typealias Property = EntityProperty`, and `EntityProperty` is a final class with no `init(wrappedValue:)`, so the synthesized memberwise initializer would ask for an `EntityProperty<String>` that cannot be built. In the extracted metadata, a conformed intent fills `assistantDefinedSchemas` and adds the `AssistantIntent` system protocol, which is exactly the gap the macOS target made visible.
+A conformed entity emits `var` properties instead of `let`, drops its `typeDisplayRepresentation`, and declares an explicit initializer, because `@AppEntity(schema:)` applies a property wrapper and takes the display name from the schema. `@Property` inside an `AppEntity` is not a struct property wrapper: the SDK declares `typealias Property = EntityProperty`, and `EntityProperty` is a final class with no `init(wrappedValue:)`, so the synthesized memberwise initializer would ask for an `EntityProperty<String>` that cannot be built. In the extracted metadata, a conformed intent fills `assistantDefinedSchemas` and adds the `AssistantIntent` system protocol, which is exactly the gap the macOS target made visible. A protocol-backed intent adds its own system protocol too (`OpenEntity` or `DeleteEntity`) and, for `open`, turns `openAppWhenRun` on so the system performs the opening.
 
-The schema set is deliberately small. It is derived from the public App Schema surface of Xcode 27 (27A266a), cross-checked against the metadata extractor's own table, and it only holds schemas the generated shape can satisfy: an intent whose schema declares no parameter, no return value and no system protocol, and an entity whose schema requires at most two string properties, declared in order as `display.title` then `display.subtitle`. Today that is three intents (`audio.createStation`, `camera.stopCapture`, `camera.switchDevice`) and twenty entities (`audio.ambientSound`, `notes.account`, `spreadsheet.document`, `wordProcessor.template`, and others). Enum conformances are not generated yet.
+The schema set is deliberately small. It is derived from the public App Schema surface of Xcode 27 (27A266a), cross-checked against the metadata extractor's own table, and it only holds schemas the generated shape can satisfy. Two shapes are supported. A schema without a system protocol declares no parameter and no return value, and its entity requires at most two string properties, declared in order as `display.title` then `display.subtitle`. A schema with the `open` or `delete` system protocol dictates its own shape instead: an `open` schema declares one `target` entity parameter and no `perform()`, because the `OpenIntent` extension provides it, while a `delete` schema declares an `entities` array, a `parameterSummary` and a `perform()` that delegates to the app handler. Either way the target entity has to be resolvable by the system, so a targeted entity also conforms to `IndexedEntity` and the file imports `CoreSpotlight`. A protocol-backed intent names its entity in the contract and declares neither parameters nor a result:
 
-A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`.
+```yaml
+intents:
+  - id: open_article
+    title: { en: Open the article, fr: Ouvrir l'article }
+    target: article
+    execution:
+      mode: native
+    schema: reader.openPage
+```
+
+Today the table holds 34 intents (three without a protocol, sixteen `open` and fifteen `delete`) and twenty entities. Enum conformances are not generated yet.
+
+A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`. For a protocol-backed schema it also refuses a missing or unknown `target`, a `target` on a schema that has no protocol, an execution mode that is not `native`, and a declared parameter or result, because the schema provides all of them.
 
 ## Risk policy
 

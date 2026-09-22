@@ -18,6 +18,7 @@ export * from "./audit-run.js";
 export * from "./audit-sdk.js";
 export * from "./audit-score.js";
 export * from "./audit-targets.js";
+export * from "./app-schemas.js";
 
 export type Severity = "error" | "warning";
 export const DIAGNOSTIC_CODES = [
@@ -52,6 +53,7 @@ export type IntentIR = Readonly<{
   id: string;
   swiftName: string;
   schema?: string;
+  target?: string;
   title: LocalizedText;
   description?: LocalizedText;
   parameters: readonly ParameterIR[];
@@ -129,6 +131,7 @@ function unavailableSchemaMessage(kind: AppSchemaKind, reference: string): strin
 
 function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
+  const entityIds = new Set(config.entities.map((entity) => entity.id));
   for (const [index, entity] of config.entities.entries()) {
     const reference = entity.schema;
     if (!reference) continue;
@@ -164,11 +167,32 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       diagnostics.push(error("IL1401", unavailableSchemaMessage("intent", reference), path));
       continue;
     }
-    if (intent.parameters.length > 0) {
-      diagnostics.push(error("IL1401", `Schema '${reference}' declares no parameter, and the generated shape cannot carry one yet, so intent '${intent.id}' must declare none.`, path));
-    }
-    if (intent.result?.returns !== undefined) {
-      diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${path.slice(0, -".schema".length)}.result.returns`));
+    const intentPath = path.slice(0, -".schema".length);
+    if (entry.protocol) {
+      if (!intent.target) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' declares a '${entry.protocol}' action, so intent '${intent.id}' must name the entity it acts on with 'target'.`, `${intentPath}.target`));
+      } else if (!entityIds.has(intent.target)) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' target references unknown entity '${intent.target}'.`, `${intentPath}.target`));
+      }
+      if (intent.execution.mode !== "native") {
+        diagnostics.push(error("IL1401", `Schema '${reference}' declares an action, so intent '${intent.id}' must use native execution.`, `${intentPath}.execution.mode`));
+      }
+      if (intent.parameters.length > 0) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own parameters, so intent '${intent.id}' must declare none.`, `${intentPath}.parameters`));
+      }
+      if (intent.result !== undefined) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own result, so intent '${intent.id}' must not declare one.`, `${intentPath}.result`));
+      }
+    } else {
+      if (intent.target !== undefined) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' declares no action, so intent '${intent.id}' must not name a target.`, `${intentPath}.target`));
+      }
+      if (intent.parameters.length > 0) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' declares no parameter, and the generated shape cannot carry one yet, so intent '${intent.id}' must declare none.`, path));
+      }
+      if (intent.result?.returns !== undefined) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${intentPath}.result.returns`));
+      }
     }
     if (compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
@@ -223,9 +247,10 @@ function semanticDiagnostics(config: IntentLaneConfig): Diagnostic[] {
     }
     if (intent.execution.mode === "native") {
       const handler = intent.execution.handler;
-      if (!handler) {
+      const protocol = intent.schema ? findAppSchema("intent", intent.schema)?.protocol : undefined;
+      if (!handler && protocol !== "open") {
         diagnostics.push(error("IL1301", "native execution requires a handler naming the Swift type the app implements.", `${path}.execution.handler`));
-      } else {
+      } else if (handler) {
         if (!/^[A-Z][A-Za-z0-9]*$/.test(handler)) diagnostics.push(error("IL1301", `Handler '${handler}' must be a Swift type name.`, `${path}.execution.handler`));
         if (handlerNames.has(handler)) diagnostics.push(error("IL1601", `Handler '${handler}' is declared by more than one intent.`, `${path}.execution.handler`));
         handlerNames.add(handler);
@@ -274,6 +299,7 @@ export function parseConfig(value: unknown): ParseResult {
       id: intent.id,
       swiftName: swiftName(intent.id),
       ...(intent.schema ? { schema: intent.schema } : {}),
+      ...(intent.target ? { target: intent.target } : {}),
       title: intent.title,
       ...(intent.description ? { description: intent.description } : {}),
       parameters: intent.parameters.map((parameter) => ({

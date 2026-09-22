@@ -127,3 +127,14 @@ The system SHALL scope the evidence of every capability to the Xcode targets tha
 #### Scenario: A file no target owns
 - **WHEN** a Swift file belongs to no target
 - **THEN** the report still inspects it, because its platform is ambiguous
+
+### Requirement: Protocol-backed schema evidence
+The system SHALL report a declared App Schema conformance as implemented, and SHALL distinguish it from a plain declaration that lacks the companions, parameters, result or execution path the schema requires.
+
+#### Scenario: An intent conformed to a protocol-backed schema
+- **WHEN** the project declares an intent conformed to a schema whose shape the generator emits, with its target entity resolvable
+- **THEN** the schema capability is implemented and the audit names the entity it resolves against
+
+#### Scenario: A declaration without its shape
+- **WHEN** the project declares a schema conformance but the required companions, parameters, result or execution path are missing
+- **THEN** the capability stays detected and the report names what is missing instead of calling it implemented
