@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { collectDoctorChecks, deriveScaffoldDefaults, parseConfig, scaffoldConfig } from "./index.js";
+import { DIAGNOSTIC_CODES, collectDoctorChecks, deriveScaffoldDefaults, parseConfig, scaffoldConfig } from "./index.js";
 import type { DoctorFacts } from "./index.js";
 
 const base = {
@@ -523,5 +523,20 @@ describe("app schemas", () => {
     expect(result.diagnostics).not.toContainEqual(
       expect.objectContaining({ path: "intents[0].schema" })
     );
+  });
+});
+
+describe("diagnostic codes", () => {
+  it("publishes the documented contract in order", () => {
+    expect([...DIAGNOSTIC_CODES]).toEqual([
+      "IL1001",
+      "IL1101",
+      "IL1201",
+      "IL1301",
+      "IL1401",
+      "IL1501",
+      "IL1601",
+      "IL1701"
+    ]);
   });
 });

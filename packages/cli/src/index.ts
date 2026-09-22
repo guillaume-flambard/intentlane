@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
@@ -23,6 +23,28 @@ async function atomicWrite(file: string, contents: string): Promise<void> {
   const temporary = `${file}.tmp-${process.pid}`;
   await writeFile(temporary, contents, "utf8");
   await rename(temporary, file);
+}
+
+async function modifiedFiles(
+  output: string,
+  expected: readonly Readonly<{ file: string; contents: string }>[],
+  stored: readonly string[]
+): Promise<readonly string[]> {
+  try {
+    const manifest = JSON.parse(await readFile(join(output, MANIFEST_FILE), "utf8")) as {
+      files?: readonly { path?: string; hash?: string }[];
+    };
+    const recorded = new Map((manifest.files ?? []).map((entry) => [entry.path, entry.hash]));
+    return expected
+      .map((item, index) => ({ path: relative(output, item.file), contents: stored[index] ?? "" }))
+      .filter((entry) => {
+        const hash = recorded.get(entry.path);
+        return hash !== undefined && hash !== generatedFileHash(entry.contents);
+      })
+      .map((entry) => entry.path);
+  } catch {
+    return [];
+  }
 }
 
 async function isPluginDeclared(): Promise<boolean> {
@@ -164,16 +186,23 @@ program.command("generate")
         process.exitCode = 1;
         return;
       }
-      let identical = false;
+      let stored: readonly string[];
       try {
-        const stored = await Promise.all(expected.map((item) => readFile(item.file, "utf8")));
-        identical = stored.every((contents, index) => contents === expected[index]?.contents);
+        stored = await Promise.all(expected.map((item) => readFile(item.file, "utf8")));
       } catch (reason) {
         process.stderr.write(`Unable to read generated files in ${output}: ${reason instanceof Error ? reason.message : "unknown error"}\n`);
         process.exitCode = 1;
         return;
       }
-      if (!identical) {
+      if (!stored.every((contents, index) => contents === expected[index]?.contents)) {
+        const edited = await modifiedFiles(output, expected, stored);
+        if (edited.length > 0) {
+          for (const file of edited) {
+            process.stderr.write(`ERROR IL1701 ${file}: generated file was modified after generation. Restore it or run 'intentlane generate'.\n`);
+          }
+          process.exitCode = 1;
+          return;
+        }
         process.stderr.write(`Generated files are stale. Run 'intentlane generate'.\n`);
         process.exitCode = 1;
       }

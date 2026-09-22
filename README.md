@@ -288,7 +288,7 @@ IntentLane owns the output directory. The generator writes the Swift source, one
 - `<locale>.lproj/IntentLane.strings`, one per locale declared in `app.locales` other than the default locale.
 - `intentlane.manifest.json`, containing the schema version, the source input hash, and the hash of each generated file.
 
-Every user-visible string in the generated Swift reads the dedicated `IntentLane` strings table, and the entry key is the default-locale text itself. A missing or unreadable table therefore degrades to the English literal instead of a broken token. `intentlane generate --check` verifies every generated file, not just the Swift.
+Every user-visible string in the generated Swift reads the dedicated `IntentLane` strings table, and the entry key is the default-locale text itself. A missing or unreadable table therefore degrades to the English literal instead of a broken token. `intentlane generate --check` verifies every generated file, not just the Swift. When a generated file no longer matches the hash recorded in the manifest, `--check` reports `IL1701` for that file, which means it was edited by hand after generation, and it reports stale output separately when the contract itself changed.
 
 Writes go to a temporary file and are renamed into place, so a failed run cannot leave a half-written source file.
 

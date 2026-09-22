@@ -214,6 +214,8 @@ Toutes les clés visibles acceptent une map locale. La locale par défaut est la
 | IL1601 | collision de nom Swift |
 | IL1701 | fichier généré modifié manuellement |
 
+La liste des codes est une surface publique. Elle vit dans `DIAGNOSTIC_CODES`, exporté par `@intentlane/core`, et un test la verrouille : ajouter un code impose de mettre à jour cette table. `intentlane generate --check` émet `IL1701` quand un fichier généré a été modifié après sa génération, et un message distinct quand le contrat a simplement changé.
+
 ## Versioning
 
 Le champ `schema` suit SemVer simplifié. Une évolution mineure reste lisible par les outils de la même version majeure. Les migrations sont explicites via `intentlane migrate`.

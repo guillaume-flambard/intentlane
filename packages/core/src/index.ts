@@ -5,7 +5,17 @@ import { intentLaneConfigSchema, type IntentLaneConfig, type ParameterType } fro
 import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSchemaKind } from "./app-schemas.js";
 
 export type Severity = "error" | "warning";
-export type DiagnosticCode = "IL1001" | "IL1101" | "IL1201" | "IL1301" | "IL1401" | "IL1501" | "IL1601";
+export const DIAGNOSTIC_CODES = [
+  "IL1001",
+  "IL1101",
+  "IL1201",
+  "IL1301",
+  "IL1401",
+  "IL1501",
+  "IL1601",
+  "IL1701"
+] as const;
+export type DiagnosticCode = (typeof DIAGNOSTIC_CODES)[number];
 export type Diagnostic = { code: DiagnosticCode; severity: Severity; message: string; path: string };
 export type LocalizedText = Readonly<Record<string, string>>;
 export type ParameterIR = Readonly<{
