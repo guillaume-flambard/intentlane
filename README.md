@@ -103,6 +103,8 @@ The report also reads the action quality signals it can see in the sources, beca
 
 The report finally states which capability catalogue it used and whether the inspected SDK is older or newer than it, because the availability values in the catalogue are derived from Xcode 27 and a newer SDK may ship capabilities the catalogue does not know. It prints `catalogue <version> (<state>)` and the JSON output adds a `catalogue` object with the catalogue version, the number of capabilities it holds, the inspected SDK version when there is one, and a next action. The state is `current` on the SDK the catalogue was derived from, `older` when the SDK is newer, `newer` when the SDK is older, and `unknown` when no SDK path was given.
 
+`--platform` also accepts `both`, which audits macOS and then iOS in one run. The single-platform outputs are unchanged, so nothing that already parses a report breaks. In `both` mode the text output prints two sections, each introduced by a `report <platform>` line; the JSON output becomes a `reports` collection holding two complete reports, macOS first, because two JSON documents in a row would not be valid JSON; and the SARIF output stays one document with one run per platform.
+
 ## Parameter types
 
 A parameter declares an `id`, a `type` and `required`. The generator maps each type to its Swift counterpart and, for `open_app` execution, converts the value into the URL query:

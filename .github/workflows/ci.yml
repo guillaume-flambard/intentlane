@@ -104,6 +104,7 @@ jobs:
         run: |
           pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/shelf --platform macos --format json --output /tmp/intentlane-shelf.json
           pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/studio --platform macos --sdk-path "$(xcrun --sdk macosx --show-sdk-path)" --build-metadata apps/example-macos/build/studio/metadata/Metadata.appintents --format json --output /tmp/intentlane-studio.json
+          pnpm exec tsx packages/cli/src/index.ts audit apps/example-macos/build/studio --platform both --format json --output /tmp/intentlane-both.json
           python3 - <<'PY'
           import json
 
@@ -145,6 +146,10 @@ jobs:
           print("conditions:", [(condition["name"], condition["state"]) for condition in report["conditions"]["conditions"]])
           print("quality:", report["quality"]["signals"], report["quality"]["issues"])
           print("catalogue:", report["catalogue"]["version"], report["catalogue"]["state"])
+          both = json.loads(open("/tmp/intentlane-both.json").read())["reports"]
+          assert [entry["target"]["platform"] for entry in both] == ["macos", "ios"], both
+          assert all(entry["score"]["discovery"] == "schema-backed" for entry in both), both
+          print("both:", [entry["target"]["platform"] for entry in both])
           print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
           print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
           PY

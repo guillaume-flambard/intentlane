@@ -22,6 +22,10 @@ export const AUDIT_PLATFORMS = ["macos", "ios"] as const;
 
 export type AuditPlatform = (typeof AUDIT_PLATFORMS)[number];
 
+export const AUDIT_PLATFORM_SELECTIONS = ["macos", "ios", "both"] as const;
+
+export type AuditPlatformSelection = (typeof AUDIT_PLATFORM_SELECTIONS)[number];
+
 export const AUDIT_CONFIDENCES = ["low", "medium", "high"] as const;
 
 export type AuditConfidence = (typeof AUDIT_CONFIDENCES)[number];

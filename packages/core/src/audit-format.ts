@@ -56,7 +56,7 @@ export function formatJson(report: AuditReport): string {
   return `${JSON.stringify({ ...report, score: scoreAuditReport(report) }, null, 2)}\n`;
 }
 
-export function formatSarif(report: AuditReport): string {
+function sarifRun(report: AuditReport) {
   const codes = new Set<string>();
   const results = report.findings.flatMap((finding) =>
     finding.gaps.map((gap) => {
@@ -81,36 +81,43 @@ export function formatSarif(report: AuditReport): string {
     })
   );
   const rules = [...codes].sort().map((id) => ({ id }));
-  const sarif = {
-    version: "2.1.0",
-    $schema: SARIF_SCHEMA,
-    runs: [
-      {
-        tool: {
-          driver: {
-            name: TOOL_NAME,
-            informationUri: TOOL_URI,
-            rules
-          }
-        },
-        results,
-        properties: {
-          score: scoreAuditReport(report),
-          ...(report.route ? { route: report.route } : {}),
-          ...(report.data ? { data: report.data } : {}),
-          ...(report.architecture ? { architecture: report.architecture } : {}),
-          ...(report.conditions ? { conditions: report.conditions } : {}),
-          ...(report.quality ? { quality: report.quality } : {}),
-          ...(report.catalogue ? { catalogue: report.catalogue } : {})
-        }
+  return {
+    tool: {
+      driver: {
+        name: TOOL_NAME,
+        informationUri: TOOL_URI,
+        rules
       }
-    ]
+    },
+    results,
+    properties: {
+      score: scoreAuditReport(report),
+      ...(report.route ? { route: report.route } : {}),
+      ...(report.data ? { data: report.data } : {}),
+      ...(report.architecture ? { architecture: report.architecture } : {}),
+      ...(report.conditions ? { conditions: report.conditions } : {}),
+      ...(report.quality ? { quality: report.quality } : {}),
+      ...(report.catalogue ? { catalogue: report.catalogue } : {})
+    }
   };
-  return `${JSON.stringify(sarif, null, 2)}\n`;
+}
+
+export function formatSarif(report: AuditReport): string {
+  return `${JSON.stringify({ version: "2.1.0", $schema: SARIF_SCHEMA, runs: [sarifRun(report)] }, null, 2)}\n`;
 }
 
 export function formatReport(report: AuditReport, format: AuditFormat): string {
   if (format === "json") return formatJson(report);
   if (format === "sarif") return formatSarif(report);
   return formatText(report);
+}
+
+export function formatReports(reports: readonly AuditReport[], format: AuditFormat): string {
+  if (format === "json") {
+    return `${JSON.stringify({ reports: reports.map((report) => ({ ...report, score: scoreAuditReport(report) })) }, null, 2)}\n`;
+  }
+  if (format === "sarif") {
+    return `${JSON.stringify({ version: "2.1.0", $schema: SARIF_SCHEMA, runs: reports.map(sarifRun) }, null, 2)}\n`;
+  }
+  return reports.map((report) => `report ${report.target.platform}\n${formatText(report)}`).join("\n");
 }

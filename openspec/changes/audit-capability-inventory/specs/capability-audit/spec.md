@@ -101,3 +101,14 @@ The system SHALL report the version of the capability catalogue it used and SHAL
 #### Scenario: No SDK inspected
 - **WHEN** the audit runs without an SDK path
 - **THEN** the catalogue state stays unknown and the report says how to compare it
+
+### Requirement: Both platforms in one run
+The system SHALL accept `both` as a platform selection and SHALL emit one complete report per platform, without changing the single-platform output.
+
+#### Scenario: JSON output for both platforms
+- **WHEN** the audit runs with `--platform both` and the JSON format
+- **THEN** the document is a `reports` collection holding two complete reports, macOS first
+
+#### Scenario: Single platform output is unchanged
+- **WHEN** the audit runs with `--platform macos` or `--platform ios`
+- **THEN** the JSON document is a single report, exactly as before

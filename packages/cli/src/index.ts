@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, type ConfigIR, type Diagnostic, type DoctorFacts } from "../../core/src/index.js";
 import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { AUDIT_FORMATS, AUDIT_PLATFORMS, SDK_SETTINGS_FILE, blockingGaps, formatReport, runAudit, type AuditFormat, type AuditPlatform } from "../../core/src/index.js";
+import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, SDK_SETTINGS_FILE, blockingGaps, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
@@ -255,8 +255,8 @@ program.command("audit")
   .option("--build-metadata <path>", "Existing build metadata to inspect")
   .option("--strict", "Exit non-zero on high-confidence blockers")
   .action(async (directory: string, options: { platform: string; format: string; output?: string; minMacos?: string; minIos?: string; sdkPath?: string; buildMetadata?: string; strict?: boolean }) => {
-    if (!(AUDIT_PLATFORMS as readonly string[]).includes(options.platform)) {
-      process.stderr.write(`Unsupported platform '${options.platform}'. Use one of: ${AUDIT_PLATFORMS.join(", ")}.\n`);
+    if (!(AUDIT_PLATFORM_SELECTIONS as readonly string[]).includes(options.platform)) {
+      process.stderr.write(`Unsupported platform '${options.platform}'. Use one of: ${AUDIT_PLATFORM_SELECTIONS.join(", ")}.\n`);
       process.exitCode = 1;
       return;
     }
@@ -265,22 +265,31 @@ program.command("audit")
       process.exitCode = 1;
       return;
     }
-    const platform = options.platform as AuditPlatform;
-    const deploymentTarget = platform === "macos" ? options.minMacos : options.minIos;
-    const report = await runAudit({
-      directory: resolve(directory),
-      platform,
-      ...(deploymentTarget ? { deploymentTarget } : {}),
-      ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {}),
-      ...(options.sdkPath ? { sdkPath: resolve(options.sdkPath) } : {}),
-      environment: environmentFacts()
-    });
-    if (options.sdkPath !== undefined && report.sdk === undefined) {
-      process.stderr.write(
-        `warning: no ${SDK_SETTINGS_FILE} under ${resolve(options.sdkPath)}, so the SDK version is not recorded.\n`
-      );
+    const platforms: readonly AuditPlatform[] =
+      options.platform === "both" ? ["macos", "ios"] : [options.platform as AuditPlatform];
+    const reports: AuditReport[] = [];
+    for (const platform of platforms) {
+      const deploymentTarget = platform === "macos" ? options.minMacos : options.minIos;
+      const report = await runAudit({
+        directory: resolve(directory),
+        platform,
+        ...(deploymentTarget ? { deploymentTarget } : {}),
+        ...(options.buildMetadata ? { buildMetadata: resolve(options.buildMetadata) } : {}),
+        ...(options.sdkPath ? { sdkPath: resolve(options.sdkPath) } : {}),
+        environment: environmentFacts()
+      });
+      if (options.sdkPath !== undefined && report.sdk === undefined) {
+        process.stderr.write(
+          `warning: no ${SDK_SETTINGS_FILE} under ${resolve(options.sdkPath)}, so the SDK version is not recorded.\n`
+        );
+      }
+      reports.push(report);
     }
-    const rendered = formatReport(report, options.format as AuditFormat);
+    const first = reports[0];
+    const rendered =
+      reports.length === 1 && first
+        ? formatReport(first, options.format as AuditFormat)
+        : formatReports(reports, options.format as AuditFormat);
     if (options.output) {
       await atomicWrite(resolve(options.output), rendered);
       process.stdout.write(`Wrote ${resolve(options.output)}\n`);
@@ -288,7 +297,7 @@ program.command("audit")
       process.stdout.write(rendered);
     }
     if (options.strict) {
-      const blockers = blockingGaps(report);
+      const blockers = reports.flatMap((report) => blockingGaps(report));
       if (blockers.length > 0) {
         for (const gap of blockers) process.stderr.write(`${gap.code} ${gap.message}\n`);
         process.exitCode = 1;
