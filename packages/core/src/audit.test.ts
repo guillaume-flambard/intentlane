@@ -33,7 +33,13 @@ describe("audit contract", () => {
       "ILA130",
       "ILA140",
       "ILA150",
-      "ILA160"
+      "ILA160",
+      "ILA170",
+      "ILA171",
+      "ILA172",
+      "ILA173",
+      "ILA174",
+      "ILA175"
     ]);
   });
 

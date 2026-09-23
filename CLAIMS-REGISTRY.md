@@ -23,8 +23,11 @@ below its status.
 
 ## How to read this
 
-`Proven` means a command, a file or an extracted metadata field in this
-repository shows it, and the claim may be repeated. `Partially proven` means the
+`Proven` means a command, a file or an extracted metadata field shows it, and the
+claim may be repeated. Some rows rest on the NetNewsWire pilot, whose fork and
+evidence ledger live outside this repository and have never been reproduced by
+a second person; those rows name the fork explicitly and may be repeated only
+as the metadata and audit facts they describe. `Partially proven` means the
 technical result holds but a stated condition of the level does not, so the
 claim has to name the gap. `Awaiting proof` means the claim may not be published
 at all, and the reason it is missing is recorded next to it.

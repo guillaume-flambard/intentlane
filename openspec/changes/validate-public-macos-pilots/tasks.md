@@ -7,9 +7,9 @@
 ## 2. NetNewsWire proof
 
 - [x] 2.1 Implement only in an isolated fork and verify upstream remains unchanged.
-- [x] 2.2 Pass AppIntentsTesting, build metadata, Shortcuts, Spotlight where claimed and manual macOS Siri checks.
+- [ ] 2.2 Pass AppIntentsTesting, build metadata, Shortcuts, Spotlight where claimed and manual macOS Siri checks. The hosted tests and the extracted metadata pass; Shortcuts, Spotlight and manual Siri are still open, so this box stays open.
 - [ ] 2.3 Have a second developer reproduce the evidence ledger.
-- [x] 2.4 Produce a short before-and-after demonstration from the reproduced ledger; verify it states no upstream endorsement or accepted integration.
+- [ ] 2.4 Produce a short before-and-after demonstration from the reproduced ledger; verify it states no upstream endorsement or accepted integration. The artifact exists but the ledger has never been reproduced, so this box stays open.
 
 ## 3. FSNotes follow-up
 
