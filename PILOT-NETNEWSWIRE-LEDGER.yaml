@@ -1,0 +1,46 @@
+schema: pilot-evidence/1.0
+pilot: netnewswire-macos
+platform: macos
+revision: 0184ca38c586078117a21f96f68eef78d39b8f68
+conditions:
+  osBuild: macOS 27.0 build 26A428
+  xcode: Xcode 27.0 build 27A266a
+  locale: en-US
+  device: local Mac
+journeys:
+  - id: find-alpha
+    claimed: [shortcuts, spotlight, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: blocked
+      spotlight: blocked
+      siri: blocked
+    risky: false
+  - id: open-alpha
+    claimed: [shortcuts, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: blocked
+      siri: blocked
+    risky: false
+  - id: mark-beta-read
+    claimed: [shortcuts, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: blocked
+      siri: blocked
+    risky: true
+    riskEvidence:
+      confirmation: false
+      authentication: false
+      ownership: false
+reproduction:
+  by: pending-second-reviewer
+  status: blocked
+artifacts:
+  notes: ./PILOT-NETNEWSWIRE.md
+  baseline: ./audit-baseline.json
+  delta: ./audit-delta.json

@@ -129,3 +129,106 @@ For the currently declared launch promise, the critical remaining work is
 proof and release discipline: reconcile the claims ledger, finish evidence
 validation and audit baselines, run independent macOS and iOS pilots, complete
 the external quickstart and publish only claims supported by those ledgers.
+
+## Catalogue revalidation against the installed SDK
+
+The local toolchain reports macOS 27.0 (build 26A428), Xcode 27.0 (build
+27A266a), SDK `macosx27.0` and SDK `iphoneos27.0`, with
+`SDKSettings.json` defaulting both SDKs to deployment target 27.0. The
+authority for every availability below is the Swift interface at
+`MacOSX27.0.sdk/System/Library/Frameworks/AppIntents.framework/Modules/AppIntents.swiftmodule/arm64e-apple-macos.swiftinterface`,
+read with `grep -B3` on each declaration, plus the CoreTransferable interface
+for `Transferable`.
+
+Eleven entries were wrong and are corrected:
+
+| Capability | Was | Now | Source line |
+| --- | --- | --- | --- |
+| discovery.intent-value-query | 14.0 / 17.0 | 26.0 / 26.0 | 4401, `IntentValueQuery` is `anyAppleOS 26.0` |
+| discovery.indexed-entity | 14.0 / 17.0 | 15.0 / 18.0 | 2608, `IndexedEntity` is macOS 15 / iOS 18 |
+| discovery.spotlight-lifecycle | 14.0 / 17.0 | 15.0 / 18.0 | 363, `indexAppEntities` and `deleteAppEntities` are macOS 15 / iOS 18 |
+| cross-app.transferable | 14.0 / 17.0 | 13.0 / 16.0 | CoreTransferable 237, `Transferable` is macOS 13 / iOS 16 |
+| relevance.donations | 14.0 / 17.0 | 13.0 / 16.0 | 4285, `IntentDonationManager` is macOS 13 / iOS 16 |
+| relevance.relevant-entities | 14.0 / 17.0 | 27.0 / 27.0 | 4837, `RelevantEntities` is `anyAppleOS 27.0` |
+| relevance.syncable-entity | 14.0 / 17.0 | 27.0 / 27.0 | 2651, `SyncableEntity` is `anyAppleOS 27.0` |
+| execution.long-running | 14.0 / 17.0 | 27.0 / 27.0 | 3602, `LongRunningIntent` is `anyAppleOS 27.0` |
+| execution.live-activity | iOS 16.1 | iOS 17.0 | 253, `LiveActivityIntent` is iOS 17.0 and unavailable on macOS |
+| proof.confirmation | 13.0 / 16.0 | 15.0 / 18.0 | 3217, the `conditions:actionName:dialog:` overload the generator emits is macOS 15 / iOS 18 |
+| proof.spotlight-surface | 14.0 / 17.0 | 15.0 / 18.0 | 363, the Spotlight indexing surface is macOS 15 / iOS 18 |
+
+Two deliberate choices stay as they were:
+
+- The four `semantics` entries remain 27.0 / 27.0. The macros themselves are
+  iOS 18 / macOS 15 (lines 10944, 10769, 10625) and the `AppSchema` struct is
+  iOS 18 / macOS 15 (line 10593), but the useful conformance (domain members
+  such as `.reader.page` and `.reader.openPage`) is `anyAppleOS 27.0`. The
+  catalogue describes the capability a pilot can actually use, which is the 27
+  surface.
+- `proof.app-intents-testing` keeps 15.0 / 18.0. `AppIntentsTesting` is not
+  present in the installed SDK at all: no framework matches
+  `System/Library/Frameworks/AppIntentsTesting*` and the interface never
+  mentions it. The value comes from Apple's documentation, not from the SDK,
+  and is flagged here as unverifiable on this machine.
+
+One test locks these numbers: `packages/core/src/audit-catalogue.test.ts`
+carries a `matches the availability the installed App Intents SDK declares`
+case that fails when an entry drifts from the table above.
+
+## Contract floor decision
+
+The 0.1 contract carries `min_ios` only. There is no `min_macos`, and that
+stays true for 0.1 for three reasons.
+
+First, the contract describes one Apple target and its iOS floor, which is what
+the generator and the plugin need. Second, the audit does not need the contract
+to carry a macOS floor: `intentlane audit --platform macos` reads the target
+platform from the flag and the floor from `--min-macos` or the installed SDK. A
+second floor in the contract would duplicate a value the audit already derives
+from the toolchain, and two sources of truth for the same floor is how a report
+starts lying.
+
+Third, the concern behind the task is closed by the catalogue revalidation
+above. A capability that macOS does not ship now reports `unsupported` with
+`ILA100` because the catalogue holds the real per-platform availability, so an
+iOS-only API can no longer be presented as an iOS promise while macOS stays
+silent. Adding `min_macos` to the schema is therefore a 0.2 candidate, recorded
+in `MIGRATION.md`, not a 0.1 change.
+
+## Known Apple 27 limitation: `OpenIntent` selection with several entity types
+
+macOS 27 can pick the wrong entity type for `OpenIntent` when more than one
+entity type coexists and more than one schema-conformant `open` intent targets
+different types. The system resolves the open request by entity type, so two
+open intents over two entity types make the selection ambiguous.
+
+This does not touch the chosen journeys today. The NetNewsWire fork has exactly
+one entity type (`IntentLaneArticleEntity`, conformed to `reader.page`) and one
+`open` intent (`OpenArticle`, conformed to `reader.openPage`), so the selection
+is unambiguous and the extracted metadata shows one `OpenEntity` conformance.
+
+The limitation is recorded here with the fixture to build the day a second
+entity type appears. That fixture is a contract with two entities declared
+(`article` conformed to `reader.page` and `collection` conformed to
+`reader.document` is not possible yet, so use two entities conformed to two
+distinct entity schemas once a second conformable entity schema exists), one
+`open` intent per entity, and two manual Siri cases, one per entity type, with
+a negative case where the phrase names the other type. Until a pilot needs the
+second entity type, the fixture stays unbuilt and this paragraph is the
+limitation.
+
+## Surface gating decision
+
+Every 27 novelty stays demand-gated. No documented pilot journey requires one
+today: the NetNewsWire ledger claims contract, build, Shortcuts, Spotlight and
+Siri on three journeys, and none of them needs indexed queries, transfers,
+screen annotations, donations, sync, collections, long running work or
+execution targets.
+
+Concretely, `discovery.indexed-entity`, `discovery.intent-value-query`,
+`discovery.spotlight-lifecycle`, `cross-app.transferable`,
+`cross-app.view-annotations`, `relevance.donations`,
+`relevance.relevant-entities`, `relevance.syncable-entity`,
+`execution.long-running` and `execution.live-activity` remain advisory in the
+audit, each one reporting `ILA150` with its group, and none of them is
+generated. No separate change is created until a pilot asks for one, and when
+that happens the work is split per the order listed in the section above.

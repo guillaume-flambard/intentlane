@@ -14,15 +14,15 @@
 
 ## 2. Apple 27 compatibility gate
 
-- [ ] 2.1 Relever Xcode, SDK macOS/iOS, OS, build et disponibilités réelles;
+- [x] 2.1 Relever Xcode, SDK macOS/iOS, OS, build et disponibilités réelles;
   mettre à jour le catalogue avec une source Apple ou SDK par assertion.
-- [ ] 2.2 Ajouter `min_macos` au contrat ou documenter explicitement pourquoi
+- [x] 2.2 Ajouter `min_macos` au contrat ou documenter explicitement pourquoi
   il ne peut pas être une entrée de contrat; l'audit ne doit plus masquer une
   disponibilité macOS inconnue sous une promesse iOS.
-- [ ] 2.3 Ajouter une fixture ou une limitation testée pour tout bug Apple 27
+- [x] 2.3 Ajouter une fixture ou une limitation testée pour tout bug Apple 27
   qui touche les parcours choisis, y compris la sélection d'`OpenIntent` quand
   plusieurs types d'entité coexistent.
-- [ ] 2.4 Décider, par surface, si les nouveautés 27 restent demand-gated ou
+- [x] 2.4 Décider, par surface, si les nouveautés 27 restent demand-gated ou
   si un pilote les exige. Créer un change séparé avant toute implémentation.
 
 ## 3. Human evidence gates

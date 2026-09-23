@@ -1,0 +1,619 @@
+{
+  "reportVersion": "1.0",
+  "target": {
+    "name": "Project",
+    "platform": "macos"
+  },
+  "route": {
+    "route": "native",
+    "confidence": "medium",
+    "evidence": [
+      {
+        "kind": "swift",
+        "path": "IntentLaneGenerated.swift"
+      }
+    ],
+    "nextAction": "Add the Swift to a native target before relying on the App Intents metadata."
+  },
+  "data": {
+    "classes": [
+      "public"
+    ],
+    "indexed": true,
+    "privacy": "missing",
+    "evidence": [
+      {
+        "kind": "swift",
+        "path": "IntentLaneGenerated.swift",
+        "line": 22
+      }
+    ],
+    "nextAction": "Add a PrivacyInfo.xcprivacy manifest before indexing user content for Spotlight."
+  },
+  "architecture": {
+    "architecture": "unknown",
+    "confidence": "medium",
+    "evidence": [],
+    "nextAction": "Qualify where the entities come from before promising a date or a price."
+  },
+  "conditions": {
+    "conditions": [
+      {
+        "name": "operatingSystem",
+        "state": "recorded",
+        "value": "27.0"
+      },
+      {
+        "name": "xcode",
+        "state": "recorded",
+        "value": "27A266a"
+      },
+      {
+        "name": "architecture",
+        "state": "recorded",
+        "value": "arm64"
+      },
+      {
+        "name": "locale",
+        "state": "recorded",
+        "value": "en-US"
+      },
+      {
+        "name": "region",
+        "state": "recorded",
+        "value": "US"
+      },
+      {
+        "name": "appleIntelligence",
+        "state": "unknown"
+      },
+      {
+        "name": "account",
+        "state": "unknown"
+      },
+      {
+        "name": "permissions",
+        "state": "unknown"
+      },
+      {
+        "name": "testData",
+        "state": "unknown"
+      }
+    ],
+    "nextAction": "Record appleIntelligence, account, permissions, testData before claiming a Siri result."
+  },
+  "quality": {
+    "signals": [
+      "result"
+    ],
+    "issues": [],
+    "evidence": [
+      {
+        "kind": "swift",
+        "path": "IntentLaneGenerated.swift",
+        "line": 113
+      }
+    ],
+    "nextAction": "Keep the action signals with the evidence ledger."
+  },
+  "catalogue": {
+    "version": "27.0",
+    "capabilities": 29,
+    "state": "unknown",
+    "nextAction": "Pass --sdk-path to compare the catalogue (27.0) with the installed SDK."
+  },
+  "targets": {
+    "targets": [],
+    "scoped": false,
+    "nextAction": "No Xcode target was found, so every Swift file in the tree was inspected."
+  },
+  "findings": [
+    {
+      "capability": "cross-app.transferable",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "cross-app.transferable is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the cross-app journey with a pilot before asking for cross-app.transferable."
+    },
+    {
+      "capability": "cross-app.view-annotations",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "semantics.schema-entity"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "cross-app.view-annotations is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the cross-app journey with a pilot before asking for cross-app.view-annotations."
+    },
+    {
+      "capability": "discovery.entity-query",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 63,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "Keep discovery.entity-query covered by tests and extracted metadata."
+    },
+    {
+      "capability": "discovery.indexed-entity",
+      "platform": "macos",
+      "state": "detected",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 41,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "discovery.entity-query",
+        "discovery.spotlight-lifecycle"
+      ],
+      "gaps": [
+        {
+          "code": "ILA110",
+          "message": "discovery.indexed-entity is declared without discovery.spotlight-lifecycle."
+        }
+      ],
+      "nextAction": "Implement discovery.spotlight-lifecycle before relying on discovery.indexed-entity."
+    },
+    {
+      "capability": "discovery.intent-value-query",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "discovery.intent-value-query is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the discovery journey with a pilot before asking for discovery.intent-value-query."
+    },
+    {
+      "capability": "discovery.spotlight-lifecycle",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.indexed-entity"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "discovery.spotlight-lifecycle is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the discovery journey with a pilot before asking for discovery.spotlight-lifecycle."
+    },
+    {
+      "capability": "execution.live-activity",
+      "platform": "macos",
+      "state": "unsupported",
+      "confidence": "high",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA100",
+          "message": "execution.live-activity is not available on macos."
+        }
+      ],
+      "nextAction": "Scope execution.live-activity out of the macos work."
+    },
+    {
+      "capability": "execution.long-running",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "execution.native-handler"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "execution.long-running is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the execution journey with a pilot before asking for execution.long-running."
+    },
+    {
+      "capability": "execution.native-handler",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "execution.native-handler is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the execution journey with a pilot before asking for execution.native-handler."
+    },
+    {
+      "capability": "foundation.app-intent",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 99,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 118,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 125,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [],
+      "gaps": [],
+      "nextAction": "Keep foundation.app-intent covered by tests and extracted metadata."
+    },
+    {
+      "capability": "foundation.localization",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [],
+      "gaps": [],
+      "nextAction": "No evidence for foundation.localization in this project."
+    },
+    {
+      "capability": "foundation.parameters",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for foundation.parameters in this project."
+    },
+    {
+      "capability": "foundation.result-traits",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for foundation.result-traits in this project."
+    },
+    {
+      "capability": "foundation.shortcuts-provider",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for foundation.shortcuts-provider in this project."
+    },
+    {
+      "capability": "proof.app-intents-testing",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "execution.native-handler"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for proof.app-intents-testing in this project."
+    },
+    {
+      "capability": "proof.authentication",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for proof.authentication in this project."
+    },
+    {
+      "capability": "proof.confirmation",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for proof.confirmation in this project."
+    },
+    {
+      "capability": "proof.shortcuts-surface",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.shortcuts-provider"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for proof.shortcuts-surface in this project."
+    },
+    {
+      "capability": "proof.siri-surface",
+      "platform": "macos",
+      "state": "detected",
+      "confidence": "medium",
+      "evidence": [],
+      "requirements": [
+        "semantics.app-schema"
+      ],
+      "gaps": [],
+      "nextAction": "Record a manual Siri proof before claiming the journey."
+    },
+    {
+      "capability": "proof.spotlight-surface",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.indexed-entity"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for proof.spotlight-surface in this project."
+    },
+    {
+      "capability": "relevance.donations",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "relevance.donations is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the relevance journey with a pilot before asking for relevance.donations."
+    },
+    {
+      "capability": "relevance.relevant-entities",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "relevance.relevant-entities is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the relevance journey with a pilot before asking for relevance.relevant-entities."
+    },
+    {
+      "capability": "relevance.syncable-entity",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "relevance.syncable-entity is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the relevance journey with a pilot before asking for relevance.syncable-entity."
+    },
+    {
+      "capability": "semantics.app-schema",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 40,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 98,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 117,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 124,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [],
+      "nextAction": "Keep semantics.app-schema covered by tests and extracted metadata."
+    },
+    {
+      "capability": "semantics.schema-completeness",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "semantics.schema-intent",
+        "semantics.schema-entity"
+      ],
+      "gaps": [],
+      "nextAction": "Keep the reader domain complete."
+    },
+    {
+      "capability": "semantics.schema-entity",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 40,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "semantics.app-schema",
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "Keep semantics.schema-entity covered by tests and extracted metadata."
+    },
+    {
+      "capability": "semantics.schema-enum",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "semantics.app-schema"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for semantics.schema-enum in this project."
+    },
+    {
+      "capability": "semantics.schema-intent",
+      "platform": "macos",
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 98,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 117,
+          "platform": "macos"
+        },
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "line": 124,
+          "platform": "macos"
+        }
+      ],
+      "requirements": [
+        "semantics.app-schema"
+      ],
+      "gaps": [],
+      "nextAction": "Keep semantics.schema-intent covered by tests and extracted metadata."
+    },
+    {
+      "capability": "semantics.shortcuts-only-schema",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [],
+      "gaps": [],
+      "nextAction": "No evidence for semantics.shortcuts-only-schema in this project."
+    }
+  ],
+  "score": {
+    "version": "1.0",
+    "score": 17,
+    "band": "early",
+    "points": 14,
+    "maximum": 84,
+    "applicable": 28,
+    "counts": {
+      "unsupported": 1,
+      "unknown": 20,
+      "detected": 2,
+      "implemented": 6,
+      "tested": 0,
+      "feasible": 0
+    },
+    "discovery": "schema-backed"
+  }
+}

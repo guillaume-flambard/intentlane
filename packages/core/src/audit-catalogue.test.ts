@@ -49,13 +49,35 @@ describe("capability catalogue", () => {
   it("reports availability per platform", () => {
     const liveActivity = findCapability("execution.live-activity");
     if (!liveActivity) throw new Error("Expected the live activity capability.");
-    expect(availableOn(liveActivity, "ios")).toBe("16.1");
+    expect(availableOn(liveActivity, "ios")).toBe("17.0");
     expect(availableOn(liveActivity, "macos")).toBeUndefined();
 
     const appIntent = findCapability("foundation.app-intent");
     if (!appIntent) throw new Error("Expected the app intent capability.");
     expect(availableOn(appIntent, "macos")).toBe("13.0");
     expect(availableOn(appIntent, "ios")).toBe("16.0");
+  });
+
+  it("matches the availability the installed App Intents SDK declares", () => {
+    const expected: Readonly<Record<string, readonly [string, string]>> = {
+      "discovery.entity-query": ["13.0", "16.0"],
+      "discovery.intent-value-query": ["26.0", "26.0"],
+      "discovery.indexed-entity": ["15.0", "18.0"],
+      "discovery.spotlight-lifecycle": ["15.0", "18.0"],
+      "cross-app.transferable": ["13.0", "16.0"],
+      "relevance.donations": ["13.0", "16.0"],
+      "relevance.relevant-entities": ["27.0", "27.0"],
+      "relevance.syncable-entity": ["27.0", "27.0"],
+      "execution.long-running": ["27.0", "27.0"],
+      "proof.confirmation": ["15.0", "18.0"],
+      "proof.authentication": ["13.0", "16.0"],
+      "proof.spotlight-surface": ["15.0", "18.0"]
+    };
+    for (const [id, [macos, ios]] of Object.entries(expected)) {
+      const record = findCapability(id);
+      if (!record) throw new Error(`Expected the ${id} capability.`);
+      expect({ id, macos: availableOn(record, "macos"), ios: availableOn(record, "ios") }).toEqual({ id, macos, ios });
+    }
   });
 
   it("classifies schema records as eligible or shortcuts only", () => {

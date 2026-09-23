@@ -157,6 +157,8 @@ jobs:
           print("shelf:", {key: value for key, value in sorted(shelf.items()) if value != "unknown"})
           print("studio:", {key: value for key, value in sorted(studio.items()) if value != "unknown"})
           PY
+      - name: Guard the reader fixture against audit regressions
+        run: pnpm exec tsx packages/cli/src/index.ts audit-diff apps/example-macos/baseline/reader-macos.json /tmp/intentlane-reader.json --fail-on regression --format text
 
   simulator:
     name: Build the example app for the simulator
