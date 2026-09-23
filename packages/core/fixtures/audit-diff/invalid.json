@@ -1,0 +1,1 @@
+this is not JSON, so the audit-diff parser must reject it with ILA170

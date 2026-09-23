@@ -1,0 +1,370 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatDelta > renders a parseable JSON delta 1`] = `
+"{
+  "baseline": [
+    {
+      "catalogue": {
+        "capabilities": 28,
+        "nextAction": "Keep the catalogue in step with the installed SDK (27.0).",
+        "state": "current",
+        "version": "27.0"
+      },
+      "conditions": {
+        "conditions": [
+          {
+            "name": "operatingSystem",
+            "state": "recorded",
+            "value": "27.0"
+          },
+          {
+            "name": "xcode",
+            "state": "recorded",
+            "value": "27.0"
+          },
+          {
+            "name": "architecture",
+            "state": "recorded",
+            "value": "arm64"
+          },
+          {
+            "name": "locale",
+            "state": "recorded",
+            "value": "en-US"
+          },
+          {
+            "name": "region",
+            "state": "recorded",
+            "value": "US"
+          },
+          {
+            "name": "appleIntelligence",
+            "state": "unknown"
+          },
+          {
+            "name": "account",
+            "state": "unknown"
+          },
+          {
+            "name": "permissions",
+            "state": "unknown"
+          },
+          {
+            "name": "testData",
+            "state": "unknown"
+          }
+        ],
+        "nextAction": "Record appleIntelligence, account, permissions, testData before claiming a Siri result."
+      },
+      "findings": [
+        {
+          "capability": "foundation.app-intent",
+          "confidence": "high",
+          "evidence": [
+            {
+              "kind": "swift",
+              "path": "Sources/App/Notes.swift",
+              "platform": "macos"
+            }
+          ],
+          "gaps": [],
+          "nextAction": "Keep foundation.app-intent covered by tests and extracted metadata.",
+          "platform": "macos",
+          "requirements": [],
+          "state": "detected"
+        },
+        {
+          "capability": "semantics.app-schema",
+          "confidence": "high",
+          "evidence": [
+            {
+              "kind": "swift",
+              "path": "Sources/App/Notes.swift",
+              "platform": "macos"
+            }
+          ],
+          "gaps": [
+            {
+              "code": "ILA120",
+              "message": "No schema-conformant open intent found."
+            }
+          ],
+          "nextAction": "Implement the domain package.",
+          "platform": "macos",
+          "requirements": [
+            "AppEntity(schema:)"
+          ],
+          "state": "detected"
+        }
+      ],
+      "reportVersion": "1.0",
+      "sdk": {
+        "canonicalName": "macosx27.0",
+        "version": "27.0"
+      },
+      "target": {
+        "deploymentTarget": "27.0",
+        "name": "Notes",
+        "platform": "macos"
+      }
+    }
+  ],
+  "candidate": [
+    {
+      "catalogue": {
+        "capabilities": 28,
+        "nextAction": "Keep the catalogue in step with the installed SDK (27.0).",
+        "state": "current",
+        "version": "27.0"
+      },
+      "conditions": {
+        "conditions": [
+          {
+            "name": "operatingSystem",
+            "state": "recorded",
+            "value": "27.0"
+          },
+          {
+            "name": "xcode",
+            "state": "recorded",
+            "value": "27.0"
+          },
+          {
+            "name": "architecture",
+            "state": "recorded",
+            "value": "arm64"
+          },
+          {
+            "name": "locale",
+            "state": "recorded",
+            "value": "en-US"
+          },
+          {
+            "name": "region",
+            "state": "recorded",
+            "value": "US"
+          },
+          {
+            "name": "appleIntelligence",
+            "state": "unknown"
+          },
+          {
+            "name": "account",
+            "state": "unknown"
+          },
+          {
+            "name": "permissions",
+            "state": "unknown"
+          },
+          {
+            "name": "testData",
+            "state": "unknown"
+          }
+        ],
+        "nextAction": "Record appleIntelligence, account, permissions, testData before claiming a Siri result."
+      },
+      "findings": [
+        {
+          "capability": "foundation.app-intent",
+          "confidence": "high",
+          "evidence": [
+            {
+              "kind": "swift",
+              "path": "Sources/App/Notes.swift",
+              "platform": "macos"
+            }
+          ],
+          "gaps": [],
+          "nextAction": "Keep foundation.app-intent covered by tests and extracted metadata.",
+          "platform": "macos",
+          "requirements": [],
+          "state": "implemented"
+        },
+        {
+          "capability": "semantics.app-schema",
+          "confidence": "high",
+          "evidence": [
+            {
+              "kind": "swift",
+              "path": "Sources/App/Notes.swift",
+              "platform": "macos"
+            }
+          ],
+          "gaps": [],
+          "nextAction": "Keep semantics.app-schema covered by tests and extracted metadata.",
+          "platform": "macos",
+          "requirements": [
+            "AppEntity(schema:)"
+          ],
+          "state": "tested"
+        }
+      ],
+      "reportVersion": "1.0",
+      "sdk": {
+        "canonicalName": "macosx27.0",
+        "version": "27.0"
+      },
+      "target": {
+        "deploymentTarget": "27.0",
+        "name": "Notes",
+        "platform": "macos"
+      }
+    }
+  ],
+  "entries": [
+    {
+      "platform": "macos",
+      "capability": "foundation.app-intent",
+      "kind": "progression",
+      "baselineState": "detected",
+      "candidateState": "implemented",
+      "baselineFinding": {
+        "capability": "foundation.app-intent",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "swift",
+            "path": "Sources/App/Notes.swift",
+            "platform": "macos"
+          }
+        ],
+        "gaps": [],
+        "nextAction": "Keep foundation.app-intent covered by tests and extracted metadata.",
+        "platform": "macos",
+        "requirements": [],
+        "state": "detected"
+      },
+      "candidateFinding": {
+        "capability": "foundation.app-intent",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "swift",
+            "path": "Sources/App/Notes.swift",
+            "platform": "macos"
+          }
+        ],
+        "gaps": [],
+        "nextAction": "Keep foundation.app-intent covered by tests and extracted metadata.",
+        "platform": "macos",
+        "requirements": [],
+        "state": "implemented"
+      },
+      "gaps": []
+    },
+    {
+      "platform": "macos",
+      "capability": "semantics.app-schema",
+      "kind": "progression",
+      "baselineState": "detected",
+      "candidateState": "tested",
+      "baselineFinding": {
+        "capability": "semantics.app-schema",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "swift",
+            "path": "Sources/App/Notes.swift",
+            "platform": "macos"
+          }
+        ],
+        "gaps": [
+          {
+            "code": "ILA120",
+            "message": "No schema-conformant open intent found."
+          }
+        ],
+        "nextAction": "Implement the domain package.",
+        "platform": "macos",
+        "requirements": [
+          "AppEntity(schema:)"
+        ],
+        "state": "detected"
+      },
+      "candidateFinding": {
+        "capability": "semantics.app-schema",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "swift",
+            "path": "Sources/App/Notes.swift",
+            "platform": "macos"
+          }
+        ],
+        "gaps": [],
+        "nextAction": "Keep semantics.app-schema covered by tests and extracted metadata.",
+        "platform": "macos",
+        "requirements": [
+          "AppEntity(schema:)"
+        ],
+        "state": "tested"
+      },
+      "gaps": []
+    }
+  ],
+  "context": [],
+  "scores": [
+    {
+      "platform": "macos",
+      "baseline": {
+        "version": "1.0",
+        "score": 33,
+        "band": "early",
+        "points": 2,
+        "maximum": 6,
+        "applicable": 2,
+        "counts": {
+          "unsupported": 0,
+          "unknown": 0,
+          "detected": 2,
+          "implemented": 0,
+          "tested": 0,
+          "feasible": 0
+        },
+        "discovery": "none"
+      },
+      "candidate": {
+        "version": "1.0",
+        "score": 83,
+        "band": "close",
+        "points": 5,
+        "maximum": 6,
+        "applicable": 2,
+        "counts": {
+          "unsupported": 0,
+          "unknown": 0,
+          "detected": 0,
+          "implemented": 1,
+          "tested": 1,
+          "feasible": 0
+        },
+        "discovery": "schema-backed"
+      }
+    }
+  ],
+  "progressions": 2,
+  "regressions": 0,
+  "added": 0,
+  "removed": 0
+}
+"
+`;
+
+exports[`formatDelta > renders a stable text delta 1`] = `
+"baseline 1 report(s), candidate 1 report(s)
+score macos 33/100 (early, none) -> 83/100 (close, schema-backed)
+macos progression foundation.app-intent: detected -> implemented
+macos progression semantics.app-schema: detected -> tested
+summary 2 progression(s), 0 regression(s), 0 added, 0 removed, 0 context change(s)
+"
+`;
+
+exports[`formatDelta > renders changed context in both formats 1`] = `
+"baseline 1 report(s), candidate 1 report(s)
+score macos 33/100 (early, none) -> 33/100 (early, none)
+context macos target: Notes (macos 27.0) -> NotesFork (macos 27.0)
+context macos sdk: 27.0 macosx27.0 -> 27.1 macosx27.1
+context macos conditions: operatingSystem=27.0,xcode=27.0,architecture=arm64,locale=en-US,region=US,appleIntelligence=unknown,account=unknown,permissions=unknown,testData=unknown -> operatingSystem=27.0,xcode=27.1,architecture=arm64,locale=fr-FR,region=FR,appleIntelligence=unknown,account=unknown,permissions=unknown,testData=unknown
+summary 0 progression(s), 0 regression(s), 0 added, 0 removed, 3 context change(s)
+"
+`;

@@ -1,0 +1,24 @@
+schema: pilot-evidence/1.0
+pilot: ledgerapp-ios
+platform: ios
+revision: ledgerapp-2.7.1
+conditions:
+  osBuild: iOS 27 build 23A123
+  xcode: Xcode 27 build 17A123
+  locale: en-US
+  device: iPhone 17 simulator
+journeys:
+  - id: find-alpha
+    claimed: [shortcuts, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: pass
+      siri: pass
+    risky: false
+reproduction:
+  by: reviewer-b
+  status: pass
+artifacts:
+  baseline: ./audit-baseline.json
+  delta: ./audit-delta.json

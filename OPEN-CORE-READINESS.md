@@ -14,7 +14,7 @@ required rather than invented.
 | Agent guide | `AGENT-GUIDE.md`, plus the programme section that points at the Siri 27 documents. |
 | Documentation | `README.md`, `SPEC.md`, `ARCHITECTURE.md`, `MIGRATION.md`, `PRD.md`, `MARKET-STUDY.md`, `ROADMAP.md`, `AUDIT-GUIDE.md`, `PILOT-PLAYBOOK.md`, `COMMERCIAL-READINESS.md`, `AUDITOR-SPEC.md`, `APPLE-27-APP-INTENTS-RESEARCH.md`, `SIRI-27-ROADMAP.md`, `UNEXPLORED-ANGLES.md`, `OPEN-CORE-READINESS.md`, `AUDIT-OFFER.md`, `PILOT-NETNEWSWIRE.md`, `CLAIMS-REGISTRY.md`. |
 | Machine-readable contract | `intentlane.schema.json`. |
-| CI | `.github/workflows/ci.yml` with four jobs: `checks` (typecheck, build the CLI bundle, 277 tests, validate, determinism), `swift` (matrix `macos-15` and `macos-26`), `macos` (`xcode-27`: four passes of `verify.mjs`, then audit the shelf, studio and reader fixtures), `simulator` (bundle, prebuild, Release build, metadata assertions). |
+| CI | `.github/workflows/ci.yml` with four jobs: `checks` (typecheck, build the CLI bundle, 309 tests, validate, determinism), `swift` (matrix `macos-15` and `macos-26`), `macos` (`xcode-27`: four passes of `verify.mjs`, then audit the shelf, studio and reader fixtures), `simulator` (bundle, prebuild, Release build, metadata assertions). |
 | Issue intake | `.github/ISSUE_TEMPLATE/pilot-report.yml`, a form that asks for the contract excerpt, the toolchain, the goal, the outcome, `intentlane doctor`, the diagnostics, the contract gaps and any hand-written Swift. |
 | Repository settings | Public repository under MIT, default GitHub labels only. Verified with `gh api /repos/guillaume-flambard/intentlane` (`public`, `MIT`) and `gh label list` (ten default labels, no `pilot report`). |
 
@@ -22,7 +22,7 @@ required rather than invented.
 
 | Area | State | Decision required |
 | --- | --- | --- |
-| Contributor setup | Reproducible and verified from a clean checkout: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm test` (277 tests), `pnpm validate`, then `pnpm generate --output .intentlane/generated` before `--check`. The documented commands failed before this check, because `.intentlane/` is not versioned and `--check` had no output to compare. | Whether to run the same path from a clean checkout in CI, and who owns that check. |
+| Contributor setup | Reproducible and verified from a clean checkout: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm test` (309 tests), `pnpm validate`, then `pnpm generate --output .intentlane/generated` before `--check`. The documented commands failed before this check, because `.intentlane/` is not versioned and `--check` had no output to compare. | Whether to run the same path from a clean checkout in CI, and who owns that check. |
 | First contribution path | Described in prose, not as a guided list of first issues. | Whether to seed `good first issue` items and label them as such. |
 | Issue intake | One form for pilots. No bug or feature form. | Whether to add a shorter bug form and a feature form, and what each must ask. |
 | Pull request intake | No pull request template. | Whether to add one, and whether it repeats the definition of done or links it. |

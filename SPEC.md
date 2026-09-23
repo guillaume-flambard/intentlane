@@ -47,9 +47,9 @@ intents:
 
 ## Types MVP
 
-Types de paramètre : `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`.
+Types de paramètre : `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`, `entity_list`.
 
-Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré, `entity` vers l'`AppEntity` généré de l'entité référencée.
+Correspondance Swift : `string` vers `String`, `integer` vers `Int`, `number` vers `Double`, `boolean` vers `Bool`, `date` vers `DateComponents`, `datetime` vers `Date`, `enum` vers un `AppEnum` généré, `entity` vers l'`AppEntity` généré de l'entité référencée, `entity_list` vers un tableau de cet `AppEntity`.
 
 Chaque paramètre peut déclarer un `title` et un `prompt`, tous deux des maps locales. Le `title` devient le libellé affiché par le système et le nom du type d'un `enum` ; à défaut, l'identifiant brut sert de libellé. Le `prompt` devient le dialogue que Siri pose pour obtenir la valeur.
 
@@ -76,7 +76,7 @@ parameters:
 
 Un `enum` sans aucune valeur est refusé (IL1301), et un paramètre qui déclare `values` sans être de type `enum` l'est aussi (IL1301).
 
-Un paramètre `entity` référence une entité déclarée et se convertit en `<valeur>.id` dans la query.
+Un paramètre `entity` référence une entité déclarée et se convertit en `<valeur>.id` dans la query. Un paramètre `entity_list` porte la même référence `entity` et génère un tableau de l'`AppEntity` correspondante.
 
 ```yaml
 parameters:
@@ -86,13 +86,13 @@ parameters:
     required: false
 ```
 
-Une référence absente, une référence inconnue, ou une référence portée par un paramètre qui n'est pas de type `entity` sont refusées (IL1301).
+Une référence absente, une référence inconnue, ou une référence portée par un paramètre qui n'est ni de type `entity` ni de type `entity_list` sont refusées (IL1301).
 
-Les listes, unions, fichiers et médias sont réservés à une version ultérieure.
+Les unions, fichiers et médias sont réservés à une version ultérieure.
 
 ## Intention
 
-Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required` ; `title` et `prompt` sont optionnels. Une intention peut déclarer `schema`, la référence `domaine.membre` du schéma d'application auquel elle se conforme.
+Champs obligatoires : `id`, `title`, `execution`. Description et raccourcis sont recommandés. Chaque paramètre possède un identifiant, un type et une politique `required` ; `title` et `prompt` sont optionnels. Une intention peut déclarer `schema`, la référence `domaine.membre` du schéma d'application auquel elle se conforme, et `target`, l'identifiant de l'entité cible quand le schéma suit un protocole système (`open` ou `delete`).
 
 ## Entité
 
@@ -136,7 +136,7 @@ intents:
 
 Le générateur écrit la conformance devant la déclaration : `@AppIntent(schema: .camera.stopCapture)` et `@AppEntity(schema: .audio.ambientSound)`. Une entité conforme émet des propriétés `var` au lieu de `let` et n'émet pas `typeDisplayRepresentation`, parce que la macro applique un property wrapper et prend le nom d'affichage du schéma.
 
-La table des schémas est dérivée de la surface publique des App Schemas d'Xcode 27 (27A266a) et croisée avec la table du processeur de métadonnées. Elle ne retient que les schémas que la forme générée peut satisfaire : une intention dont le schéma ne déclare ni paramètre, ni valeur de retour, ni protocole système, et une entité dont le schéma n'exige pas plus de deux propriétés de type `string`, déclarées dans l'ordre en `display.title` puis `display.subtitle`. Les conformances d'enum ne sont pas générées en 0.1.
+La table des schémas est dérivée de la surface publique des App Schemas d'Xcode 27 (27A266a) et croisée avec la table du processeur de métadonnées. Elle retient 35 intentions atteignables et 20 entités : 16 intentions suivent le protocole `open`, 15 suivent le protocole `delete`, et 4 n'ont aucun protocole mais fournissent leurs propres paramètres (par exemple `reader.rotatePages` avec `pages` et `isClockwise`). Pour un schéma à protocole, le générateur dérive la forme du schéma au lieu de la demander au contrat : une intention `open` émet `var target` typé de l'entité cible et aucun `perform()`, une intention `delete` émet un tableau d'entités et un `perform()` qui délègue au handler nommé. Pour un schéma sans protocole qui fournit ses paramètres, le générateur émet un `@Parameter` par paramètre du schéma. Une entité conforme n'est retenue que si le schéma n'exige pas plus de deux propriétés de type `string`, déclarées dans l'ordre en `display.title` puis `display.subtitle`. Une entité conforme émet des propriétés `var` au lieu de `let` et n'émet pas `typeDisplayRepresentation`, parce que la macro applique un property wrapper et prend le nom d'affichage du schéma. Les conformances d'enum ne sont pas générées en 0.1.
 
 Un schéma inconnu, mal formé, d'un autre genre, ou connu mais que la forme générée ne peut pas satisfaire, est refusé en IL1401 avec un message qui nomme ce qui manque. Un schéma dont la disponibilité iOS est supérieure au `min_ios` de l'application est refusé de la même façon. La disponibilité macOS n'est pas validable : le contrat n'a pas de plancher macOS.
 

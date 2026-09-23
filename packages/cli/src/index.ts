@@ -5,9 +5,10 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
-import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, type ConfigIR, type Diagnostic, type DoctorFacts } from "../../core/src/index.js";
+import { parse } from "yaml";
+import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type PilotLedgerResult } from "../../core/src/index.js";
 import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, SDK_SETTINGS_FILE, blockingGaps, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
+import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
@@ -303,6 +304,97 @@ program.command("audit")
         process.exitCode = 1;
       }
     }
+  });
+
+program.command("audit-diff")
+  .argument("<baseline>", "Baseline audit JSON produced by 'intentlane audit --format json'")
+  .argument("<candidate>", "Candidate audit JSON produced by 'intentlane audit --format json'")
+  .option("-f, --format <format>", "Delta format", "text")
+  .option("-o, --output <file>", "Write the delta to a file")
+  .option("--fail-on <kind>", "Exit non-zero when the delta holds the kind")
+  .action(async (baseline: string, candidate: string, options: { format: string; output?: string; failOn?: string }) => {
+    if (options.format !== "text" && options.format !== "json") {
+      process.stderr.write(`Unsupported format '${options.format}'. Use one of: text, json.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (options.failOn !== undefined && options.failOn !== "regression") {
+      process.stderr.write(`Unsupported --fail-on '${options.failOn}'. Use: regression.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let baselineText: string;
+    let candidateText: string;
+    try {
+      baselineText = await readFile(resolve(baseline), "utf8");
+      candidateText = await readFile(resolve(candidate), "utf8");
+    } catch (reason) {
+      process.stderr.write(`Unable to read the audit files: ${reason instanceof Error ? reason.message : "unknown error"}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let rendered: string;
+    let regressions = 0;
+    try {
+      const delta = diffAuditDocuments(baselineText, candidateText);
+      rendered = options.format === "json" ? formatDeltaJson(delta) : formatDeltaText(delta);
+      regressions = delta.regressions;
+    } catch (reason) {
+      if (reason instanceof AuditDiffError) process.stderr.write(`${reason.message}\n`);
+      else process.stderr.write(`${reason instanceof Error ? reason.message : String(reason)}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (options.output) {
+      await atomicWrite(resolve(options.output), rendered);
+      process.stdout.write(`Wrote ${resolve(options.output)}\n`);
+    } else {
+      process.stdout.write(rendered);
+    }
+    if (options.failOn === "regression" && regressions > 0) {
+      process.stderr.write(`${regressions} regression(s) found between the baseline and the candidate.\n`);
+      process.exitCode = 1;
+    }
+  });
+
+const evidence = program.command("evidence").description("Validate pilot evidence");
+
+evidence.command("validate <ledger>")
+  .option("-f, --format <format>", "Output format", "text")
+  .option("--strict", "Exit non-zero when the ledger is unverified")
+  .action(async (ledger: string, options: { format: string; strict?: boolean }) => {
+    if (options.format !== "text" && options.format !== "json") {
+      process.stderr.write(`Unsupported format '${options.format}'. Use one of: text, json.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const file = resolve(ledger);
+    let source: string;
+    try {
+      source = await readFile(file, "utf8");
+    } catch (reason) {
+      process.stderr.write(`Unable to read ledger ${file}: ${reason instanceof Error ? reason.message : "unknown error"}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let value: unknown;
+    try {
+      value = parse(source) as unknown;
+    } catch (reason) {
+      process.stderr.write(`ILA173 root: ${file} is not valid YAML: ${reason instanceof Error ? reason.message : "unknown error"}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const result: PilotLedgerResult = validatePilotLedger(value);
+    if (options.format === "json") {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      process.stdout.write(`${result.summary}\n`);
+      for (const diagnostic of result.diagnostics) {
+        process.stdout.write(`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}\n`);
+      }
+    }
+    if (options.strict && result.status === "unverified") process.exitCode = 1;
   });
 
 program.parseAsync().catch((reason: unknown) => {

@@ -9,7 +9,7 @@ below its status.
 
 | Claim | Level | Platform and version | Evidence | Status |
 | --- | --- | --- | --- | --- |
-| `intentlane audit` reports, read only, what a repository implements, what the target platform ships and what is feasible. | Auditor | macOS 27 and iOS 27 | `intentlane audit` run on `apps/example-macos` (shelf, studio, reader), on `apps/example-expo` and on the NetNewsWire fork, with the worktree fingerprint unchanged; 277 tests. | Proven |
+| `intentlane audit` reports, read only, what a repository implements, what the target platform ships and what is feasible. | Auditor | macOS 27 and iOS 27 | `intentlane audit` run on `apps/example-macos` (shelf, studio, reader), on `apps/example-expo` and on the NetNewsWire fork, with the worktree fingerprint unchanged; 309 tests. | Proven |
 | The audit separates schema-backed readiness from shortcut-only readiness. | Auditor | macOS 27 | The `discovery` field (`schema-backed`, `shortcuts-only`, `none`) plus `ILA140`; the NetNewsWire fork moves from `shortcuts-only` to `schema-backed`. | Proven |
 | The audit scopes every capability to the Xcode targets that compile for the requested platform. | Auditor | macOS 27 and iOS 27 | `targets 8 target(s) (3 for macos)` and `(4 for ios)` on NetNewsWire, whose macOS report is `0/100 (none, none)` while the iOS report keeps three implemented capabilities. | Proven |
 | A contract compiles to App Intents that build for macOS 27 and iOS 27. | Build | macOS 27 and iOS 27 | The generated Swift compiles for `arm64-apple-macos27.0` and for `arm64-apple-ios27.0`, and `appintentsmetadataprocessor` extracts the metadata on both. | Proven |

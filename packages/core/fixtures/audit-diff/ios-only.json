@@ -1,0 +1,1 @@
+{"findings":[{"capability":"foundation.app-intent","confidence":"high","evidence":[],"gaps":[],"nextAction":"Keep it covered.","platform":"ios","requirements":[],"state":"detected"}],"reportVersion":"1.0","target":{"name":"Notes","platform":"ios"}}

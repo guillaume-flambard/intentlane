@@ -95,6 +95,9 @@ work).
 | `ILA140` | Shortcut-only evidence does not establish Siri or Apple Intelligence discovery. | Yes. |
 | `ILA150` | The capability belongs to an advanced group that IntentLane adds only with a pilot journey. | No, it is advisory. |
 | `ILA160` | The capability needs a newer SDK than the one inspected. | Yes. |
+| `ILA170` | The file is not valid audit JSON. | No, `audit-diff` exits before any delta. |
+| `ILA171` | The report version is not the supported `1.0`. | No, `audit-diff` exits before any delta. |
+| `ILA172` | A platform is present on one side of the diff only. | No, `audit-diff` exits before any delta. |
 
 `ILA120` is reserved and not emitted yet.
 
@@ -106,9 +109,27 @@ work).
    next to the evidence ledger. The JSON is the machine-readable baseline.
 3. Record what the report says about existing shortcuts and intents, and about
    the missing schema-backed discovery, as evidence rather than assumption.
-4. Re-run the same command after the implementation and compare the two
-   reports. The delta in `score`, `discovery`, `route`, `data`, `architecture`,
-   `conditions`, `quality` and the capability states is the pilot's progress.
+4. Re-run the same command after the implementation, then compare the two
+   JSON reports without re-reading the repository:
+
+   ```sh
+   npx intentlane audit-diff baseline.json candidate.json
+   npx intentlane audit-diff baseline.json candidate.json --format json --output delta.json
+   npx intentlane audit-diff baseline.json candidate.json --fail-on regression
+   ```
+
+   The join key is the platform and capability pair, so a fork compares
+   against its upstream even when the target names differ. A state that moves
+   down the public order is a regression, a state that moves up is a
+   progression, and a capability that appears or disappears is an unclassified
+   change, never an inferred gain. SDK, catalogue, conditions, target, route,
+   architecture, data and quality differences are reported as context, without
+   a positive or negative rank, and the score is derived from each report, not
+   compared as primary proof. `--fail-on regression` renders the delta first
+   and exits non-zero only when at least one regression exists, which makes it
+   a CI gate. A file that is not valid audit JSON fails with `ILA170`, an
+   unknown report version with `ILA171`, and a platform present on one side
+   only with `ILA172`; in each case no partial delta is emitted.
 5. Add `--build-metadata` once a build exists, so the capabilities that the
    extracted metadata proves move from `implemented` to `tested`.
 

@@ -13,11 +13,13 @@ export * from "./audit-quality.js";
 export * from "./audit-route.js";
 export * from "./audit-catalogue.js";
 export * from "./audit-detect.js";
+export * from "./audit-diff.js";
 export * from "./audit-format.js";
 export * from "./audit-run.js";
 export * from "./audit-sdk.js";
 export * from "./audit-score.js";
 export * from "./audit-targets.js";
+export * from "./pilot-ledger.js";
 export * from "./app-schemas.js";
 
 export type Severity = "error" | "warning";

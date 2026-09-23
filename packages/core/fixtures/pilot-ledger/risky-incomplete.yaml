@@ -1,0 +1,28 @@
+schema: pilot-evidence/1.0
+pilot: ledgerapp-macos
+platform: macos
+revision: ledgerapp-2.7.1
+conditions:
+  osBuild: macOS 27 build 23A123
+  xcode: Xcode 27 build 17A123
+  locale: en-US
+  device: MacBook Pro 14-inch
+journeys:
+  - id: mark-beta-read
+    claimed: [shortcuts, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: pass
+      siri: pass
+    risky: true
+    riskEvidence:
+      confirmation: true
+      authentication: true
+      ownership: false
+reproduction:
+  by: reviewer-b
+  status: pass
+artifacts:
+  baseline: ./audit-baseline.json
+  delta: ./audit-delta.json

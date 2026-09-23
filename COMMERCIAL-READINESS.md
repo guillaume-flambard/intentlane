@@ -53,6 +53,14 @@ Publish a broad landing page only after one reproducible macOS 27 and one
 reproducible iOS 27 pilot. Case studies need app-owner permission and name
 actions, platform versions and observed surfaces.
 
+## Evidence ledger gate
+
+No case study may exceed the computed status of its pilot evidence ledger.
+A study is publishable only when `intentlane evidence validate --strict`
+reports `verified` for its ledger. An `unverified` ledger keeps the pilot as
+feedback, never as marketing. Each published study references its ledger, and
+the ledger references the audit baseline and delta it was checked against.
+
 ## Future direction: IntentLane Observe
 
 IntentLane Observe is a future, post-integration capability, envisaged later. It

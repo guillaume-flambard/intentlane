@@ -9,10 +9,10 @@ post-launch.
 
 | Ordre | État actuel | Action | Critère de fermeture | Artefact attendu |
 | --- | --- | --- | --- | --- |
-| 0 | code-ready | Réconcilier les statuts de pilote et claims | Aucun document ne prétend Siri ou reproduction sans ledger valide | C0 et change pilote mis à jour |
-| 1 | code-ready | Livrer `audit-diff` | Delta déterministe et `--fail-on regression` vert en CI | Change `compare-audit-baselines` clos |
-| 2 | code-ready | Livrer le validateur de ledger | `evidence validate --strict` refuse `unverified` | Change `validate-pilot-evidence-ledger` clos |
-| 3 | code-ready | Revalider Apple 27 et corriger les docs | SDK, disponibilité macOS/iOS et release notes liés; aucune doc périmée | Catalogue, fixtures et docs corrigés |
+| 0 | closed | Réconcilier les statuts de pilote et claims | Aucun document ne prétend Siri ou reproduction sans ledger valide | C0 et change pilote mis à jour (fait dans `983189f`) |
+| 1 | code-ready | Ajouter `audit-diff` à l'échelle CI | Delta déterministe et `--fail-on regression` vert en CI | Module, commande et change `compare-audit-baselines` clos ; l'échelle CI reste à ajouter |
+| 2 | closed | Livrer le validateur de ledger | `evidence validate --strict` refuse `unverified` | Module, commande et change `validate-pilot-evidence-ledger` clos |
+| 3 | code-ready | Revalider Apple 27 et corriger les docs | SDK, disponibilité macOS/iOS et release notes liés; aucune doc périmée | Docs corrigés (`SPEC.md`) ; le catalogue et les fixtures de disponibilité restent à revalider |
 | 4 | human-gate | Prouver NetNewsWire sur macOS | Trois parcours et négatifs Siri passés dans un ledger valide | Ledger macOS et delta d'audit |
 | 5 | human-gate | Reproduction indépendante macOS | Seconde personne, checkout propre, succès et négatifs passés | Entrée de reproduction du ledger |
 | 6 | human-gate | Prouver un pilote iOS | Build appareil, trois parcours, négatifs et comparaison macOS/iOS | Ledger iOS et delta |

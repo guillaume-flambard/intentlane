@@ -899,3 +899,37 @@ describe("schema parameters", () => {
     expect(swift()).toMatchSnapshot();
   });
 });
+
+const entityListConfig = {
+  schema: "0.1",
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en"] },
+  entities: [
+    {
+      id: "idea",
+      title: { en: "Idea" },
+      identifier: "id",
+      display: { title: "title" },
+      query: { mode: "static" }
+    }
+  ],
+  intents: [{
+    id: "bulk_ideas",
+    title: { en: "Bulk ideas" },
+    parameters: [{ id: "ideas", type: "entity_list", required: true, entity: "idea" }],
+    execution: { mode: "open_app", route: "/ideas/bulk", mapping: { ideas: "ideas" } }
+  }]
+};
+
+describe("entity_list parameters", () => {
+  const swift = (): string => {
+    const result = parseConfig(entityListConfig);
+    if (!result.ir) throw new Error("Entity list fixture must parse");
+    return generateSwift(result.ir);
+  };
+
+  it("declares an array of entities and joins their identifiers in the query", () => {
+    const source = swift();
+    expect(source).toContain("var ideas: [IntentLaneIdeaEntity]");
+    expect(source).toContain('"ideas": ideas.map { $0.id }.joined(separator: ",")');
+  });
+});

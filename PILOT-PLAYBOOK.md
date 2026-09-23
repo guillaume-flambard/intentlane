@@ -48,7 +48,11 @@ but never replace tests, logs or metadata.
 
 For macOS 27: build, install or launch, check Shortcuts, check Spotlight when
 claimed, run the Siri journey, repeat a negative or unsafe case, then export
-the audit delta and evidence ledger.
+the audit delta and evidence ledger. Then export the delta between the pinned
+baseline and the post-implementation report with
+`npx intentlane audit-diff baseline.json candidate.json --fail-on regression`,
+keep the rendered delta next to the evidence ledger, and treat any regression
+entry as a release blocker until a person explains it.
 
 For iOS 27: use a native development or signed device build, not Expo Go. Run
 the same sequence and document every macOS versus iOS difference.
@@ -57,3 +61,51 @@ the same sequence and document every macOS versus iOS difference.
 
 A pilot is case-study ready only when every advertised journey passes required
 layers, a second developer reproduces it, and no public claim exceeds evidence.
+
+## Evidence ledger template
+
+Record the pilot in a versioned ledger and validate it locally:
+
+```sh
+intentlane evidence validate evidence-ledger.yaml
+intentlane evidence validate evidence-ledger.yaml --strict
+```
+
+`--strict` exits non-zero while the ledger reads `unverified`. A ledger is
+`verified` only when every required layer is `pass` for every journey and an
+independent reproduction is `pass`. Copy this template, keep the audit baseline
+and delta next to it, and reference them as relative paths. References are
+never read by the validator.
+
+```yaml
+schema: pilot-evidence/1.0
+pilot: ledgerapp-macos
+platform: macos
+revision: ledgerapp-2.7.1
+conditions:
+  osBuild: macOS 27 build 23A123
+  xcode: Xcode 27 build 17A123
+  locale: en-US
+  device: MacBook Pro 14-inch
+journeys:
+  - id: find-alpha
+    claimed: [shortcuts, spotlight, siri]
+    layers:
+      contract: pass
+      build: pass
+      shortcuts: pass
+      spotlight: pass
+      siri: pass
+    risky: false
+reproduction:
+  by: reviewer-b
+  status: pass
+artifacts:
+  baseline: ./audit-baseline.json
+  delta: ./audit-delta.json
+```
+
+`contract` and `build` are always required. `shortcuts`, `spotlight` and
+`siri` are required only when claimed. A risky journey also documents
+confirmation, authentication and ownership. Use harmless local fixture data
+only, never credentials or production content.

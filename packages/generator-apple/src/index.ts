@@ -160,6 +160,7 @@ function queryValue(intent: IntentIR, source: string): string {
   if (type === "date") return `String(format: "%04d-%02d-%02d", ${source}.year ?? 0, ${source}.month ?? 0, ${source}.day ?? 0)`;
   if (type === "enum") return `${source}.rawValue`;
   if (type === "entity") return `${source}.id`;
+  if (type === "entity_list") return `${source}.map { $0.id }.joined(separator: ",")`;
   return source;
 }
 
