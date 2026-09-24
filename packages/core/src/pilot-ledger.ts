@@ -1,4 +1,5 @@
 import type { AuditDiagnosticCode } from "./audit.js";
+import { isNonEmptyString, isRecord } from "./guards.js";
 
 export const PILOT_LEDGER_VERSION = "pilot-evidence/1.0";
 
@@ -65,14 +66,6 @@ export type PilotLedgerResult = Readonly<{
   diagnostics: readonly PilotLedgerDiagnostic[];
   summary: string;
 }>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
 
 function invalid(code: PilotLedgerDiagnosticCode, message: string, path: string): PilotLedgerDiagnostic {
   return { code, message, path };

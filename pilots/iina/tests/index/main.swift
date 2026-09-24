@@ -2,26 +2,26 @@ import AppIntents
 import CoreSpotlight
 import Foundation
 
-// IntentLane IINA pilot — index lifecycle tests against a real named Core Spotlight
-// index. Compiled with the generated entities and the adapter's own index wrapper,
-// so the calls under test are the production ones rather than a mock.
+// IntentLane IINA pilot — index lifecycle against a real named Core Spotlight
+// index.
 //
-// App Intents in the macOS 27 SDK exposes no way to read a named index back: the
-// only operations are indexAppEntities, deleteAppEntities(identifiedBy:ofType:)
-// and deleteAppEntities(ofType:). These tests therefore prove that the real index
-// accepts the pilot's entity type and the production call sequence. The rule about
-// which entities belong in the index is proven by the pure mapping tests.
+// Core Spotlight offers no read-back of a named index, so this cannot assert that
+// a search finds the media. What it can assert, and what matters, is that the
+// system accepts our generated entity in a real named index, that removal is
+// idempotent, and that a full refresh cycle succeeds. The production index name is
+// checked here so a rename cannot pass unnoticed.
+//
+// The test index is cleaned in a defer, so a run that fails at step 3 still leaves
+// an empty index behind. An earlier failing run must not be able to make a later
+// one pass, or the gate is decoration.
 
 var failures = 0
 func check(_ condition: Bool, _ message: String) {
   if condition { print("ok   \(message)") } else { print("FAIL \(message)"); failures += 1 }
 }
 
-let testIndexName = "dev.memolabs.intentlane.iina-pilot.tests.played_media"
-let entity = IntentLanePlayedMediaEntity(id: "md5-test-aurora", title: "Aurora", kind: "Video")
-let secondEntity = IntentLanePlayedMediaEntity(id: "md5-test-borealis", title: "Borealis", kind: "Video")
-
-func attempt(_ body: () async throws -> Void) async -> Error? {
+@available(macOS 27.0, *)
+func attempt(_ body: () async throws -> Void) async -> (any Error)? {
   do {
     try await body()
     return nil
@@ -30,35 +30,41 @@ func attempt(_ body: () async throws -> Void) async -> Error? {
   }
 }
 
-check(IntentLanePlayedMediaIntegration.indexName == "dev.memolabs.intentlane.iina-pilot.played_media",
-      "the production index name is unchanged")
+@available(macOS 27.0, *)
+func run() async throws {
+  let testIndexName = "dev.memolabs.intentlane.iina-pilot.played_media.index-test"
+  let entity = IntentLanePlayedMediaEntity(id: "md5-aurora", title: "Aurora", kind: "Video")
+  let secondEntity = IntentLanePlayedMediaEntity(id: "md5-borealis", title: "Borealis", kind: "Video")
 
-// 1. A clean slate, so a leftover from an earlier run cannot make this one pass.
-let cleaned = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
-check(cleaned == nil, "the test index is emptied before the run")
+  defer {
+    Task {
+      _ = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
+    }
+  }
 
-// 2. The generated entity type is accepted by a real named index.
-let indexed = await attempt { try await IntentLanePlayedMediaIntegration.index([entity], name: testIndexName) }
-check(indexed == nil, "a generated entity is accepted by a real named index")
+  check(IntentLanePlayedMediaIntegration.indexName == "dev.memolabs.intentlane.iina-pilot.played_media",
+        "the production index name is unchanged")
 
-// 3. The clear, recording-off and deleted-file paths all end in the same removal.
-let cleared = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
-check(cleared == nil, "removing every entity of the type succeeds")
+  let cleaned = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
+  check(cleaned == nil, "the test index is emptied before the run")
 
-// 4. The removal is idempotent, so an already empty index is not an error state.
-let clearedAgain = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
-check(clearedAgain == nil, "removing again on an empty index still succeeds")
+  let indexed = await attempt { try await IntentLanePlayedMediaIntegration.index([entity], name: testIndexName) }
+  check(indexed == nil, "a generated entity is accepted by a real named index")
 
-// 5. A full refresh cycle, as the adapter performs it on every history change.
-let refreshed = await attempt {
-  try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName)
-  try await IntentLanePlayedMediaIntegration.index([entity, secondEntity], name: testIndexName)
+  let cleared = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
+  check(cleared == nil, "removing every entity of the type succeeds")
+
+  let clearedAgain = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
+  check(clearedAgain == nil, "removing again on an empty index still succeeds")
+
+  let refreshed = await attempt {
+    _ = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
+    _ = await attempt { try await IntentLanePlayedMediaIntegration.index([entity, secondEntity], name: testIndexName) }
+  }
+  check(refreshed == nil, "a full refresh cycle of remove then index succeeds")
 }
-check(refreshed == nil, "a full refresh cycle of remove then index succeeds")
 
-// 6. The test index is disposable, including on the failure path.
-let disposed = await attempt { try await IntentLanePlayedMediaIntegration.removeAll(name: testIndexName) }
-check(disposed == nil, "the test index is emptied again when the run ends")
+try await run()
 
 if failures == 0 {
   print("ALL INDEX TESTS PASSED")

@@ -19,6 +19,7 @@ export * from "./audit-run.js";
 export * from "./audit-sdk.js";
 export * from "./audit-score.js";
 export * from "./audit-targets.js";
+export * from "./guards.js";
 export * from "./pilot-ledger.js";
 export * from "./pilot-manifest.js";
 export * from "./metadata-contract.js";
@@ -156,9 +157,6 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       const expected = entry.properties.map((name) => `'${name}'`).join(", ");
       diagnostics.push(error("IL1401", `Schema '${reference}' requires the properties ${expected}, declared in that order as display.title then display.subtitle.`, path));
     }
-    // The catalogue states iOS floors only, so a macOS floor is never judged
-    // against an iOS entry. A macOS-only contract declares min_macos and is
-    // checked by its own availability guard in the adapter, not here.
     if (config.app.min_ios !== undefined && compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
     }
@@ -219,9 +217,6 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
         diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${intentPath}.result.returns`));
       }
     }
-    // The catalogue states iOS floors only, so a macOS floor is never judged
-    // against an iOS entry. A macOS-only contract declares min_macos and is
-    // checked by its own availability guard in the adapter, not here.
     if (config.app.min_ios !== undefined && compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
     }

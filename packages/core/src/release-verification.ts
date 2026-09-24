@@ -13,11 +13,8 @@ export type ClaimOutcome = Readonly<{
 }>;
 
 export type ReleaseVerificationInput = Readonly<{
-  /** The claims being certified, as declared by the pilot or passed on the command line. */
   claims: readonly string[];
-  /** Result of every deterministic gate, keyed by claim id. */
   gates: Readonly<Record<string, GateStatus | undefined>>;
-  /** Result of every observed claim, keyed by claim id. */
   observed: Readonly<Record<string, ObservedStatus | undefined>>;
 }>;
 
@@ -29,14 +26,6 @@ export type ReleaseVerificationResult = Readonly<{
   nextAction: string;
 }>;
 
-/**
- * Certify a declared claim set, and nothing else.
- *
- * A deterministic claim is settled by a gate. An observed claim is settled only by
- * a person. The result therefore names every claim it covers, so `certified` can
- * never be read on its own as "the system surface works": a caller that certifies
- * five deterministic claims and claims no observation gets exactly that.
- */
 export function evaluateReleaseVerification(input: ReleaseVerificationInput): ReleaseVerificationResult {
   const unknown = input.claims.filter((id) => !isPilotClaimId(id));
   if (unknown.length > 0) {

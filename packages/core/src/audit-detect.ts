@@ -57,8 +57,6 @@ const DOMAIN_PATTERNS: readonly Readonly<{ kind: "intent" | "entity"; pattern: R
   { kind: "entity", pattern: /@AppEntity\s*\(\s*schema\s*:\s*\.([a-zA-Z][a-zA-Z0-9]*)\s*\./ }
 ];
 
-// Apple documents these schema domains as Shortcuts-only. A conformance in one
-// of them must never be used as evidence that Siri AI understands the app.
 export const SHORTCUTS_ONLY_SCHEMA_DOMAINS = [
   "books",
   "browser",

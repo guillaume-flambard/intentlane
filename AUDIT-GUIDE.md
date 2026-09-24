@@ -98,8 +98,20 @@ work).
 | `ILA170` | The file is not valid audit JSON. | No, `audit-diff` exits before any delta. |
 | `ILA171` | The report version is not the supported `1.0`. | No, `audit-diff` exits before any delta. |
 | `ILA172` | A platform is present on one side of the diff only. | No, `audit-diff` exits before any delta. |
+| `ILA173` | The evidence an entry cites is not evidence for that capability. | Yes. |
+| `ILA174` | A capability needs a ledger observation no run can produce. | No, it is why the claim stays pending. |
+| `ILA175` | The evidence ledger's conditions do not match the claim it supports. | Yes, `--strict` exits non-zero. |
+| `ILA176` | A pilot manifest is malformed: a missing path, an empty claim set, or a gate that is not an object. | Yes, `verify` refuses to run. |
+| `ILA177` | A pilot manifest declares a claim that is not in the registry. | Yes, certification refuses to run on a claim it cannot resolve. |
+| `ILA178` | A declared claim has no command, so nothing can settle it. | Yes, `verify` refuses to certify it. |
 
 `ILA120` is reserved and not emitted yet.
+
+`ILA173` to `ILA178` are emitted by the pilot machinery rather than by the audit
+itself: the evidence and ledger codes by `intentlane evidence validate`, and the
+manifest codes by `intentlane verify --pilot`. They live in the same registry
+because they block the same commands under `--strict`, and the registry is
+exported as `AUDIT_DIAGNOSTIC_CODES` from `@intentlane/core`.
 
 ## Baseline a pilot candidate
 
@@ -143,3 +155,20 @@ work).
 - The audit observes the repository, the installed SDK and extracted metadata.
   It never observes a live Siri session, so `proof.siri-surface` stays at most
   `detected` until a person records a manual test.
+- An `.xcodeproj` in the tree is not proof that the audited platform is native
+  there. A repository can ship a macOS crash reporter or a macOS audio library as
+  Xcode projects while its application is C++ built with waf, which is what Ardour
+  does. The route therefore needs positive evidence that no target compiles for
+  the audited platform before it downgrades, and a target whose platform could not
+  be resolved is still treated as a target rather than as an absence.
+- A target inherits its build settings from the project, so `SDKROOT` is often
+  declared once on the project's build configuration list and never on the target.
+  A target-level setting still wins over the project one. CotEditor declares
+  `SDKROOT = macosx` that way, and reading only the target resolved no platform
+  and reported discovery over the whole tree.
+- A missing directory is refused by name rather than answered with an empty
+  report, because an empty report is indistinguishable from a project that
+  implements nothing.
+- Apple documents certain schema domains as Shortcuts-only. A conformance in one
+  of them is never used as evidence that Siri AI understands the application, and
+  the score reports those domains separately so the two cannot be confused.

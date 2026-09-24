@@ -1,11 +1,11 @@
 import type { AuditDiagnosticCode } from "./audit.js";
 import { claim, isPilotClaimId, unknownClaimIds, type PilotClaimId } from "./claims.js";
+import { isNonEmptyString, isRecord } from "./guards.js";
 
 export type PilotManifestDiagnostic = Readonly<{ code: AuditDiagnosticCode; message: string; path: string }>;
 
 export const PILOT_MANIFEST_VERSION = "intentlane-pilot/1.0";
 
-/** Claims the tool settles itself, so a manifest only declares the application-owned ones. */
 export const BUILTIN_GATE_CLAIMS: readonly string[] = ["contract", "generated", "metadata"];
 
 export type PilotManifest = Readonly<{
@@ -26,22 +26,6 @@ export type PilotManifestResult = Readonly<{
 
 const ALLOWED_KEYS = ["version", "contract", "claims", "gates", "generated", "metadata", "ledger", "probe"] as const;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
-
-/**
- * Read the file that says what a pilot claims, and refuse anything ambiguous.
- *
- * The evidence kind of a claim is never declared here: it belongs to the claim
- * catalogue, so a manifest cannot present an observation as deterministic. Every
- * claimed deterministic claim must also name the command that settles it, because a
- * claim with no verifier is a claim nobody can check.
- */
 export function parsePilotManifest(value: unknown): PilotManifestResult {
   const diagnostics: PilotManifestDiagnostic[] = [];
   const invalid = (code: AuditDiagnosticCode, message: string, path: string): void => {

@@ -50,8 +50,32 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | HandBrake `1255087` | 7 | 0.5 s compile plus the processor | `/usr/bin/time -p` | one intent instead of two, and exactly that intent in the metadata |
 | HandBrake `1255087` | 8 | under 1 s plus the gate suites | `/usr/bin/time -p` | certified on the first run |
 | LuLu `7d2669e` | Q | not instrumented | manual | done before this sheet existed |
-| LuLu `7d2669e` | 1 to 8 | not started | | |
+| LuLu `7d2669e` | 0 | not started | | |
+| LuLu `7d2669e` | 1 | not started | | |
+| LuLu `7d2669e` | 2 | not started | | |
+| LuLu `7d2669e` | 3 | not started | | |
+| LuLu `7d2669e` | 4 | not started | | |
+| LuLu `7d2669e` | 5 | not started | | |
+| LuLu `7d2669e` | 6 | not started | | |
+| LuLu `7d2669e` | 7 | not started | | |
+| LuLu `7d2669e` | 8 | not started | | |
 | Transmission `48835c6` | Q | not instrumented | manual | done before this sheet existed |
-| Transmission `48835c6` | 1 to 8 | not started | | |
+| Transmission `48835c6` | 0 | not started | | |
+| Transmission `48835c6` | 1 | not started | | |
+| Transmission `48835c6` | 2 | not started | | |
+| Transmission `48835c6` | 3 | not started | | |
+| Transmission `48835c6` | 4 | not started | | |
+| Transmission `48835c6` | 5 | not started | | |
+| Transmission `48835c6` | 6 | not started | | |
+| Transmission `48835c6` | 7 | not started | | |
+| Transmission `48835c6` | 8 | not started | | |
 | Cyberduck `fc0d437` | Q | not instrumented | manual | done before this sheet existed |
-| Cyberduck `fc0d437` | 1 to 8 | not started | | |
+| Cyberduck `fc0d437` | 0 | not started | | |
+| Cyberduck `fc0d437` | 1 | not started | | |
+| Cyberduck `fc0d437` | 2 | not started | | |
+| Cyberduck `fc0d437` | 3 | not started | | |
+| Cyberduck `fc0d437` | 4 | not started | | |
+| Cyberduck `fc0d437` | 5 | not started | | |
+| Cyberduck `fc0d437` | 6 | not started | | |
+| Cyberduck `fc0d437` | 7 | not started | | |
+| Cyberduck `fc0d437` | 8 | not started | | |

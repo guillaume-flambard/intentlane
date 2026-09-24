@@ -701,6 +701,7 @@ describe("results and snippets", () => {
 
     const swift = generateSwift(result.ir!);
     expect(swift).toContain("@available(macOS 27.0, *)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
+    expect(swift).toMatchSnapshot();
   });
 
   it("leaves the macOS availability annotation off when no system schema is used and no floor reaches 27", () => {

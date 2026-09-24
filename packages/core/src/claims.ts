@@ -16,15 +16,6 @@ export const PILOT_CLAIM_IDS = [
 
 export type PilotClaimId = (typeof PILOT_CLAIM_IDS)[number];
 
-/**
- * What a client may claim about an integration, and what actually proves it.
- *
- * A deterministic claim is settled by a command that exits with a status. An
- * observed claim is settled only by a person watching the operating system, because
- * no public API can drive Siri or read a named Core Spotlight index back. Keeping
- * the two apart is the point: a project declares which ones it claims, so
- * certification never silently depends on a human nobody scheduled.
- */
 export type PilotClaim = Readonly<{
   id: PilotClaimId;
   evidence: ClaimEvidenceKind;

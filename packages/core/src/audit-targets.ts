@@ -199,8 +199,6 @@ export function readTargetMembership(contents: string, readFile?: TargetFileRead
     }
     const list = field(target.body, "buildConfigurationList");
     const targetSettings = (lists.get(list ?? "") ?? []).map((id) => configurations.get(id));
-    // A target inherits its build settings from the project, so SDKROOT is often
-    // declared once on the project configuration list and never on the target.
     const levels = [targetSettings, projectSettings];
     let sdkroot = levels
       .flat()

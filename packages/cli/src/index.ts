@@ -55,7 +55,6 @@ async function isPluginDeclared(): Promise<boolean> {
     const dependencies = { ...manifest.dependencies, ...manifest.devDependencies };
     if (Object.keys(dependencies).includes("@intentlane/expo")) return true;
   } catch {
-    // No readable package.json: fall through to the app config check.
   }
   for (const candidate of ["app.json", "app.config.js", "app.config.ts", "app.config.mjs"]) {
     const file = resolve(candidate);
@@ -278,8 +277,6 @@ program.command("audit")
       process.exitCode = 1;
       return;
     }
-    // A missing directory would otherwise produce a clean, empty report, which is
-    // indistinguishable from a project that implements nothing.
     const target = resolve(directory);
     if (!existsSync(target) || !statSync(target).isDirectory()) {
       process.stderr.write(`No directory to audit at ${target}.\n`);
@@ -489,8 +486,6 @@ program.command("verify")
     const metadataPath = options.metadata ?? (manifest?.metadata === undefined ? undefined : fromManifest(manifest.metadata));
     const ledgerPath = options.ledger ?? (manifest?.ledger === undefined ? undefined : fromManifest(manifest.ledger));
 
-    // Manifest commands run from the manifest's own directory, so a shipped manifest is
-    // self-contained. An explicit flag overrides the manifest and keeps the caller's directory.
     const gateCommands = new Map<string, { command: string; cwd?: string }>();
     for (const [id, command] of Object.entries(manifest?.gates ?? {})) {
       gateCommands.set(id, { command, ...(manifestDirectory === undefined ? {} : { cwd: manifestDirectory }) });
