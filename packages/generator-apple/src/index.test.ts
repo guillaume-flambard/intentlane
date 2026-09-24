@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseConfig } from "../../core/src/index.js";
-import { generateArtifacts, generateStrings, generateSwift } from "./index.js";
+import { generateAdapterTemplate, generateArtifacts, generateStrings, generateSwift } from "./index.js";
 
 const config = {
   schema: "0.1",
@@ -180,6 +180,111 @@ describe("generateArtifacts", () => {
     const result = parseConfig(config);
     if (!result.ir) throw new Error("Fixture must parse");
     expect(generateArtifacts(result.ir)).toEqual(generateArtifacts(result.ir));
+  });
+});
+
+describe("generateAdapterTemplate", () => {
+  it("leaves entity lookup and the Spotlight lifecycle to customer-owned mapping code", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: { id: "dev.intentlane.reader", name: "Reader", url_scheme: "reader", min_ios: "27.0", locales: ["en", "fr"] },
+      entities: [{
+        id: "article",
+        title: { en: "Article", fr: "Article" },
+        identifier: "id",
+        display: { title: "title" },
+        query: { mode: "static" }
+      }],
+      intents: [{
+        id: "open_article",
+        title: { en: "Open article", fr: "Ouvrir l’article" },
+        parameters: [],
+        execution: { mode: "native" },
+        schema: "system.open",
+        target: "article"
+      }, {
+        id: "search_in_app",
+        title: { en: "Search articles", fr: "Rechercher les articles" },
+        parameters: [],
+        execution: { mode: "native", handler: "SearchInAppHandler" },
+        schema: "system.searchInApp"
+      }]
+    });
+    if (!result.ir) throw new Error("Adapter fixture must parse");
+
+    const source = generateAdapterTemplate(result.ir);
+    const generated = generateSwift(result.ir);
+
+    expect(source).toContain("actor IntentLaneArticleResolverImplementation: IntentLaneArticleResolver");
+    expect(source).toContain("func articleEntities(matching string: String) async throws -> [IntentLaneArticleEntity]");
+    expect(generated).toContain("struct IntentLaneArticleQuery: EntityQuery, EntityStringQuery, IndexedEntityQuery {");
+    expect(generated).toContain("return try await resolver.articleEntities(matching: string)");
+    expect(source).toContain("TODO: Map stable application identifiers to IntentLaneArticleEntity values.");
+    expect(source).toContain('CSSearchableIndex(name: "dev.intentlane.reader.article").indexAppEntities(entities)');
+    expect(source).toContain('CSSearchableIndex(name: "dev.intentlane.reader.article").deleteAppEntities(identifiedBy: identifiers, ofType: IntentLaneArticleEntity.self)');
+    expect(source).not.toContain("URLRepresentableEntity");
+    expect(source).not.toContain("reader://intentlane/article/\\(.id)");
+    expect(source).toContain("IntentLaneEntityResolvers.article = IntentLaneArticleResolverImplementation()");
+    expect(source).toContain("actor IntentLaneSearchInAppImplementation: SearchInAppHandler");
+    expect(source).toContain("Route the existing in-app search UI with criteria.term.");
+    expect(source).toContain("IntentLaneIntentHandlers.search_in_app = IntentLaneSearchInAppImplementation()");
+    expect(source).not.toContain("AppShortcutsProvider");
+  });
+});
+
+describe("Spotlight entity properties", () => {
+  it("marks the display title as searchable for a targeted non-schema entity", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: { id: "dev.intentlane.reader", name: "Reader", url_scheme: "reader", min_ios: "27.0", locales: ["en"] },
+      entities: [{
+        id: "article",
+        title: { en: "Article" },
+        identifier: "id",
+        display: { title: "title" },
+        query: { mode: "static" }
+      }],
+      intents: [{
+        id: "open_article",
+        title: { en: "Open article" },
+        parameters: [],
+        execution: { mode: "native" },
+        schema: "system.open",
+        target: "article"
+      }]
+    });
+    if (!result.ir) throw new Error("Spotlight fixture must parse");
+
+    const source = generateSwift(result.ir);
+
+    expect(source).toContain('@Property(title: LocalizedStringResource("Title", table: "IntentLane"), indexingKey: \\.title)');
+    expect(source).toContain("var title: String");
+    expect(source).not.toContain("intentLaneSearchableTitle");
+  });
+});
+
+describe("system searchInApp", () => {
+  it("emits the macOS 27 criteria conformance rather than the deprecated system search schema", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: { id: "dev.intentlane.search", name: "Search", url_scheme: "search", min_ios: "27.0", locales: ["en"] },
+      entities: [],
+      intents: [{
+        id: "search_in_app",
+        title: { en: "Search" },
+        parameters: [],
+        execution: { mode: "native", handler: "SearchInAppHandler" },
+        schema: "system.searchInApp"
+      }]
+    });
+    if (!result.ir) throw new Error("Search fixture must parse");
+
+    const source = generateSwift(result.ir);
+
+    expect(source).toContain("@AppIntent(schema: .system.searchInApp)");
+    expect(source).toContain("typealias Criteria = StringSearchCriteria");
+    expect(source).toContain("var criteria: StringSearchCriteria");
+    expect(source).not.toContain("@AppIntent(schema: .system.search)");
   });
 });
 
@@ -563,6 +668,7 @@ describe("results and snippets", () => {
   it("declares the shared snippet view once and imports SwiftUI", () => {
     const swift = swiftFor(multiIntentConfig);
     expect(swift).toContain("import SwiftUI");
+    expect(swift).toContain("@available(macOS 13.0, iOS 16.0, *)\nstruct IntentLaneSnippetView: View {");
     expect(swift.match(/struct IntentLaneSnippetView: View \{/g)).toHaveLength(1);
     expect(swift).toContain("Text(fields[index].0).foregroundStyle(.secondary)");
   });
@@ -816,10 +922,10 @@ describe("schema protocols", () => {
 
   it("emits an open intent that lets the system perform it", () => {
     const source = swift();
-    expect(source).toContain("@AppIntent(schema: .reader.openPage)\nstruct OpenPage: AppIntent {");
+    expect(source).toContain("@AppIntent(schema: .reader.openPage)\nstruct OpenPage: OpenIntent {");
     expect(source).toContain("  var target: IntentLanePageEntity");
-    const block = source.slice(source.indexOf("@AppIntent(schema: .reader.openPage)"), source.indexOf("@AppIntent(schema: .reader.deletePages)"));
-    expect(block).not.toContain("func perform()");
+    expect(source).toContain("protocol OpenPageHandler: Sendable {\n  func perform(target: IntentLanePageEntity) async throws\n}");
+    expect(source).toContain("try await handler.perform(target: target)");
   });
 
   it("emits a delete intent with a summary and a delegating perform", () => {

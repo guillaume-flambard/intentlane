@@ -20,6 +20,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -39,6 +40,7 @@ struct IntentLaneSnippetView: View {
   }
 }
 
+@available(macOS 27.0, *)
 @AppEntity(schema: .audio.ambientSound)
 struct IntentLaneSoundEntity: AppEntity {
   static let defaultQuery = IntentLaneSoundQuery()
@@ -57,11 +59,13 @@ struct IntentLaneSoundEntity: AppEntity {
   }
 }
 
+@available(macOS 27.0, *)
 protocol IntentLaneSoundResolver: Sendable {
   func soundEntities(for identifiers: [String]) async throws -> [IntentLaneSoundEntity]
   func suggestedSoundEntities() async throws -> [IntentLaneSoundEntity]
 }
 
+@available(macOS 27.0, *)
 struct IntentLaneSoundQuery: EntityQuery {
   func entities(for identifiers: [String]) async throws -> [IntentLaneSoundEntity] {
     guard let resolver = await IntentLaneEntityResolvers.sound else { return [] }
@@ -74,11 +78,13 @@ struct IntentLaneSoundQuery: EntityQuery {
   }
 }
 
+@available(macOS 27.0, *)
 @MainActor
 enum IntentLaneEntityResolvers {
   static var sound: (any IntentLaneSoundResolver)?
 }
 
+@available(macOS 27.0, *)
 @AppIntent(schema: .camera.stopCapture)
 struct StopCapture: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Stop capture", table: "IntentLane")
@@ -117,6 +123,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -261,6 +268,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -345,6 +353,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -411,6 +420,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -488,6 +498,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -621,6 +632,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -727,6 +739,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -746,6 +759,7 @@ struct IntentLaneSnippetView: View {
   }
 }
 
+@available(macOS 27.0, *)
 @AppEntity(schema: .reader.page)
 struct IntentLanePageEntity: AppEntity {
   static let defaultQuery = IntentLanePageQuery()
@@ -764,11 +778,13 @@ struct IntentLanePageEntity: AppEntity {
   }
 }
 
+@available(macOS 27.0, *)
 protocol IntentLanePageResolver: Sendable {
   func pageEntities(for identifiers: [String]) async throws -> [IntentLanePageEntity]
   func suggestedPageEntities() async throws -> [IntentLanePageEntity]
 }
 
+@available(macOS 27.0, *)
 struct IntentLanePageQuery: EntityQuery {
   func entities(for identifiers: [String]) async throws -> [IntentLanePageEntity] {
     guard let resolver = await IntentLaneEntityResolvers.page else { return [] }
@@ -781,24 +797,29 @@ struct IntentLanePageQuery: EntityQuery {
   }
 }
 
+@available(macOS 27.0, *)
 @MainActor
 enum IntentLaneEntityResolvers {
   static var page: (any IntentLanePageResolver)?
 }
 
+@available(macOS 27.0, *)
 protocol RotatePagesHandler: Sendable {
   func perform(pages: [IntentLanePageEntity], isClockwise: Bool) async throws
 }
 
+@available(macOS 27.0, *)
 enum IntentLaneHandlerError: Error {
   case missingHandler(String)
 }
 
+@available(macOS 27.0, *)
 @MainActor
 enum IntentLaneIntentHandlers {
   static var rotate_pages: (any RotatePagesHandler)?
 }
 
+@available(macOS 27.0, *)
 @AppIntent(schema: .reader.rotatePages)
 struct RotatePages: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Rotate pages", table: "IntentLane")
@@ -841,6 +862,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
@@ -860,6 +882,7 @@ struct IntentLaneSnippetView: View {
   }
 }
 
+@available(macOS 27.0, *)
 @AppEntity(schema: .reader.page)
 struct IntentLanePageEntity: AppEntity, IndexedEntity {
   static let defaultQuery = IntentLanePageQuery()
@@ -878,15 +901,23 @@ struct IntentLanePageEntity: AppEntity, IndexedEntity {
   }
 }
 
+@available(macOS 27.0, *)
 protocol IntentLanePageResolver: Sendable {
   func pageEntities(for identifiers: [String]) async throws -> [IntentLanePageEntity]
+  func pageEntities(matching string: String) async throws -> [IntentLanePageEntity]
   func suggestedPageEntities() async throws -> [IntentLanePageEntity]
 }
 
-struct IntentLanePageQuery: EntityQuery {
+@available(macOS 27.0, *)
+struct IntentLanePageQuery: EntityQuery, EntityStringQuery {
   func entities(for identifiers: [String]) async throws -> [IntentLanePageEntity] {
     guard let resolver = await IntentLaneEntityResolvers.page else { return [] }
     return try await resolver.pageEntities(for: identifiers)
+  }
+
+  func entities(matching string: String) async throws -> [IntentLanePageEntity] {
+    guard let resolver = await IntentLaneEntityResolvers.page else { return [] }
+    return try await resolver.pageEntities(matching: string)
   }
 
   func suggestedEntities() async throws -> [IntentLanePageEntity] {
@@ -895,24 +926,35 @@ struct IntentLanePageQuery: EntityQuery {
   }
 }
 
+@available(macOS 27.0, *)
 @MainActor
 enum IntentLaneEntityResolvers {
   static var page: (any IntentLanePageResolver)?
 }
 
+@available(macOS 27.0, *)
 protocol DeletePagesHandler: Sendable {
   func perform(entities: [IntentLanePageEntity]) async throws
 }
 
+@available(macOS 27.0, *)
+protocol OpenPageHandler: Sendable {
+  func perform(target: IntentLanePageEntity) async throws
+}
+
+@available(macOS 27.0, *)
 enum IntentLaneHandlerError: Error {
   case missingHandler(String)
 }
 
+@available(macOS 27.0, *)
 @MainActor
 enum IntentLaneIntentHandlers {
   static var delete_pages: (any DeletePagesHandler)?
+  static var open_page: (any OpenPageHandler)?
 }
 
+@available(macOS 27.0, *)
 @AppIntent(schema: .reader.deletePages)
 struct DeletePages: AppIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Delete pages", table: "IntentLane")
@@ -932,11 +974,22 @@ struct DeletePages: AppIntent {
   }
 }
 
+@available(macOS 27.0, *)
 @AppIntent(schema: .reader.openPage)
-struct OpenPage: AppIntent {
+struct OpenPage: OpenIntent {
   static let title: LocalizedStringResource = LocalizedStringResource("Open page", table: "IntentLane")
 
+  @Parameter(title: LocalizedStringResource("Page", table: "IntentLane"))
   var target: IntentLanePageEntity
+
+  @MainActor
+  func perform() async throws -> some IntentResult {
+    guard let handler = IntentLaneIntentHandlers.open_page else {
+      throw IntentLaneHandlerError.missingHandler("open_page")
+    }
+    try await handler.perform(target: target)
+    return .result()
+  }
 }
 "
 `;
@@ -961,6 +1014,7 @@ enum IntentLaneRoute {
   }
 }
 
+@available(macOS 13.0, iOS 16.0, *)
 struct IntentLaneSnippetView: View {
   let title: LocalizedStringResource
   let fields: [(LocalizedStringResource, String)]
