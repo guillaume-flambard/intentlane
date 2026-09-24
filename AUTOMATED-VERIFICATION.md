@@ -22,33 +22,72 @@ Le produit sépare donc les deux preuves au lieu de donner un faux « 100 % » :
 Une build verte sans les deux dernières lignes n'est pas une promesse
 commerciale. Elle est seulement prête à être soumise au test système.
 
-## Commande unique par application
+## Une commande par application, après le premier raccord
 
-Après le premier raccord du client, la CI appelle :
+La certification porte sur un **ensemble de revendications déclaré**, et chaque
+revendication nomme ce qui la settles. `intentlane claims` affiche le catalogue.
 
 ```sh
-intentlane verify \
-  --config intentlane.yaml \
-  --output Mac/IntentLaneGenerated \
-  --app-test "xcodebuild -project Client.xcodeproj -scheme Client -destination 'platform=macOS' test" \
-  --metadata build/Build/Products/Debug/Client.app/Metadata.appintents \
-  --ledger PILOT-CLIENT-LEDGER.yaml \
-  --strict
+# ce que le client peut revendiquer, et ce qui le prouve
+intentlane claims
+
+# certifier l'ensemble déclaré par le manifeste du pilote
+intentlane verify --pilot pilots/iina/pilot.yaml
 ```
 
-La commande affiche chaque porte séparément : `contract`, `generated`,
-`applicationTests`, `metadata`, `liveEvidence`. Elle échoue :
+Un manifeste `intentlane-pilot/1.0` déclare l'ensemble de revendications, les
+chemins du contrat et des métadonnées, et la commande qui settles chaque porte
+détenue par l'application. Ses chemins et ses commandes se résolvent depuis son
+propre dossier, donc il est autonome.
 
-- sans test applicatif déclaré ;
-- si la génération est périmée ou modifiée ;
-- si le build ne produit pas de métadonnées App Intents lisibles ;
-- en `--strict`, tant que le ledger ne dit pas `verified`.
+Deux familles de revendications, et la distinction est le cœur du modèle :
 
-Le `--app-test` appartient à l'app cliente. Il est le point où son équipe
-prouve son mapping métier, jamais un script que IntentLane devine. Pour une
-application native, cette commande est normalement un `xcodebuild test` ;
-pour une app Expo ou React Native, elle peut être un script qui prébuild puis
-exécute les tests iOS/macOS.
+- **déterministe**, réglée par une commande qui sort avec un statut :
+  `contract`, `generated`, `applicationTests`, `integrationTests`, `metadata`,
+  `indexSync`, `registration` ;
+- **observée**, qu'aucune API publique ne peut trancher : `siri-conversation`,
+  `spotlight-ui-result`. Le ledger les settles, et il n'est lu que si une
+  revendication observée est revendiquée.
+
+Le résultat nomme **chaque** revendication et sa famille, puis écrit
+`Any claim not listed here is not certified`. Un `certified` ne peut donc jamais
+être lu seul comme « la surface système fonctionne ».
+
+```
+pass  contract [deterministic]: verified
+pass  generated [deterministic]: verified
+pass  applicationTests [deterministic]: verified
+pass  integrationTests [deterministic]: verified
+pass  metadata [deterministic]: verified
+pass  indexSync [deterministic]: verified
+certified: Certified for the declared claims only: contract, generated,
+applicationTests, integrationTests, metadata, indexSync.
+Any claim not listed here is not certified.
+```
+
+`--strict` sort non nul tant qu'une revendication de l'ensemble n'est pas
+certifiée. Ajouter une revendication observée la fait attendre une personne :
+
+```sh
+intentlane verify --pilot pilots/iina/pilot.yaml --claim siri-conversation
+# pending  siri-conversation [observed]: pending
+# pending-evidence: ... until then they are simply not certified.
+```
+
+**Rupture de sens assumée.** Avant, `--strict` exigeait la preuve humaine. Cette
+garantie existe toujours, à la demande :
+`--claim siri-conversation --claim spotlight-ui-result`. Un projet qui ne
+revendique aucune observation n'a plus rien à prouver à une personne, et une
+revendication inconnue est refusée plutôt que silencieusement ignorée.
+
+## Ce que la certification automatique ne peut pas établir
+
+Rien n'a été automatisé qui ne l'était pas. Un build vert, des métadonnées
+lisibles et un harnais d'intégration prouvent le code du client, pas la
+conversation système. L'absence d'API publique pour envoyer une phrase à Siri et
+pour relire un index Core Spotlight nommé reste un plancher physique, et c'est
+pourquoi ces deux éléments sont des revendications observées et non des portes.
+
 
 ## Contrat de tests à fournir par le client
 

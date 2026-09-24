@@ -86,14 +86,19 @@ The automatic gates prove the adapter and generated contract. The live gates rem
   nommé), `HistoryWindowController.applySearch`. Tests métier **17/17 verts**.
 - Étape 3 — couche générée + cycle d'index : **fait** (`played_media`,
   `system.searchInApp` + `system.open`, index nommé, stale removal).
-- Étape 4 — porte automatique : **fait**. `intentlane verify` contre l'app
-  construite (`IINA.app/Contents/Resources/Metadata.appintents`) :
-  `contract pass`, `generated pass`, `applicationTests pass`, `metadata pass`,
-  `liveEvidence not-requested` → `awaiting-live-evidence`.
-  Métadonnées réelles : `IINA.OpenPlayedMedia` porte `OpenIntent` + `OpenEntity`
-  + `AssistantIntent`, cible `IINA.IntentLanePlayedMediaEntity`.
-- Étape 5 — campagne manuelle (Spotlight `Aurora`, Siri avec homonyme, titre
-  inventé) : **non faite**.
+- Étape 4 — certification automatique : **fait**. `intentlane verify --pilot`
+  certifie six revendications déterministes, `contract`, `generated`,
+  `applicationTests`, `integrationTests`, `metadata` et `indexSync`, sans aucune
+  intervention humaine. Métadonnées réelles : `IINA.OpenPlayedMedia` porte
+  `OpenIntent` + `OpenEntity` + `AssistantIntent`, cible
+  `IINA.IntentLanePlayedMediaEntity`.
+- Étape 5 — preuve système observée (Spotlight `Aurora`, Siri avec homonyme,
+  titre inventé) : **non faite, et plus revendiquée par défaut**. C'est une
+  revendication *observée*, disponible sur demande avec
+  `--claim siri-conversation`, qui exige alors le ledger. Voir
+  `pilots/iina/RUNBOOK.md`.
 - Étape 6 — design proposal + divulgation IA avant toute PR : **non faite**.
 
-Aucun contact, aucune PR, aucune revendication.
+Aucun contact, aucune PR. La certification porte sur les revendications
+nommées, et rien d'autre n'est certifié.
+

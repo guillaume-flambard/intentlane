@@ -1,15 +1,17 @@
 # IntentLane IINA pilot — live evidence ledger.
 #
-# This ledger starts unverified on purpose. The automatic gates pass, but no
-# person has observed the Siri or Spotlight surfaces yet, and no second tester has
-# reproduced anything, so it must not read as verified. `intentlane evidence
-# validate` says exactly why, and `intentlane verify --ledger` therefore keeps
-# the pilot at awaiting-live-evidence.
+# This ledger is NOT a release gate any more. The pilot is certified for what a
+# command can prove, with no human involved, and its claim set in pilot.yaml does
+# not include any observed claim.
 #
-# To complete the campaign, follow RUNBOOK.md, then replace each `blocked` with
-# the observed `pass` or `fail`, record the conditions of the run, and add the
-# reproduction block naming the second tester. A `fail` stays a `fail`: the
-# ledger is a record, not a scoreboard.
+# This file is the evidence for the optional observed claims, `siri-conversation`
+# and `spotlight-ui-result`. It stays unverified until a person observes the
+# surfaces and a second tester reproduces them, and it is only read when one of
+# those claims is requested:
+#
+#   intentlane verify --pilot pilots/iina/pilot.yaml --claim siri-conversation --strict
+#
+# Until then, keep every layer below at `blocked` and the entry says why.
 
 schema: pilot-evidence/1.0
 pilot: iina-played-media

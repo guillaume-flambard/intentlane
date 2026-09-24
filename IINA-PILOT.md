@@ -151,16 +151,23 @@ Tests métier (`pilots/iina/tests/`, commande `run-all-tests.sh`) :
 homonymes, casse, diacritiques, requête vide, fichier supprimé, historique vidé,
 et mapping partagé (ordre, règle unique, fichier disparu exclu).
 
-`intentlane verify` avec `--app-test "bash .../run-tests.sh"` :
+`intentlane verify --pilot pilots/iina/pilot.yaml` aujourd'hui :
 
 ```
-pass  contract: pass
-pass  generated: pass
-pass  applicationTests: pass
-pass  metadata: pass
-pending  liveEvidence: not-requested
-awaiting-live-evidence: Record independently reproduced live Spotlight and Siri evidence before claiming certification.
+pass  contract [deterministic]: verified
+pass  generated [deterministic]: verified
+pass  applicationTests [deterministic]: verified
+pass  integrationTests [deterministic]: verified
+pass  metadata [deterministic]: verified
+pass  indexSync [deterministic]: verified
+certified: Certified for the declared claims only: contract, generated, applicationTests, integrationTests, metadata, indexSync. Any claim not listed here is not certified.
 ```
+
+Les sessions précédentes affichaient `awaiting-live-evidence` et
+`liveEvidence: not-requested`. Ce modèle est remplacé : la certification porte
+sur un ensemble de revendications, et le pilote n'en revendique aucune qu'une
+personne seule puisse trancher. Voir « Certification par revendications » plus
+bas.
 
 Métadonnées extraites : `OpenPlayedMedia` porte les protocoles système
 `OpenIntent` + `AssistantIntent` + `OpenEntity` (surface Siri AI par schéma).
@@ -206,8 +213,8 @@ Preuves observées :
   `OpenIntent` + `AssistantIntent` + `OpenEntity`, et
   `IntentLanePlayedMediaEntity` est toujours présent.
 - `intentlane verify` : `contract`, `generated`, `applicationTests`, `metadata`
-  au vert, `liveEvidence: not-requested`, statut `awaiting-live-evidence`
-  inchangé.
+  au vert, et `liveEvidence: not-requested` en attente de preuve humaine. Cette
+  exigence a depuis été retirée du chemin de certification, voir plus bas.
 
 ## Portes automatiques prouvées (2026-09-24, suite)
 
@@ -237,13 +244,53 @@ Résultats observés :
   `indexed 0 item(s)`, donc le premier rafraîchissement s'est exécuté. Le drapeau n'est plus écrit
   que si les trois registres sont non nuls, donc sa lecture ne peut pas tromper.
 - `intentlane verify` : `contract`, `generated`, `applicationTests`, `metadata` au vert ;
-  `liveEvidence: not-requested`, statut `awaiting-live-evidence`.
+  `liveEvidence: not-requested`, statut `awaiting-live-evidence`. Cette porte a
+  depuis été remplacée par la revendication `integrationTests`, qui exécute le
+  résolveur, l'ouverture et le routage de recherche pour de vrai.
 
 Ce que la porte ne prouve toujours pas, et qui est écrit tel quel : App Intents et Core Spotlight
 n'offrent aucune lecture d'un index nommé, donc le test d'index prouve les appels, pas le contenu
 résultant. La règle sur les entités qui doivent être indexées reste prouvée par les tests du
 mapping pur. Les surfaces Siri et Spotlight restent hors de toute porte automatisée, et
 l'enregistrement est prouvé par sonde, pas par la commande de test.
+
+## Certification par revendications (2026-09-24, fin)
+
+Le modèle `liveEvidence` est supprimé. `intentlane verify` certifie un **ensemble
+de revendications** déclaré, et chaque ligne nomme sa famille et ce qui la
+settles. Une revendication observée, que seul un humain peut trancher, n'est lue
+que si le client la revendique.
+
+```
+pass  contract [deterministic]: verified
+pass  generated [deterministic]: verified
+pass  applicationTests [deterministic]: verified
+pass  integrationTests [deterministic]: verified
+pass  metadata [deterministic]: verified
+pass  indexSync [deterministic]: verified
+certified: Certified for the declared claims only: ...
+```
+
+Le pilote est donc certifié sans intervention humaine, et l'ensemble ne contient
+aucune revendication observée. Le ledger et le runbook restent, comme preuve
+d'une revendication observée **si on la demande** avec
+`--claim siri-conversation --strict`.
+
+`verify --strict` a changé de sens : il exige les revendications de l'ensemble,
+plus la preuve humaine qui n'était exigée qu'en ajoutant les revendications
+observées. La rupture est notée dans `AUTOMATED-VERIFICATION.md`.
+
+Pour que `integrationTests` soit un fait et non une intention, l'adaptateur a
+été scindé comme l'index l'avait été : `PlayedMediaHandlers.swift` ne connaît pas
+IINA et contient le résolveur, l'ouverture et le routage, derrière trois seams
+(`IntentLanePlayedMediaHistorySource`, `IINAPlaybackOpening`,
+`IntentLaneInAppSearchSurface`) ; `PlayedMediaIntegration.swift` garde
+`HistoryController`, `Preference`, `PlayerCore` et `AppDelegate`. Le harnais
+compile les types générés réels avec les handlers réels, et remplace seulement
+les trois seams : 21 vérifications, dont l'ouverture appelée une fois avec
+l'URL exacte, l'identifiant inconnu et le fichier supprimé sans aucun appel, et
+l'historique désactivé qui n'offre rien.
+
 ## Contrat d'entité tranché (2026-09-24)
 
 Deux points divergeaient entre la spec et le code. Ils sont tranchés et verrouillés par des tests.

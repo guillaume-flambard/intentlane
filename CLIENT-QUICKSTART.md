@@ -82,18 +82,30 @@ suivante refuse de l'écraser sans `--overwrite-adapter`.
 # .github/workflows/intentlane.yml
 steps:
   - uses: actions/checkout@v4
-  - uses: actions/setup-node@v4
-    with: { node-version: 22 }
-  - run: npx intentlane verify --strict -c intentlane.yaml -o Mac/IntentLaneGenerated \
-      --app-test "xcodebuild -project Client.xcodeproj -scheme Client -destination 'platform=macOS' test" \
-      --metadata build/.../Client.app/Metadata.appintents \
-      --ledger PILOT-CLIENT-LEDGER.yaml
+    - uses: actions/setup-node@v4
+      with: { node-version: 22 }
+  - run: npx intentlane verify --pilot intentlane.pilot.yaml --strict
 ```
 
-`verify --strict` affiche chaque porte séparément (`contract`, `generated`,
-`applicationTests`, `metadata`, `liveEvidence`) et sort non nul si l'une échoue
-ou si le ledger n'est pas `verified`. La CI échoue donc clairement quand le
-contrat, la génération, les tests métier, le build ou les métadonnées manquent.
+Le manifeste `intentlane.pilot.yaml` déclare ce que le client revendique et la
+commande qui settles chaque porte :
+
+```yaml
+version: intentlane-pilot/1.0
+contract: intentlane.yaml
+generated: Mac/IntentLaneGenerated
+metadata: build/.../Client.app/Metadata.appintents
+claims: [contract, generated, applicationTests, integrationTests, metadata]
+gates:
+  applicationTests: "xcodebuild -project Client.xcodeproj -scheme Client test"
+  integrationTests: "bash tests/run-integration-tests.sh"
+```
+
+`verify` affiche chaque revendication avec sa famille et son statut, puis écrit
+`Any claim not listed here is not certified`. `--strict` sort non nul tant qu'une
+revendication de l'ensemble n'est pas certifiée. Le ledger n'est lu que si une
+revendication observée, comme `siri-conversation`, est effectivement revendiquée.
+`npx intentlane claims` affiche le catalogue complet.
 
 ## Test automatique ≠ preuve visuelle Siri/Spotlight
 
@@ -101,12 +113,17 @@ contrat, la génération, les tests métier, le build ou les métadonnées manqu
 | --- | --- | --- |
 | Contrat / génération / build / métadonnées | oui | non |
 | Tests métier (résolution, droits, navigation) | oui | non |
+| Intégration réelle (résolveur, ouverture, routage) | oui | non |
 | Carte Siri / Spotlight visible | non | **oui**, observation réelle |
 | Conversation Siri parlée | non | **oui**, phrase réelle |
 | Reproduction indépendante | non | **oui**, second testeur |
 
-Une build verte prouve la chaîne, pas Siri. Ne jamais promettre une phrase Siri
-ni une carte Spotlight avant l'observation réelle consignée dans le ledger.
+Une certification verte prouve la chaîne du client, pas Siri. Le statut
+`certified` nomme les revendications qu'il couvre, et rien d'autre n'est
+certifié. Ne jamais promettre une phrase Siri ni une carte Spotlight sans
+l'observation réelle consignée dans le ledger, en revendiquant explicitement la
+revendication observée correspondante.
+
 
 ## Procédure de validation par deux testeurs
 

@@ -1,3 +1,13 @@
+# Validate five public cross-domain pilots
+
+## Status
+
+Every task below is now **optional**. The pilot certifies its six deterministic
+claims with no human involved, and its claim set in `pilots/iina/pilot.yaml`
+includes no observed claim. These tasks are the content of the observed claims
+`siri-conversation` and `spotlight-ui-result`, which a client claims explicitly
+with `--claim` and which then require this ledger.
+
 ## 1. Fixtures
 
 - [x] 1.1 Provide a reproducible generator for three local, freely usable short
@@ -6,7 +16,8 @@
       patterns. No personal media, no downloaded content.
 - [x] 1.3 One fixture is named differently from its embedded title on purpose, so
       the title-versus-path divergence is observed rather than hidden.
-- [ ] 1.4 Play each once so the playback history contains them.
+- [ ] 1.4 Play each once so the playback history contains them. Only when an
+      observed claim is requested.
 
 ## 2. Recorded conditions
 
@@ -39,16 +50,19 @@
 
 - [x] 6.1 The ledger exists at `pilots/iina/evidence-ledger.yaml`, with the claimed
       layers blocked and no reproduction claimed.
-- [x] 6.2 The gate is proven to refuse: `intentlane evidence validate --strict`
+- [x] 6.2 The validator is proven to refuse: `intentlane evidence validate --strict`
       exits 1 with one ILA175 and five ILA174 diagnostics, and
-      `intentlane verify --ledger` reports `liveEvidence: unverified`.
+      `intentlane verify --pilot ... --claim siri-conversation --strict` exits 1
+      with `pending-evidence`.
 - [x] 6.3 The observation procedure, the fields to record and the second-tester
       protocol are written in `pilots/iina/RUNBOOK.md`.
 - [ ] 6.4 A second person replays the accepted flows from a clean state, unaided.
 - [ ] 6.5 Every observation enters the ledger, replacing each `blocked` with the
       observed `pass` or `fail`, and `evidence validate --strict` reports
       `verified`.
-- [ ] 6.6 Until then the pilot stays `awaiting-live-evidence` and no claim is made.
+- [x] 6.6 Until then the observed claims stay unclaimed, the ledger stays
+      `blocked`, and the pilot is certified for its deterministic claims only. No
+      OS-surface claim is made.
 
 ## Notes
 

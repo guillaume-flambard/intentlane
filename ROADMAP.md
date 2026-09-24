@@ -140,9 +140,11 @@ Périmètre, critères de sortie vérifiables (E1–E10) et preuves : voir
   route, build simulateur, métadonnées). **fait et vérifié** :
   `apps/example-expo`, plugin `@intentlane/expo`, `withIdeaResolver.cjs`,
   `routes.test.ts`, job CI `simulator`.
-- `intentlane verify` et `verify --strict`. **fait et prouvé** : portes
-  `contract` / `generated` / `applicationTests` / `metadata` / `liveEvidence` ;
-  sortie non nulle sur porte bloquée ou ledger non `verified`.
+- `intentlane verify` et `verify --strict`. **fait et prouvé** : certification d'un
+  ensemble de revendications déclaré, chaque revendication nommant ce qui la
+  settles ; familles `deterministic` et `observed` ; catalogue exposed par
+  `intentlane claims` ; refus d'une revendication inconnue et d'un ensemble vide ;
+  sortie non nulle en `--strict` tant qu'une revendication n'est pas certifiée.
 - Contrôle de preuves (`evidence validate --strict`, `audit-diff`). **fait**.
 - Suite complète verte. **fait** : `pnpm test` 318/318, `pnpm build`,
   `pnpm validate`, `generate --check`, probe `swiftc`, `verify.mjs`.

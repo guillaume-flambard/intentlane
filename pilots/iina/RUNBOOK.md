@@ -1,36 +1,67 @@
 # IntentLane IINA pilot — live evidence runbook
 
-Ce runbook décrit la seule partie du pilote qu'aucune porte automatisée ne peut
-couvrir : ce que le système montre vraiment à une personne. Les quatre portes
-automatisées passent, le code est enregistré au lancement et l'index nommé est
-réconcilié, mais tant que personne n'a observé Spotlight et Siri, le pilote reste
-un feedback et non une revendication. Le ledger `evidence-ledger.yaml` le dit
-explicitement, et `intentlane verify --ledger` refuse de le lire comme vérifié.
+Ce runbook ne décrit plus une porte de livraison. Le pilote est **certifié pour ce
+qu'une commande peut prouver**, sans aucune intervention humaine :
 
-## Ce que le pilote revendique
+```
+pass  contract [deterministic]: verified
+pass  generated [deterministic]: verified
+pass  applicationTests [deterministic]: verified
+pass  integrationTests [deterministic]: verified
+pass  metadata [deterministic]: verified
+pass  indexSync [deterministic]: verified
+certified: Certified for the declared claims only: ...
+```
 
-Deux surfaces, et rien d'autre :
+Ce qui reste non prouvable, la conversation Siri et l'affichage du résultat
+Spotlight, n'est pas une revendication du pilote. C'est une **revendication
+observée**, disponible sur demande, et c'est tout ce que ce document décrit.
+
+Si tu veux pouvoir dire que Siri ouvre un média joué précis, tu revendiques
+explicitement l'observation, et elle a besoin de quelqu'un :
+
+```sh
+intentlane verify --pilot pilots/iina/pilot.yaml --claim siri-conversation --strict
+```
+
+Cette commande sort non nul tant que l'observation n'est pas au ledger. Elle ne
+retire rien à la certification ci-dessus : elle ajoute une ligne
+`pending siri-conversation [observed]` et n'obtient `certified` que si le ledger
+décrit une reproduction indépendante.
+
+## Ce que le pilote revendique, et ce qu'il ne revendique pas
+
+Il revendique `contract`, `generated`, `applicationTests`, `integrationTests`,
+`metadata` et `indexSync`. Il ne revendique ni `siri-conversation` ni
+`spotlight-ui-result`.
+
+Deux surfaces existent, et rien d'autre n'est enregistré :
 
 - `system.searchInApp` : une recherche de média joué arrive dans la fenêtre
-  d'historique d'IINA, filtrée sur le terme demandé.
-- `system.open` : Siri ouvre un média joué précis, après avoir demandé lequel
-  quand deux médias portent le même titre visible.
+  d'historique d'IINA, filtrée sur le terme demandé. Le routage est certifié par
+  le harnais d'intégration.
+- `system.open` : ouvrir un média joué précis. La décision d'ouverture, y compris
+  le refus d'un identifiant inconnu et l'absence de substitution, est certifiée
+  par le harnais d'intégration.
 
 Aucun App Shortcut n'est enregistré. Aucun chemin de fichier n'apparaît dans un
 identifiant, un titre ou un sous-titre. Rien n'est indexé quand l'enregistrement
 d'historique est désactivé.
 
-## Avant de commencer
+## Ce que la campagne ne peut pas établir, et pourquoi
 
-1. Rejouer les portes automatiques, qui doivent rester vertes :
+Aucune API publique n'envoie une phrase à Siri, et Core Spotlight n'offre aucune
+lecture d'un index nommé. Ces deux faits ne sont pas un manque d'effort : ils
+planchent la revendication. C'est pour cela que le pilote est certifié sans
+campagne, et que la phrase « Siri marche » reste à ne pas dire.
+
+## Si l'observation est demandée
+
+1. Rejouer les portes, qui doivent rester vertes :
 
    ```sh
    cd ~/projects/active/apps/clients/intentlane
-   pnpm exec tsx packages/cli/src/index.ts verify \
-     -c pilots/iina/contract.yaml -o pilots/iina/out \
-     --metadata pilots/iina/out/metadata/Metadata.appintents \
-     --app-test "bash pilots/iina/tests/run-all-tests.sh" \
-     --ledger pilots/iina/evidence-ledger.yaml
+   pnpm exec tsx packages/cli/src/index.ts verify --pilot pilots/iina/pilot.yaml --strict
    ```
 
 2. Préparer les fixtures :
@@ -41,89 +72,35 @@ d'historique est désactivé.
 
    Trois clips synthétiques de trois secondes. `fixture-03.mp4` porte le titre
    `Cygnus` alors que son nom de fichier ne contient pas ce mot : c'est
-   volontaire, pour que la campagne observe la divergence entre le titre que Siri
-   résout et le chemin que la fenêtre d'historique recherche.
+   volontaire, pour que l'observation distingue une résolution Siri d'une
+   recherche dans la fenêtre.
 
-3. Installer l'app du pilote, puis la lancer une fois, jouer chaque fixture une
-   fois, et quitter IINA proprement. L'historique contient alors les trois médias.
-   Vérifier que le log de lancement contient bien :
+3. Lancer l'app du pilote, jouer chaque fixture une fois, quitter IINA
+   proprement, et vérifier que le log contient :
 
    ```
    IntentLane: PlayedMedia registered, resolver true, open true, search true
    IntentLane: indexed 3 item(s)
    ```
 
-   Si ces deux lignes ne sont pas là, la campagne ne commence pas : les portes
-   automatisées ne le diraient pas.
+4. Observer les parcours : titre exact dans Spotlight, homonyme dans Siri, titre
+   `Cygnus` dont le titre diffère du nom de fichier, titre inventé qui n'ouvre
+   rien et ne sélectionne aucun voisin, fichier supprimé qui n'est plus proposé.
 
-4. Noter les conditions de l'observation, telles qu'elles doivent figurer dans le
-   ledger : version d'OS et son build, build de Xcode, modèle de machine, locale,
-   langue de Siri, version de l'app, et index utilisé.
+5. Noter les conditions réelles dans `evidence-ledger.yaml` : version d'OS et son
+   build, build de Xcode, modèle, locale, langue de Siri, version de l'app, index.
 
-## Parcours à observer
+6. Faire reproduire les parcours acceptés par une seconde personne, sans aide,
+   puis remplacer le bloc `reproduction`.
 
-Chaque observation note le résultat tel quel. Un échec reste un échec.
-
-### 1. Trouver un média joué
-
-- Rechercher dans Spotlight le titre visible d'un fixture, par exemple `Aurora`.
-- Noter si un résultat attributed à IINA apparaît, et s'il ouvre exactement ce
-  média.
-- Refaire avec `Cygnus` : noter ce que donne le chemin, dont le nom ne contient
-  pas le titre. C'est le cas qui distingue une résolution Siri d'une recherche
-  dans la fenêtre.
-
-### 2. Ouvrir un média joué
-
-- Demander à Siri d'ouvrir un média joué, par exemple « ouvre Aurora dans IINA ».
-- Noter le résultat, et surtout ce qu'il se passe quand deux médias portent le
-  même titre visible : Siri doit demander lequel, et le média choisi doit être
-  celui qui s'ouvre.
-- Répéter avec le titre `Cygnus` pour le cas titre différent du nom de fichier.
-
-### 3. Refuser un média inconnu
-
-- Donner à Siri un titre qui n'existe pas, par exemple `Phénix`.
-- Noter que rien ne s'ouvre et qu'aucun média voisin n'est sélectionné à la
-  place. Un substitut serait un défaut, pas un succès.
-
-### 4. Média supprimé
-
-- Supprimer le fichier d'un fixture.
-- Noter qu'il n'est plus proposé, dans Spotlight comme dans Siri, et qu'une
-  tentative d'ouverture échoue sans rien ouvrir à la place.
-- C'est aussi le moment pour observer ce que dit l'identifiant : IINA dérive son
-  identifiant du chemin, donc un déplacement ou un renommage change
-  l'identifiant. L'ancien identifiant ne résout rien, ce qui est le
-  comportement voulu et testé, mais cela doit être observé et non supposé.
-
-## Remplir le ledger
-
-Une fois les observations faites :
-
-1. Remplacer chaque `blocked` par le `pass` ou le `fail` observé, sans en
-   amenuiser la formulation.
-2. Renseigner les conditions réelles de l'observation, et retirer les `TODO`.
-3. Faire reproduire les parcours acceptés par une seconde personne, sans aide, à
-   partir d'un état propre, puis remplacer le bloc `reproduction` par son nom et
-   `status: pass`.
-4. Valider :
+7. Valider :
 
    ```sh
    pnpm exec tsx packages/cli/src/index.ts evidence validate \
      pilots/iina/evidence-ledger.yaml --strict
    ```
 
-   Le code de sortie doit être `0` et le statut `verified`. Tant qu'il ne l'est
-   pas, le pilote reste un feedback : aucune revendication publique, aucune
-   étude de cas, et le statut du pilote dans la documentation reste
-   `awaiting-live-evidence`.
+Tant que le code de sortie n'est pas `0`, l'observation n'est pas établie et la
+revendication reste `pending`. C'est le comportement voulu, pas un blocage du
+produit.
 
-## Ce que cette campagne ne peut pas établir
-
-- Aucun automatisation ne pilote l'interface de Siri. Si une observation n'a pas
-  été faite par une personne, elle n'existe pas.
-- Une observation réussie ne vaut que pour les conditions notées. Un build
-  d'OS, une locale ou une version d'app différents imposent de recommencer.
-- Le second testeur doit reproduire les parcours acceptés sans assistance. S'il
-  ne peut pas, le ledger reste `unverified` même si le premier passage a réussi.

@@ -48,7 +48,7 @@ endpoint queries, exécution `http`, enum schemas, packages avancés
 | E3 | Porte `generated` échoue quand la sortie est périmée ou modifiée à la main | `generate --check` (IL1701) ; exercice `verify` sur `build/studio` périmé → `generated: fail` |
 | E4 | Porte `applicationTests` : manquante sans `--app-test`, exécute la commande applicative | exercice `verify` (applicationTests pass avec `--app-test "true"`, missing sans) |
 | E5 | Porte `metadata` lit `Metadata.appintents` / `extract.actionsdata` | exercice `verify` (metadata pass) ; job CI `macos` et `simulator` |
-| E6 | Porte `liveEvidence` : ledger non `verified` sans reproduction indépendante | `intentlane evidence validate --strict` ; `packages/core/src/pilot-ledger.test.ts` |
+| E6 | Une revendication observée reste en attente sans ledger vérifié, et n'est jamais lue quand elle n'est pas revendiquée | `intentlane verify --claim siri-conversation` → `pending-evidence` ; `intentlane evidence validate --strict` ; `packages/core/src/pilot-ledger.test.ts`, `packages/core/src/release-verification.test.ts` |
 | E7 | Parcours natif complet : audit → contrat → génération → adaptateur → test → verify | `apps/example-macos` + `verify.mjs` (métadonnées extraites, Xcode 27A266a) |
 | E8 | Parcours Expo/RN : plugin idempotent, adaptateur exemple, tests de route, build simulateur, métadonnées | tests plugin (11+16), `routes.test.ts` (14), job CI `simulator` |
 | E9 | Suite complète verte | `pnpm test` (318 tests), `pnpm build`, `pnpm validate`, `generate --check`, probe `swiftc`, `node apps/example-macos/verify.mjs` |
