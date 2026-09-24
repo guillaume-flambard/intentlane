@@ -21,6 +21,7 @@ export * from "./audit-score.js";
 export * from "./audit-targets.js";
 export * from "./pilot-ledger.js";
 export * from "./pilot-manifest.js";
+export * from "./metadata-contract.js";
 export * from "./claims.js";
 export * from "./release-verification.js";
 export * from "./app-schemas.js";

@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { parse } from "yaml";
-import { collectDoctorChecks, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
+import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
@@ -417,14 +417,16 @@ evidence.command("validate <ledger>")
     if (options.strict && result.status === "unverified") process.exitCode = 1;
   });
 
-async function metadataVerificationStatus(path: string | undefined): Promise<GateStatus> {
+async function metadataVerificationStatus(path: string | undefined, declaredActions: readonly string[] | undefined): Promise<GateStatus> {
   if (!path) return "missing";
+  if (declaredActions === undefined) return "fail";
   const input = resolve(path);
   const candidate = input.endsWith("extract.actionsdata") ? input : join(input, "extract.actionsdata");
   if (!existsSync(candidate)) return "fail";
   try {
-    const metadata = JSON.parse(await readFile(candidate, "utf8")) as { actions?: unknown };
-    return metadata.actions !== undefined && typeof metadata.actions === "object" ? "pass" : "fail";
+    const comparison = compareMetadataToContract(JSON.parse(await readFile(candidate, "utf8")) as unknown, declaredActions);
+    if (comparison.status === "fail") process.stderr.write(`${comparison.nextAction}\n`);
+    return comparison.status;
   } catch {
     return "fail";
   }
@@ -510,7 +512,12 @@ program.command("verify")
       contract: configValid ? "pass" : "fail",
       generated: generated === "fresh" ? "pass" : generated === "missing" ? "missing" : "fail"
     };
-    if (metadataPath !== undefined) gates["metadata"] = await metadataVerificationStatus(metadataPath);
+    if (metadataPath !== undefined) {
+      gates["metadata"] = await metadataVerificationStatus(
+        metadataPath,
+        configResult.ir?.intents.map((intent) => intent.swiftName)
+      );
+    }
     for (const [id, gate] of gateCommands) {
       const run = spawnSync(gate.command, { shell: true, stdio: "inherit", ...(gate.cwd === undefined ? {} : { cwd: gate.cwd }) });
       gates[id] = run.status === 0 ? "pass" : "fail";
