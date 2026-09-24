@@ -1,0 +1,152 @@
+## 0. Fermer l'écart de certification avant d'enchainer
+
+Ces tâches précèdent tout nouveau pilote. Un défaut connu laissé en place sera
+redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
+
+- [ ] 0.1 Écrire les conditions d'entrée d'un pilote dans la recette, et les
+      écrire avant le premier pilote restant. Vérifié par la présence des trois
+      conditions dans `../validate-five-public-pilots/recipe.md` et par le fait
+      que la recette les cite dans sa section stage 0.
+- [ ] 0.2 Décider, pour FSNotes, si l'application expose un événement de
+      suppression, déplacement ou renommage de dossier. Vérifié en lisant le code
+      de `Storage` et `Project` dans le fork, et par une phrase dans la fiche du
+      pilote qui dit ce qui a été trouvé.
+- [ ] 0.3 Idem pour HandBrake, sur la suppression et le renommage d'un preset
+      utilisateur, en lisant `HBPresetsManager` et le delegate de l'arbre. Vérifié
+      de la même façon.
+- [ ] 0.4 Si un événement existe dans au moins un des deux pilotes, écrire le
+      harness d'index qui lie l'application et intercepte l'index nommé, puis un
+      test qui échoue quand l'application n'appelle pas la suppression. Vérifié
+      par un test rouge avant l'implémentation, puis vert.
+- [ ] 0.5 Câbler la suppression dans ce pilote, à travers l'API de l'application,
+      jamais en écrivant l'état de l'interface. Vérifié par le test de 0.4 et par
+      une ligne de deviation et une ligne d'effort.
+- [ ] 0.6 Si aucun événement n'existe dans un pilote, décrire dans sa fiche que
+      `indexSync` vaut réindexation à la demande et non crochet de mutation, et
+      retirer du texte toute formulation qui suggère un crochet. Vérifié par
+      relecture de la fiche, aucune occurrence de crochet non justifiée.
+- [ ] 0.7 Re-certifier les deux pilotes après 0.4 à 0.6, et vérifier que les six
+      revendications sont inchangées. Vérifié par `verify --strict` qui sort à
+      zéro pour les deux.
+
+## 1. La sonde de lancement
+
+- [ ] 1.1 Décrire ce que la sonde doit lire, sur le modèle de la sonde IINA, et ce
+      qu'elle ne doit pas conclure. Vérifié par une section dans la recette.
+- [ ] 1.2 Écrire la sonde pour HandBrake, qui lance l'application construite et
+      rapporte l'enregistrement par nom. Vérifié par un test rouge du message
+      attendu, puis vert contre l'application lancée.
+- [ ] 1.3 La même sonde pour FSNotes. Vérifié de la même façon.
+- [ ] 1.4 Enregistrer la réutilisation de la sonde IINA comme déviation, et écrire
+      ce que chaque pilote a dû changer pour lire son propre enregistrement.
+      Vérifié par la ligne de deviation.
+- [ ] 1.5 Dire dans la sortie de la sonde qu'elle ne prouve ni la conversation Siri
+      ni l'affichage Spotlight, et le vérifier en lisant la sortie d'un run qui
+      passe. Vérifié par la présence de la phrase dans la sortie.
+- [ ] 1.6 Ne pas déclarer la revendication `registration` quand aucune session
+      graphique n'est disponible. Vérifié en lançant la porte sans session et en
+      constatant qu'elle n'est pas dans le jeu par défaut.
+
+## 2. Transmission, troisième pilote
+
+- [ ] 2.1 Appliquer les conditions d'entrée : compiler depuis un clone propre,
+      FSNotes certifié, aucun défaut connu non corrigé. Vérifié par la liste des
+      conditions cochée dans la fiche du pilote.
+- [ ] 2.2 Lire le modèle avant d'écrire, choisir l'objet, et écrire le contrat avec
+      la raison de l'exclusion de ce que l'application ne sait pas faire. Vérifié
+      par `validate` qui sort à zéro et par la relecture de la raison.
+- [ ] 2.3 Générer, ajouter les sources à la cible avec le script du projet, et
+      construire. Vérifié par `generate --check` et par `BUILD SUCCEEDED`.
+- [ ] 2.4 Écrire les trois suites, test-first, dont le négatif exact. Vérifié par
+      le premier run rouge puis le run vert.
+- [ ] 2.5 Extraire les métadonnées et certifier les six revendications. Vérifié
+      par `verify --strict` qui sort à zéro.
+- [ ] 2.6 Noter l'effort par étape et chaque déviation, et écrire dans la fiche ce
+      que le coût de HandBrake avait prévu et ce qu'il avait manqué. Vérifié par
+      les lignes du journal et de la feuille.
+
+## 3. LuLu, quatrième pilote
+
+- [ ] 3.1 Classer la sensibilité avant le contrat, et écrire ce que les noms
+      d'objets peuvent porter. Vérifié par la section de classification dans la
+      fiche.
+- [ ] 3.2 Appliquer les conditions d'entrée, avec Transmission certifié. Vérifié
+      par la liste cochée.
+- [ ] 3.3 Contrat, génération, construction, trois suites, métadonnées,
+      certification. Vérifié par les mêmes commandes que pour Transmission.
+- [ ] 3.4 Écrire si l'ajustement du contrat était prévu par la classification, ce
+      qui est le but de la classification. Vérifié par une ligne qui relie les
+      deux.
+
+## 4. Cyberduck, cinquième pilote
+
+- [ ] 4.1 Établir d'abord si le shell natif porte App Intents par le même chemin
+      que les autres cibles, sans écrire de mapping. Vérifié par une réponse
+      documentée, dans les deux sens.
+- [ ] 4.2 Si la réponse est non, publier le résultat comme limite de la méthode,
+      nommer ce qui a échoué, et ne pas rétrécir le jeu de revendications pour la
+      masquer. Vérifié par la relecture du document de résultats.
+- [ ] 4.3 Si la réponse est oui, exécuter le pilote comme les autres, en répétant
+      les étapes 2.2 à 2.6. Vérifié par `verify --strict` qui sort à zéro.
+- [ ] 4.4 Dans les deux cas, écrire ce que ce pilote a appris sur la portabilité
+      vers une application qui n'est pas dans la langue de sa couche native.
+      Vérifié par une section dans le document de résultats.
+
+## 5. La revendication observée, au plus une fois
+
+- [ ] 5.1 Choisir le pilote dont l'observation a une valeur commerciale, et écrire
+      pourquoi celui-là. Vérifié par la section dans la fiche du pilote.
+- [ ] 5.2 Ajouter la revendication au manifeste, lancer le runbook, et enregistrer
+      l'observation dans le ledger. Vérifié par la ligne du ledger et par
+      `verify --claim siri-conversation --strict` qui ne sort plus non nul.
+- [ ] 5.3 Vérifier que les quatre autres pilotes ne déclarent aucune revendication
+      observée, et que la porte de l'offre n'en dépend pas. Vérifié par la sortie
+      de `verify` des quatre autres.
+
+## 6. La porte de l'offre
+
+- [ ] 6.1 Confirmer que les trois domaines sont réellement distincts, et le dire
+      ainsi. Vérifié par la section domain spread du document de résultats.
+- [ ] 6.2 Dériver la fourchette de prix de la feuille d'effort, en excluant les
+      lignes `not instrumented` et en le disant. Vérifié par le calcul et par la
+      ligne qui nomme l'étape dominante.
+- [ ] 6.3 Séparer dans le prix le coût de compilation de l'application du coût de
+      l'intégration, puisque ce sont deux services. Vérifié par les deux lignes du
+      document de résultats.
+- [ ] 6.4 Relire chaque ligne de l'offre contre le registre de revendications, et
+      retirer toute ligne qui promet une surface non observée. Vérifié par la
+      relecture et par la liste des lignes retirées.
+- [ ] 6.5 Préparer les brouillons de PR et de contact par mainteneur, sans les
+      envoyer, et publier la règle de contribution qui l'interdit le cas échéant.
+      Vérifié par la présence des brouillons et leur absence d'envoi.
+
+## 7. La clôture
+
+- [ ] 7.1 Amender la recette en version 2 avec chaque correction de pilote, en
+      nommant le pilote qui l'a prouvée. Vérifié par la comparaison des deux
+      versions.
+- [ ] 7.2 Écrire le nombre d'étapes qui n'ont jamais eu besoin d'amendement, parce
+      que c'est la mesure de la méthode. Vérifié par le chiffre dans le document
+      de résultats.
+- [ ] 7.3 Publier les domaines validés, la fourchette, le compte de deviations, et
+      les surfaces jamais observées, avec la raison qui les aplatit. Vérifié par
+      relecture contre les specs de clôture.
+- [ ] 7.4 Écrire dans le document que le push et npm sont des décisions de la
+      personne, restées en attente, et ne pas les présenter comme faits. Vérifié
+      par relecture.
+- [ ] 7.5 Ne retirer aucune limitation enregistrée par un pilote, même si elle
+      affaiblit le résultat. Vérifié par relecture croisée avec les fiches.
+
+## Notes
+
+- L'ordre 0 avant 1 avant 2 est délibéré. Un défaut de certification reproduit sur
+  trois pilotes coûte plus cher que corrigé une fois, et une sonde qui prouve un
+  enregistrement inexistant sur deux pilotes vaut mieux que trois sondes.
+- Le groupe 4 a une sortie qui n'est pas un succès, et il est écrit ainsi à
+  l'avance pour que personne ne soit tenté de le forcer.
+- Le groupe 7 ne s'écrit pas avant le groupe 6, parce que la version 2 doit porter
+  ce que les cinq ont appris, y compris ce que la porte de l'offre a permis de
+  mesurer.
+- Rien dans ces tâches ne pousse de branche ni ne publie sur npm. Ces deux points
+  restent des décisions de la personne et sont nommés comme tels dans le change
+  précédent.
