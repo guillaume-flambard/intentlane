@@ -3,32 +3,53 @@
 Ces tâches précèdent tout nouveau pilote. Un défaut connu laissé en place sera
 redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 
-- [ ] 0.1 Écrire les conditions d'entrée d'un pilote dans la recette, et les
+- [x] 0.1 Écrire les conditions d'entrée d'un pilote dans la recette, et les
       écrire avant le premier pilote restant. Vérifié par la présence des trois
       conditions dans `../validate-five-public-pilots/recipe.md` et par le fait
       que la recette les cite dans sa section stage 0.
-- [ ] 0.2 Décider, pour FSNotes, si l'application expose un événement de
+- [x] 0.2 Décider, pour FSNotes, si l'application expose un événement de
       suppression, déplacement ou renommage de dossier. Vérifié en lisant le code
       de `Storage` et `Project` dans le fork, et par une phrase dans la fiche du
-      pilote qui dit ce qui a été trouvé.
-- [ ] 0.3 Idem pour HandBrake, sur la suppression et le renommage d'un preset
+      pilote qui dit ce qui a été trouvé. **Oui** : `removeRows(projects:)` est le
+      seul entonnoir, appelé par cinq chemins, dont la suppression demandée par
+      l'utilisateur et la disparition sur disque. Le renommage est un retrait plus
+      une insertion, pas une mise à jour d'URL sur place. Écrit dans la fiche.
+- [x] 0.3 Idem pour HandBrake, sur la suppression et le renommage d'un preset
       utilisateur, en lisant `HBPresetsManager` et le delegate de l'arbre. Vérifié
-      de la même façon.
-- [ ] 0.4 Si un événement existe dans au moins un des deux pilotes, écrire le
-      harness d'index qui lie l'application et intercepte l'index nommé, puis un
-      test qui échoue quand l'application n'appelle pas la suppression. Vérifié
-      par un test rouge avant l'implémentation, puis vert.
-- [ ] 0.5 Câbler la suppression dans ce pilote, à travers l'API de l'application,
-      jamais en écrivant l'état de l'interface. Vérifié par le test de 0.4 et par
-      une ligne de deviation et une ligne d'effort.
-- [ ] 0.6 Si aucun événement n'existe dans un pilote, décrire dans sa fiche que
-      `indexSync` vaut réindexation à la demande et non crochet de mutation, et
-      retirer du texte toute formulation qui suggère un crochet. Vérifié par
-      relecture de la fiche, aucune occurrence de crochet non justifiée.
-- [ ] 0.7 Re-certifier les deux pilotes après 0.4 à 0.6, et vérifier que les six
+      de la même façon. **Oui** : `HBPresetsManager` est déjà le delegate de l'arbre
+      entier et poste `HBPresetsChangedNotification` à chaque insertion, suppression
+      et remplacement, donc un seul observateur voit tout sans toucher au chemin
+      d'alerte. La notification ne porte pas le nœud, donc le bon mouvement est un
+      diff de l'ensemble éligible avant et après. Écrit dans la fiche.
+- [x] 0.4 Prouver d'abord que rien n'est câblé, avant d'écrire le test qui l'exige.
+      Fait avec deux sondes qui sortent un fait et non un verdict :
+      `pilots/fsnotes/tests/run-wiring-probe.sh` et
+      `pilots/handbrake/tests/run-wiring-probe.sh`. Les deux constatent que
+      l'index accepte l'entité, que l'application émet bien son événement, et que
+      l'identifiant reste écrit après la suppression, avec zéro appel de retrait
+      dans le chemin de l'application. **Trouvé et nommé** dans les deux pilotes,
+      alors que `indexSync` est certifié pour les deux.
+- [ ] 0.5 Écrire le test rouge qui exige le retrait, pour les deux pilotes, avec
+      le nom exact de l'identifiant qui doit disparaître. Vérifié par un run qui
+      échoue sur l'assertion et non sur une erreur de compilation.
+- [ ] 0.6 Écrire le harness qui relie l'application à l'index nommé, sans
+      modifier la couture. Pour FSNotes, il appelle le vrai `removeRows` et fournit
+      l'énumération nommée. Pour HandBrake, il observe la notification réelle et
+      compare l'ensemble éligible avant et après, puisque la notification ne porte
+      pas le nœud. Le code testé est la couture de l'application, pas une
+      imitation. Vérifié par le test de 0.5 passant une fois la couture câblée.
+- [ ] 0.7 Câbler la suppression dans les deux pilotes, à travers l'entonnoir que
+      l'application expose déjà, jamais en écrivant l'état de l'interface ni en
+      interceptant le chemin d'alerte. Pour HandBrake, ne pas s'accrocher à
+      `deletePreset:` et ne pas deviner le nœud retiré. Vérifié par le test de 0.5, une ligne de
+      deviation et une ligne d'effort par pilote, et `BUILD SUCCEEDED`.
+- [ ] 0.8 Réécrire dans les deux fiches ce qui est réellement câblé, et retirer
+      toute formulation qui décrit la réindexation à la demande comme si elle était
+      le seul branchement, puisque la suppression l'est désormais aussi. Vérifié
+      par relecture contre le test de 0.5.
+- [ ] 0.9 Re-certifier les deux pilotes après 0.4 à 0.8, et vérifier que les six
       revendications sont inchangées. Vérifié par `verify --strict` qui sort à
       zéro pour les deux.
-
 ## 1. La sonde de lancement
 
 - [ ] 1.1 Décrire ce que la sonde doit lire, sur le modèle de la sonde IINA, et ce

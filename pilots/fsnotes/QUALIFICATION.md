@@ -154,7 +154,41 @@ applicationTests, integrationTests, metadata, indexSync.
 exits 0. 63 checks in three suites, none of which launches FSNotes: 24 pure
 rules, 30 integration, 9 index lifecycle.
 
-### Stage 4, the mapping, and how it was written
+### Does FSNotes expose a deletion, move or rename event?
+
+Yes, and the app already funnels them. This was read before writing anything,
+because it decides whether `indexSync` is a mutation hook or an on-demand
+reindex.
+
+**Deletion and external disappearance** both land in one place. `SidebarOutlineView.removeRows(projects:)`
+is the single funnel, and it is called from exactly the paths that matter:
+
+| Path | Source |
+| --- | --- |
+| The user deletes a folder | `SidebarOutlineView.swift:789`, after the confirmation alert |
+| A folder vanishes from the disk | `FileSystemEventManager.swift:103`, on a directory change inside a hidden folder |
+| A rename event arrives for a folder that no longer exists | `FileSystemEventManager.swift:116` |
+| A folder is removed from the disk | `FileSystemEventManager.swift:134` |
+| The launch-time diff finds removed folders | `ViewController.swift:244` |
+
+That is five call sites converging on one function, which means one wiring point
+covers deletion, external deletion and the rename that removes the old path. The
+funnel is `remove(project:)` at `SidebarOutlineView.swift:1186`, which calls
+`storage.removeBy(project:)` at line 1195.
+
+**Creation** converges the same way, on `insertRows(projects:)` at line 1292, from
+`Storage.insert(url:)` at `Storage.swift:287`.
+
+**Rename and move are not single points.** A folder rename changes its path, so
+the identifier changes, and FSNotes treats it as a removal of the old path plus an
+insertion of the new one through `FileSystemEventManager`. There is no in-place
+`project.url` update, which the review's worry about a stale identifier turns out
+not to apply to: a rename is two events, and the removal half is the one that
+matters for the index.
+
+So the pilot has a real event to wire. Task 0.4 of the next change applies.
+
+## Stage 4, the mapping, and how it was written
 
 Test first, in two red steps, because Swift needs the types to exist before a
 test can fail on a behaviour. The first run failed on missing files, the second
@@ -200,11 +234,18 @@ resolved by name and can never be selected, so the test failed and the rule grew
 
 ### What is deliberately not done
 
-No write intent, no note body, no note count, no mutation hooks. FSNotes has no
-macOS test target, so the ancestor-expansion branch is proven by the build and by
-reading, not by a test, and the pilot says so instead of implying otherwise. The
-system reindexes the named index on demand; incremental reindexing on
-create, rename and delete is not wired in this pilot.
+No write intent, no note body, no note count. FSNotes has no macOS test target,
+so the ancestor-expansion branch is proven by the build and by reading, not by a
+test, and the pilot says so instead of implying otherwise.
+
+**Index removal is not wired, and the wiring probe says so rather than the claim
+being quietly true.** `bash pilots/fsnotes/tests/run-wiring-probe.sh` reports that
+the index accepts the entity, that the application emits its own funnel on five
+paths, that this funnel makes zero calls to the index, and that the identifier
+therefore survives a deletion. The system reindexes the named index on demand,
+which is real but is not the same as a mutation hook, so `indexSync` certifies the
+lifecycle of the index and not its freshness. The next change, task 0.7, wires it
+through `removeRows(projects:)`.
 
 ### Stage 6 and 7, measured
 

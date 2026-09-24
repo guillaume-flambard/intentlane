@@ -56,6 +56,45 @@ command proves. The six deterministic claims are identical for both pilots. What
 differs is what the contract exposes inside them, and that difference is an
 application fact written down in the contract.
 
+## Does HandBrake expose a deletion or rename event?
+
+Yes, and it already has one for exactly this purpose, unused. This was read
+before writing anything, because it decides whether `indexSync` is a mutation hook
+or an on-demand reindex.
+
+`HBPresetsManager` sets itself as the delegate of the whole preset tree at
+`HBPresetsManager.m:32`, and that tree implements a callback that is currently
+used for one thing only:
+
+```
+HBPresetsManager.m:50   nodeDidChange:        posts HBPresetsChangedNotification
+HBPresetsManager.m:59   treeDidRemoveNode:    picks a new default preset
+```
+
+`HBTreeNode` calls `nodeDidChange:` on every insert, every removal and every
+replacement (`HBTreeNode.m:58`, `:65`, `:71`), and it sets the delegate down the
+whole tree as children are added. So a single observer on
+`HBPresetsChangedNotification` sees a preset being created, deleted or renamed
+without the pilot touching the deletion path, the alert, or the tree controller.
+
+The mutations that matter, and where they land:
+
+| Mutation | Source |
+| --- | --- |
+| The user deletes a preset | `HBPresetsViewController.m:469` to `deletePresetAtIndexPath:` |
+| A preset is renamed | `HBController.m:1781` to `replacePresetAtIndexPath:withPreset:` |
+| A preset is added | `HBPresetsManager.m:241` |
+| The root itself mutates | `HBTreeNode.m:58`, `:65`, `:71`, each calling `nodeDidChange:` |
+
+Two things the pilot must not do. It must not hook `deletePreset:` itself, because
+that is the alert path, not the commit path, and a deletion can also arrive from
+the tree being reloaded. And it must not infer which preset was removed from the
+notification, because the notification carries no node: the correct move is to
+diff the eligible set before and after, and remove the identifiers that went away.
+
+So the pilot has a real event to wire, and it has a better one than the obvious
+one. Task 0.4 of the next change applies.
+
 ## Step 4.1, the Objective-C to Swift step, measured
 
 The app target is 77 `.m` files and no Swift. Four things were needed, and all four
@@ -96,9 +135,16 @@ Same protocols, same availability annotation, same resolver shape.
 
 ## What is deliberately not claimed
 
-No Siri conversation, no Spotlight result, and no `system.searchInApp`. No
-incremental reindexing on preset creation or deletion. The system reindexes the
-named index on demand, and this pilot does not pretend otherwise.
+No Siri conversation, no Spotlight result, and no `system.searchInApp`.
+
+**Index removal is not wired, and HandBrake already has the event that would wire
+it.** `bash pilots/handbrake/tests/run-wiring-probe.sh` reports that the index
+accepts the entity, that `HBPresetsChangedNotification` does fire on every insert,
+removal and replacement, that nothing observes it to remove the entry, and that the
+identifier therefore survives a deletion. So the gap is one observer, not a missing
+event, which is the cheapest shape this defect could have taken. The system
+reindexes the named index on demand, and this pilot does not pretend that is the
+same as a mutation hook. The next change, task 0.7, wires the observer.
 
 ## Not measured
 

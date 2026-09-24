@@ -11,6 +11,26 @@ had to bend it goes into `deviations.md`, and every stage's cost goes into
 either a method or it was written after the fact; the deviation log is how we
 tell the difference.
 
+## The entry conditions, written before a pilot starts
+
+A pilot is not started on a hunch. These three conditions are written into the
+pilot's own record before the first line of its code exists, and a pilot that
+cannot meet one is blocked and named rather than forced.
+
+1. **The application builds from a clean checkout**, on this machine, with the
+   prerequisites that requires. Stage 0 exists for this, and a missing system
+   dependency is the person's decision, not the pilot's.
+2. **The previous pilot is certified.** Two uncertified pilots in a row would make
+   a later defect ambiguous between them.
+3. **No known defect from an earlier pilot is unfixed in the code being reused.**
+   A defect left in place is rediscovered on every pilot that follows, and each
+   rediscovery is more expensive to diagnose because it arrives among new code.
+
+When a defect is found on one stack, check the certified pilots for it before
+starting the next one. The same defect on two stacks is a defect of the method,
+and the recipe is amended once for both. The same defect on one stack only is an
+application quirk, and the recipe notes why the other stack is unaffected.
+
 ## The rule that outranks the stages
 
 A stage is finished when a command exits zero. It is not finished when a person
