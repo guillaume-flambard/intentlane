@@ -60,11 +60,17 @@ endpoint queries, exécution `http`, enum schemas, packages avancés
    (`npm pack` vérifié) mais non publiés — `npm whoami` répond 401 Unauthorized
    sur cette machine. Bloquant livraison, pas produit.
 2. **Gate humain Quickstart** (R1) : personne externe < 30 min non mesuré.
-3. **Preuves Siri/Spotlight visuelles** (P1/P2) : ne sont **pas** automatisables
-   ; elles exigent observation réelle et reproduction par un second testeur
-   avant toute revendication. Le ledger reste `unverified` sans cela.
-4. **Second pilote** (P3) et **cohorte** (P5) : FSNotes ou remplaçant qualifié,
-   cinq pilotes consentis, non atteints.
+3. **Prouvee de repetition** (P3/P5) : la repetition de la methode n'est pas
+   encore mesuree. C'est le vrai manque, et il ne demande personne : cinq
+   pilotes certifies sur les revendications deterministes, un journal de
+   deviations et une mesure d'effort par etape. Voir
+   `openspec/changes/validate-five-public-pilots`.
+4. **Preuve systeme observee** (P1/P2) : n'est plus un bloqueur, mais elle n'est
+   pas non plus etablie. Ce sont des revendications observees, revendiquables
+   explicitement avec `--claim siri-conversation --strict`, et le ledger reste
+   `unverified` tant que personne n'a observe. Aucun pilote ne la réclame par
+   defaut, donc la livraison n'en depend pas, et aucune formulation ne doit
+   pretendre le contraire.
 
 ## Définition de done
 
