@@ -185,6 +185,15 @@ App Intents is Swift.
   `.m` extension to the `.h` it belongs in, and expect a bridging header to
   declare the Objective-C classes the Swift file calls. Every promoted property
   belongs in the pull request; none of it is pilot scaffolding.
+- On a target that had no Swift at all, expect to set `SWIFT_OBJC_BRIDGING_HEADER`
+  and `SWIFT_VERSION` yourself; neither setting exists yet.
+- The application calls the Swift code through the generated `-Swift.h` header,
+  which means the registering `.m` file imports it. That import is a circular
+  dependency in appearance only: the generated header is produced by the same
+  build that consumes it.
+- Make anything that assigns the generated `@MainActor` registries itself
+  main-actor isolated, or the compiler will refuse the assignment. The
+  availability check belongs around the registration, not around the registries.
 - Index incrementally only if the application exposes its own create, update and
   delete events and the pilot wires them. If it does not, say that the system
   reindexes on demand instead, rather than implying mutation hooks exist.

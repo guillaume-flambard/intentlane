@@ -44,9 +44,11 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | HandBrake `1255087` | 1 | 3 s of tool time, counted inside Q | `/usr/bin/time -p` | route `native/high`, 8 macOS targets |
 | HandBrake `1255087` | 2 | not instrumented, authoring | manual | the object choice came from reading the model, not from running a tool |
 | HandBrake `1255087` | 3 | under 1 s for validate, generate and check | `/usr/bin/time -p` on generate | same as FSNotes: generation is free once the contract is right |
-| HandBrake `1255087` | 4 | 53 checks, three suites, none needing HandBrake | shell, four runs | 23 pure rules, 21 integration, 9 index |
-| HandBrake `1255087` | 5 | under 5 s for the suites | shell | the mapping was written test-first, same two reds as FSNotes |
-| HandBrake `1255087` | 6 to 8 | not started | | the app-side interop is the next step, and the build is what will prove it |
+| HandBrake `1255087` | 4 | 53 checks, three suites, none needing HandBrake | shell, four runs | 23 pure rules, 21 integration, 9 index; the mapping was written test-first, same two reds as FSNotes |
+| HandBrake `1255087` | 5 | under 5 s for the suites | shell | the suites are the gate, so their cost is counted once, in stage 4 |
+| HandBrake `1255087` | 6 | 2 failed builds, then BUILD SUCCEEDED, incremental after a full `make` | `/usr/bin/time -p` | both failures were real: the bridging header missed `HBAppDelegate`, and the registration was not main-actor isolated |
+| HandBrake `1255087` | 7 | 0.5 s compile plus the processor | `/usr/bin/time -p` | one intent instead of two, and exactly that intent in the metadata |
+| HandBrake `1255087` | 8 | under 1 s plus the gate suites | `/usr/bin/time -p` | certified on the first run |
 | LuLu `7d2669e` | Q | not instrumented | manual | done before this sheet existed |
 | LuLu `7d2669e` | 1 to 8 | not started | | |
 | Transmission `48835c6` | Q | not instrumented | manual | done before this sheet existed |
