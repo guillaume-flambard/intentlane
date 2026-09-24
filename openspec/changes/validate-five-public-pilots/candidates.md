@@ -9,33 +9,65 @@ shallow at the revision recorded here. The audit was run as
 `intentlane audit <repo> --platform macos --format json` with the local SDK
 (macOS 27.0 build 26A428, Xcode 27 build 27A266a).
 
-## What the tool found, and two defects it exposed
+## What the tool found, and the defects the screening exposed
 
 Every candidate scores `0/84 (none)` with `discovery: none`, which is expected:
 none of these applications ships App Intents today. What separates them is
 whether there is a macOS Xcode application target to integrate into, and that is
 what qualification has to establish.
 
-The screening also exposed two defects in `intentlane audit`, which matter more
-than the shortlist because they would have produced wrong classifications:
+The screening exposed three defects in `intentlane audit`. The first two are now
+fixed, and the numbers below were re-measured with the fixed tool. The third is
+recorded as a limitation a reader must keep applying by hand.
 
-1. **The audit cannot see `PBXFileSystemSynchronizedRootGroup` targets.**
-   CotEditor uses nine of them, so the audit reports its targets with empty
-   `files` and reports `discovery: none` for an application that *does* ship
-   `import AppIntents`. Any qualification that trusts `discovery: none` on a
-   modern Xcode project is unsound. This is a defect to fix before the first
-   pilot runs, because `discovery` is exactly the field that separates a
-   Shortcuts-only profile from a schema-capable one, as NetNewsWire showed.
-2. **The audit can report `route: native` with zero macOS targets.** Ardour
-   reports `targets: []`, `scoped: false`, and still `route: native/high`.
+1. **A target inherits SDKROOT from the project build configuration.** Fixed.
+   CotEditor declares `SDKROOT = macosx` once, on the project configuration list,
+   and its targets inherit it. The audit read only the target's own list, so it
+   resolved no platform, reported `scoped: false`, and computed `discovery` over
+   the whole tree. It now reads the project level as a fallback, after the target
+   level, for both a declared `SDKROOT` and an xcconfig anchor. CotEditor now
+   reports three macOS targets and `discovery: shortcuts-only`, which is the
+   profile the screening had predicted and the one NetNewsWire had.
+2. **The route claimed a native platform with no target for it.** Fixed. Ardour
+   ships a macOS crash reporter and a macOS audio library as Xcode projects
+   while its application is C++ built with waf and contains no Swift. The route
+   read only the file list, saw an `.xcodeproj`, and reported `native/high`. It
+   now takes the parsed target evidence and reports `unknown` when the project
+   carries no target for the audited platform, or when every target compiles for
+   another one. A target that exists but whose platform is unresolved is left
+   alone, because a real target with an unreadable SDKROOT is still a target.
+3. **Still open: helpers are not the application.** Krita's route is
+   `native/high` and it does resolve four macOS targets, but they are
+   `krita-preview`, `krita-preview_helper`, `krita-thumbnailer` and
+   `krita-thumbnailer_helper`. The application is a CMake/Qt build. Nothing in
+   the tool knows that a Quick Look preview helper is not the app, so this
+   rejection rests on reading the target names, which is exactly what a
+   qualification is for.
 
-A third, smaller inaccuracy: the audit printed Krita's preview files as
-`krita-preview/PreviewProvider.swift` when the real path is
-`krita/integration/krita-preview/PreviewProvider.swift`.
+A third, smaller problem was fixed alongside: `intentlane audit` on a directory
+that does not exist used to print a clean, empty report and exit zero, which is
+indistinguishable from a project that implements nothing. It now refuses and
+names the path. That matters here, because a wrong path would have qualified a
+candidate for the wrong reason.
 
-Campaign-wide gap: all nine report 5 of 9 conditions recorded, with
+## Measurements after the fixes
+
+| Candidate | Route | Score | Discovery | Targets for macos |
+| --- | --- | --- | --- | --- |
+| FSNotes | `native/high` | 0/84 `none` | `none` | 2 |
+| LuLu | `native/high` | 0/84 `none` | `none` | 2 |
+| HandBrake | `native/high` | 0/84 `none` | `none` | 8 |
+| Transmission | `native/high` | 0/84 `none` | `none` | 20 |
+| Cyberduck | `native/high` | 0/84 `none` | `none` | 1 |
+| CotEditor | `native/high` | 10/84 `early` | `shortcuts-only` | 3 |
+| Ardour | `unknown/high` | 0/84 `none` | `none` | 0 |
+| Krita | `native/high` | 0/84 `none` | `none` | 4, all helpers |
+| Zed | `ineligible/high` | 0/84 `none` | `none` | 0 |
+
+Campaign-wide gap: all candidates report 5 of 9 conditions recorded, with
 `appleIntelligence`, `account`, `permissions` and `testData` missing. That should
 be recorded once, not five times.
+
 
 ## Qualified, five candidates
 
@@ -110,34 +142,33 @@ credential reference, so a mapping that gets this wrong is visibly wrong.
 
 - **Krita**, `188d778` (2026-09-24), GPLv3 with a separate licence for the CMake
   scripts. Rejected on the route, not on the licence: the application is a
-  CMake/Qt build, and its only macOS Xcode target is a Quick Look preview helper
-  under `krita/integration/integration.xcodeproj`. There is no native Xcode
-  application target to integrate with, so the native route does not apply to the
-  app itself. Worth revisiting if a non-native route is ever in scope.
+  CMake/Qt build, and the only macOS targets the audit can see, under
+  `krita/integration/integration.xcodeproj`, are a Quick Look preview helper and a
+  thumbnailer. The route reports `native/high` because those targets really are
+  native and really are macOS; the rejection rests on their names, not on the
+  tool. Worth revisiting if a non-native route is ever in scope.
 - **Zed**, `6fae7f3` (2026-09-24), Apache-2.0 or GPLv3, with a
   `CONTRIBUTING.md`. Rejected on the route: the audit reports
   `route: ineligible` with zero macOS targets, because the application builds with
   its own system rather than from an Xcode project.
-- **Ardour**, `71074fe` (2026-09-24), GPL. Rejected: zero macOS targets found.
-  Recorded alongside the audit defect above, since it also reports
-  `route: native/high`, which is wrong for a repository with no target.
-- **CotEditor**, `5e7d853` (2026-09-24). Rejected for two independent reasons.
-  Its project uses nine `PBXFileSystemSynchronizedRootGroup` entries, so the audit
-  cannot see its sources and reports `discovery: none` for an app that ships
-  `import AppIntents` in `DocumentShortcuts.swift`, which is the same
-  Shortcuts-only profile NetNewsWire had. Its root licence is also
-  CC BY-NC-ND for bundled assets, with the source under Apache-2.0, which
-  complicates redistribution even though the code licence would allow a local
-  fork. The licence alone would not have rejected it; the existing Shortcuts
-  surface plus an unreadable project would have.
+- **Ardour**, `71074fe` (2026-09-24), GPL. Rejected: zero macOS targets found for
+  the application. It used to report `native/high`, which the route fix corrected
+  to `unknown/high`; the rejection rests on the same fact, but the tool now says
+  so instead of contradicting it.
+- **CotEditor**, `5e7d853` (2026-09-24), source under Apache-2.0 with a root
+  licence of CC BY-NC-ND for bundled assets. Rejected because the fixed audit now
+  classifies it `shortcuts-only`: it ships `import AppIntents` in
+  `DocumentShortcuts.swift`, which is the same profile NetNewsWire had and
+  therefore not representable as Siri AI discovery. The NC-ND asset licence
+  complicates redistribution but would not on its own have rejected a local fork.
 
 ## What is still open before the first pilot
 
-1. Fix the audit's handling of synchronized root groups, then re-run the
-   classification. Until then, `discovery` is unreliable on any modern Xcode
-   project, and no candidate may be called Shortcuts-only on the audit's word.
-2. Choose the first pilot. The method should be tried where it is easiest, which
+1. Choose the first pilot. The method should be tried where it is easiest, which
    by the sensitivity table is HandBrake, and the hardest case, which is
    Cyberduck, should be reserved for when the recipe has survived one success.
-3. Record `appleIntelligence`, `account`, `permissions` and `testData` once, in
+2. Record `appleIntelligence`, `account`, `permissions` and `testData` once, in
    the shared conditions, instead of per pilot.
+3. Keep reading the target names. The tool cannot tell a Quick Look helper from
+   the application, so that judgement stays human and belongs in the
+   qualification record rather than in a score.

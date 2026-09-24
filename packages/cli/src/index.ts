@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -275,6 +275,14 @@ program.command("audit")
     }
     if (!(AUDIT_FORMATS as readonly string[]).includes(options.format)) {
       process.stderr.write(`Unsupported format '${options.format}'. Use one of: ${AUDIT_FORMATS.join(", ")}.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    // A missing directory would otherwise produce a clean, empty report, which is
+    // indistinguishable from a project that implements nothing.
+    const target = resolve(directory);
+    if (!existsSync(target) || !statSync(target).isDirectory()) {
+      process.stderr.write(`No directory to audit at ${target}.\n`);
       process.exitCode = 1;
       return;
     }

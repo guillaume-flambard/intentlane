@@ -162,6 +162,9 @@ export function readTargetMembership(contents: string, readFile?: TargetFileRead
     ])
   );
   const project = entries(body.get("PBXProject") ?? "")[0];
+  const projectSettings = (lists.get(field(project?.body ?? "", "buildConfigurationList") ?? "") ?? []).map((id) =>
+    configurations.get(id)
+  );
 
   const paths = new Map<string, string>();
   const seen = new Set<string>();
@@ -195,10 +198,16 @@ export function readTargetMembership(contents: string, readFile?: TargetFileRead
       if (path) folders.add(path);
     }
     const list = field(target.body, "buildConfigurationList");
-    const settings = (lists.get(list ?? "") ?? []).map((id) => configurations.get(id));
-    let sdkroot = settings.map((setting) => setting?.sdkroot).find((value) => value !== undefined);
+    const targetSettings = (lists.get(list ?? "") ?? []).map((id) => configurations.get(id));
+    // A target inherits its build settings from the project, so SDKROOT is often
+    // declared once on the project configuration list and never on the target.
+    const levels = [targetSettings, projectSettings];
+    let sdkroot = levels
+      .flat()
+      .map((setting) => setting?.sdkroot)
+      .find((value) => value !== undefined);
     if (sdkroot === undefined && readFile) {
-      for (const setting of settings) {
+      for (const setting of levels.flat()) {
         if (!setting) continue;
         const entry = setting.base
           ? (paths.get(setting.base) ?? fileReferences.get(setting.base) ?? setting.base)

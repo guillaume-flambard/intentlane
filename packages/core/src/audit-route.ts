@@ -1,5 +1,5 @@
 import type { AuditProject } from "./audit-project.js";
-import type { AuditConfidence, AuditEvidence } from "./audit.js";
+import type { AuditConfidence, AuditEvidence, AuditPlatform } from "./audit.js";
 
 export const AUDIT_ROUTES = ["native", "bridged", "ineligible", "unknown"] as const;
 
@@ -47,12 +47,47 @@ function evidence(paths: readonly string[], kind: AuditEvidence["kind"]): AuditE
   return paths.map((path) => ({ kind, path }));
 }
 
+export type RouteTargetEvidence = Readonly<{
+  platform: AuditPlatform;
+  /** Targets the audit could read in the Xcode project it inspected. */
+  targetCount: number;
+  /** How many of them declare the platform being audited. */
+  targetsForPlatform: number;
+  /** How many declare some other platform. */
+  targetsElsewhere: number;
+}>;
+
 export function detectIntegrationRoute(
   files: readonly string[],
-  projects: readonly AuditProject[] = []
+  projects: readonly AuditProject[] = [],
+  targetEvidence?: RouteTargetEvidence
 ): AuditRouteReport {
   const targets = files.filter(isNativeTarget);
   const bridges = files.filter((file) => BRIDGE_MARKERS.includes(basename(file)));
+
+  // An Xcode project in the tree is not proof that the audited platform is native
+  // here: a repository can ship a macOS crash reporter or an audio library as an
+  // Xcode project while its application is built another way. Only positive
+  // evidence that no target compiles for this platform downgrades the route, so a
+  // real target whose platform could not be resolved is left alone.
+  if (targetEvidence && targets.length > 0 && targetEvidence.targetsForPlatform === 0 && bridges.length === 0) {
+    if (targetEvidence.targetCount === 0) {
+      return {
+        route: "unknown",
+        confidence: "high",
+        evidence: evidence(targets, "project"),
+        nextAction: `The Xcode project in this tree carries no application target, so the ${targetEvidence.platform} native route is unproven here.`
+      };
+    }
+    if (targetEvidence.targetsElsewhere > 0) {
+      return {
+        route: "unknown",
+        confidence: "high",
+        evidence: evidence(targets, "project"),
+        nextAction: `Every native target in this tree compiles for other platforms, so ${targetEvidence.platform} is unproven here.`
+      };
+    }
+  }
 
   if (targets.length > 0 && bridges.length === 0) {
     return {

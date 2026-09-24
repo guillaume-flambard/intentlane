@@ -99,7 +99,13 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const partialDomains = partialSchemaDomains(siriDomains);
   const metadata = options.buildMetadata ? await readBuildMetadata(options.buildMetadata) : undefined;
   const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
-  const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
+  const route = detectIntegrationRoute(files, await discoverProjects(options.directory), {
+    platform: options.platform,
+    targetCount: targets.length,
+    targetsForPlatform: targets.filter((target) => target.platform === options.platform).length,
+    targetsElsewhere: targets.filter((target) => target.platform !== undefined && target.platform !== options.platform)
+      .length
+  });
   const data = classifyData(files, sources);
   const architecture = detectDataArchitecture(files, sources);
   const conditions = describeConditions(options.environment);

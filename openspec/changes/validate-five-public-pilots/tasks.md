@@ -29,10 +29,11 @@ rejection. Screening clones are in
       indexed, and record the reason. No candidate was rejected on sensitivity
       alone; the four rejections are on route, on an existing Shortcuts surface,
       and on a licence that complicates redistribution.
-- [ ] 1.4 Fix `intentlane audit` so a project using
-      `PBXFileSystemSynchronizedRootGroup` is read correctly, then re-run the
-      classification. It is a defect the screening found, and `discovery` is
-      unreliable until it is fixed.
+- [x] 1.4 Fix `intentlane audit` so a target that inherits SDKROOT from the project
+      is read correctly, so the route cannot claim a native platform with no target
+      for it, and so a missing directory is refused rather than reported as an
+      empty success. Three tests, then the nine candidates re-measured with the
+      fixed tool; the numbers are in `candidates.md`.
 - [ ] 1.5 Choose the first pilot and say why. HandBrake is the low-sensitivity
       case and should go first; Cyberduck is the hardest privacy case and should
       be reserved for after one success.
@@ -86,7 +87,9 @@ rejection. Screening clones are in
   most once, on purpose.
 - The gate is still three, and the research set is still five. Neither number was
   moved to make the campaign easier.
-- The screening found two audit defects, recorded in `candidates.md`: targets
-  using `PBXFileSystemSynchronizedRootGroup` are invisible, and a repository with
-  no macOS target can still report `route: native`. Both affect how a pilot is
-  classified, so both are fixed before the first pilot rather than during it.
+- The screening found three audit defects, recorded in `candidates.md`: a target
+  inheriting SDKROOT from the project was not resolved, a repository with no
+  target for the audited platform could still report `route: native`, and a
+  missing directory produced a clean empty report. The first three are fixed; the
+  remaining limitation is that no tool can tell a Quick Look helper from the
+  application, so that judgement stays human.

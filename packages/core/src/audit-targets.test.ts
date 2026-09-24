@@ -345,3 +345,130 @@ describe("readTargetMembership with synchronized folders", () => {
     expect(targets.map((target) => target.platform)).toEqual([undefined, undefined]);
   });
 });
+
+/**
+ * CotEditor declares SDKROOT once, on the project build configuration, and the
+ * targets inherit it. A target-level setting still wins over the project one.
+ */
+const INHERITED = [
+  "// !$*UTF8*$!",
+  "{",
+  "\tobjects = {",
+  "",
+  ...section("PBXProject", [
+    entry("D00000000000000000000001", "Project object", [
+      "isa = PBXProject;",
+      "mainGroup = D00000000000000000000010;",
+      "buildConfigurationList = D00000000000000000000030 /* Build configuration list for PBXProject */;"
+    ])
+  ]),
+  "",
+  ...section("PBXGroup", [
+    entry("D00000000000000000000010", "Sources", [
+      "isa = PBXGroup;",
+      "children = (D00000000000000000000011, D00000000000000000000014);",
+      'sourceTree = "<group>";'
+    ])
+  ]),
+  "",
+  ...section("PBXFileReference", [
+    line("D00000000000000000000011", "App.swift", [
+      "isa = PBXFileReference;",
+      "path = App.swift;",
+      'sourceTree = "<group>";'
+    ]),
+    line("D00000000000000000000014", "Extra.swift", [
+      "isa = PBXFileReference;",
+      "path = Extra.swift;",
+      'sourceTree = "<group>";'
+    ])
+  ]),
+  "",
+  ...section("PBXBuildFile", [
+    line("D00000000000000000000012", "App.swift in Sources", [
+      "isa = PBXBuildFile;",
+      "fileRef = D00000000000000000000011 /* App.swift */;"
+    ]),
+    line("D00000000000000000000015", "Extra.swift in Sources", [
+      "isa = PBXBuildFile;",
+      "fileRef = D00000000000000000000014 /* Extra.swift */;"
+    ])
+  ]),
+  "",
+  ...section("PBXSourcesBuildPhase", [
+    entry("D00000000000000000000013", "Sources", [
+      "isa = PBXSourcesBuildPhase;",
+      "files = (D00000000000000000000012);"
+    ]),
+    entry("D00000000000000000000016", "Sources", [
+      "isa = PBXSourcesBuildPhase;",
+      "files = (D00000000000000000000015);"
+    ])
+  ]),
+  "",
+  ...section("PBXNativeTarget", [
+    entry("D00000000000000000000020", "App", [
+      "isa = PBXNativeTarget;",
+      "buildConfigurationList = D00000000000000000000031 /* Build configuration list for App */;",
+      "buildPhases = (D00000000000000000000013);",
+      "name = App;"
+    ]),
+    entry("D00000000000000000000021", "App-iOS", [
+      "isa = PBXNativeTarget;",
+      "buildConfigurationList = D00000000000000000000032 /* Build configuration list for App-iOS */;",
+      "buildPhases = (D00000000000000000000016);",
+      "name = App-iOS;"
+    ])
+  ]),
+  "",
+  ...section("XCBuildConfiguration", [
+    entry("D00000000000000000000040", "Debug", [
+      "isa = XCBuildConfiguration;",
+      "SDKROOT = macosx;"
+    ]),
+    entry("D00000000000000000000041", "Debug", [
+      "isa = XCBuildConfiguration;",
+      "SWIFT_VERSION = 6.0;"
+    ]),
+    entry("D00000000000000000000042", "Debug", [
+      "isa = XCBuildConfiguration;",
+      "SDKROOT = iphoneos;"
+    ])
+  ]),
+  "",
+  ...section("XCConfigurationList", [
+    line("D00000000000000000000030", "Build configuration list for PBXProject", [
+      "isa = XCConfigurationList;",
+      "buildConfigurations = (D00000000000000000000040);"
+    ]),
+    line("D00000000000000000000031", "Build configuration list for App", [
+      "isa = XCConfigurationList;",
+      "buildConfigurations = (D00000000000000000000041);"
+    ]),
+    line("D00000000000000000000032", "Build configuration list for App-iOS", [
+      "isa = XCConfigurationList;",
+      "buildConfigurations = (D00000000000000000000042);"
+    ])
+  ]),
+  "",
+  "\t};",
+  "}"
+].join("\n");
+
+describe("platform inherited from the project build configuration", () => {
+  it("resolves a target that inherits SDKROOT from the project", () => {
+    expect(readTargetMembership(INHERITED)).toEqual([
+      { name: "App", platform: "macos", files: ["App.swift"], folders: [] },
+      { name: "App-iOS", platform: "ios", files: ["Extra.swift"], folders: [] }
+    ]);
+  });
+
+  it("scopes the report once the inherited platform is known", () => {
+    const memberships = readTargetMembership(INHERITED);
+    expect(describeTargets(memberships, "macos").scoped).toBe(true);
+    expect([...filesForPlatform(memberships, "macos", ["App.swift", "Extra.swift", "README.md"])].sort()).toEqual([
+      "App.swift",
+      "README.md"
+    ]);
+  });
+});
