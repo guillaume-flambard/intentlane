@@ -1,14 +1,17 @@
 ## 0. Method and measurement, before any candidate
 
-- [ ] 0.1 Freeze the recipe as a versioned document, the ASRi integration method,
+- [x] 0.1 Freeze the recipe as a versioned document, the ASRi integration method,
       with one section per stage: audit, contract, generation, mapping, tests,
-      build, metadata, certification.
-- [ ] 0.2 Create the deviation log format: pilot, stage, what the recipe said,
-      what this pilot needed, why, and the extra effort.
-- [ ] 0.3 Create the effort sheet: one row per stage per pilot, in minutes, with
-      the tooling that recorded it.
-- [ ] 0.4 Create the campaign results document, which will hold the pricing
+      build, metadata, certification. `recipe.md`, v1, with a command and an exit
+      criterion per stage.
+- [x] 0.2 Create the deviation log format: pilot, stage, what the recipe said,
+      what this pilot needed, why, and the extra effort. `deviations.md`.
+- [x] 0.3 Create the effort sheet: one row per stage per pilot, in minutes, with
+      the tooling that recorded it. `effort.md`, with `not instrumented` where a
+      stage predates the sheet, because a remembered number would corrupt it.
+- [x] 0.4 Create the campaign results document, which will hold the pricing
       range, the deviation count and the domain spread, and nothing else.
+      `results.md`, empty until the offer gate is met.
 
 ## 1. Candidate qualification
 
@@ -34,13 +37,27 @@ rejection. Screening clones are in
       for it, and so a missing directory is refused rather than reported as an
       empty success. Three tests, then the nine candidates re-measured with the
       fixed tool; the numbers are in `candidates.md`.
-- [ ] 1.5 Choose the first pilot and say why. HandBrake is the low-sensitivity
-      case and should go first; Cyberduck is the hardest privacy case and should
-      be reserved for after one success.
+- [x] 1.5 Choose the first pilot and say why. **FSNotes goes first**, not
+      HandBrake, because it is the only qualified candidate whose app target is
+      Swift, so it is the only one that can run the recipe as written and make a
+      zero-deviation result meaningful. HandBrake is second and becomes the first
+      real test of step 4.1, the Objective-C path. Cyberduck stays last, because
+      a thin Objective-C shell over a Java application is where the recipe may
+      not apply at all. The four Objective-C targets are recorded in
+      `candidates.md` and in `deviations.md`.
 
 ## 2. Local proof, per pilot
 
-- [ ] 2.1 Run the read-only audit and record the exact revision and SDK.
+First pilot: **FSNotes `a96b9b5`**, macOS, the only Swift target among the
+qualified candidates. Each stage is timed with a clock and every deviation is
+logged before the next stage starts.
+
+- [x] 2.1 Run the read-only audit and record the exact revision and SDK.
+      FSNotes `a96b9b5`, tag `v7.3.4`, no submodules. macOS 27.0, Xcode
+      `27A266a`, arm64, `en-US`, region `US`, five of nine conditions recorded.
+      Route `native/high`, 229 Swift files in the macOS app target, 0 quality
+      issues, data classified `sensitive, personal, public` with the privacy
+      manifest reported missing. Recorded in `pilots/fsnotes/QUALIFICATION.md`.
 - [ ] 2.2 Write the contract, declare the claim set in a `pilot.yaml`, and name
       the command that settles each application-owned claim.
 - [ ] 2.3 Implement only a fixture-backed, minimal mapping in an isolated fork.

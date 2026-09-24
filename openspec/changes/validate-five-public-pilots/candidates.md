@@ -9,6 +9,39 @@ shallow at the revision recorded here. The audit was run as
 `intentlane audit <repo> --platform macos --format json` with the local SDK
 (macOS 27.0 build 26A428, Xcode 27 build 27A266a).
 
+## The language of the application target, which decided the order
+
+The screening did not record this, and it turned out to matter more than data
+sensitivity. App Intents is Swift, so an application target with no Swift in it
+cannot receive the mapping as the recipe was first written.
+
+| Candidate | App target | Language in the target | Swift? |
+| --- | --- | --- | --- |
+| FSNotes | `FSNotes` | 229 Swift files | yes |
+| HandBrake | `HandBrake` | 77 `.m` | no |
+| LuLu | `LuLu` | 27 `.m` | no |
+| Transmission | `Transmission` | 81 `.m` | no |
+| Cyberduck | `app` | 6 `.m` over a Java application | no |
+
+Four of the five qualified candidates are not Swift. This does not disqualify
+any of them, and it is logged as a deviation rather than hidden: the recipe now
+has step 4.1, "when the app target is not Swift", which adds Swift to the target,
+exposes one read function and one open function through the bridging header,
+and forbids converting the existing Objective-C.
+
+It also reverses the pilot order that task 1.5 originally proposed. The first
+pilot should be the one that can run the recipe as written, so that a
+zero-deviation result means something. That is FSNotes, the only Swift target.
+Cyberduck is still reserved for last, because a thin Objective-C shell over a
+Java application is the case where the recipe may simply not apply.
+
+One more FSNotes detail, recorded so it cannot be confused later: the audit found
+`import AppIntents` evidence in the **iOS** target's `AppDelegate`, not in the
+macOS app. The macOS application is the integration target, and its existing iOS
+surface is not ours to claim. The audit also reports `data.privacy: missing` and
+a data classification of `sensitive, personal, public` for a note application,
+which is expected and is the reason the pilot runs on fixtures only.
+
 ## What the tool found, and the defects the screening exposed
 
 Every candidate scores `0/84 (none)` with `discovery: none`, which is expected:
@@ -164,11 +197,13 @@ credential reference, so a mapping that gets this wrong is visibly wrong.
 
 ## What is still open before the first pilot
 
-1. Choose the first pilot. The method should be tried where it is easiest, which
-   by the sensitivity table is HandBrake, and the hardest case, which is
-   Cyberduck, should be reserved for when the recipe has survived one success.
-2. Record `appleIntelligence`, `account`, `permissions` and `testData` once, in
-   the shared conditions, instead of per pilot.
-3. Keep reading the target names. The tool cannot tell a Quick Look helper from
+1. Run the recipe on FSNotes: audit, contract, generation, mapping, tests, build,
+   metadata, certification, with every stage timed and every deviation logged.
+2. Use HandBrake as the first test of step 4.1, the Objective-C path, and measure
+   what it really costs instead of estimating it.
+3. Record `appleIntelligence`, `account`, `permissions` and `testData` once, in
+   the shared conditions, instead of per pilot. Every candidate reports five of
+   nine conditions, with the same four unknown.
+4. Keep reading the target names. The tool cannot tell a Quick Look helper from
    the application, so that judgement stays human and belongs in the
    qualification record rather than in a score.
