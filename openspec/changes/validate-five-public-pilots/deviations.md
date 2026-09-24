@@ -60,3 +60,33 @@ ambiguous. It is not recorded for a stage that simply took longer.
   which is what FSNotes actually deploys to. Closing a deviation by changing the
   tool is the outcome the campaign wants: the recipe is supposed to get easier
   with each pilot, and this one is easier for the next four.
+- **The recipe and the capability spec contradicted each other, and the pilots
+  followed the wrong one.** `recipe.md` 4.3 has always said to reindex on the
+  application's own create, update and delete events, and a full rewrite is
+  acceptable only when the application exposes no incremental event. The
+  `pilot-index-lifecycle` spec said a pilot MAY wire them and SHALL NOT be required
+  to. Both statements cannot be true, and when the first two pilots were written the
+  two files were both open, so the weaker one won by default: `indexSync` was
+  certified against the index API, which proves the lifecycle and not the wiring, and
+  both pilots shipped a deleted object that stayed searchable. FSNotes and HandBrake
+  both expose the event, so the recipe's exception did not apply and neither pilot
+  had a reason to take it.
+
+  The fix is not to the pilots, it is to the contradiction. The spec now says the
+  test must reach the application's own path, or the pilot record must say the
+  wiring was verified by review and by the launch probe instead of implying a
+  coverage it does not have. What the spec must not say again is that the hook is
+  optional while the recipe requires it, because that is how two honest documents
+  produce an uncertified claim.
+
+  The cost is in the effort sheet under stage W: 138 s per run for FSNotes and 10 s
+  for HandBrake. The fourteen-fold gap is the language, not the method, and it
+  matters for the offer, because a Swift pilot pays for a real-object test and an
+  Objective-C pilot does not.
+- FSNotes needed its test harness to launch the real application, and that needed an
+  isolated `HOME`. `Storage.shared()` creates a trash directory inside the
+  developer's `Documents` on first use, so a test that touches the real model also
+  writes to the developer's disk. This is recorded rather than fixed because the
+  behaviour belongs to the application, not to the pilot, and upstream will not want
+  a test-only `HOME`. A pilot on a Swift app that keeps user state in a singleton has
+  to budget for this, and the recipe now asks.

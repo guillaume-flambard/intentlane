@@ -51,17 +51,42 @@ index API, so that the wiring is covered rather than assumed.
       launch probe rather than by a test, instead of implying a coverage it does
       not have
 
-### Requirement: La réindexation incrémentale reste un choix, pas une obligation
-A pilot MAY wire create, update and delete events. It SHALL NOT be required to, and
-a pilot that does not SHALL NOT be described as incomplete.
+### Requirement: La réindexation incrémentale n'est plus optionnelle
+A pilot SHALL wire the application's own mutation events when the application
+exposes them, as `recipe.md` 4.3 already required. The two documents previously
+disagreed, this one calling the hook optional, and the disagreement is what let
+`indexSync` be certified against the index API while a deleted object stayed
+searchable. A pilot that wires the events SHALL NOT be described as having grown
+beyond its scope, because it did what the recipe said.
 
-#### Scenario: Un premier pilote n'ajoute pas de crochets
-- **WHEN** a first pilot does not wire mutation events
-- **THEN** it says the system reindexes on demand, and the claim set stays the same
-      six, because the on-demand path is real and the claim never covered mutation
-      hooks
-
-#### Scenario: Un pilote les ajoute
-- **WHEN** a pilot wires the events
+#### Scenario: Un pilote câble les événements
+- **WHEN** a pilot wires the application's own mutation events
 - **THEN** the cost is recorded as an extra effort row, and the deviation log says
-      the recipe asked for it rather than requiring it
+      the recipe asked for it and the capability spec had contradicted the recipe
+
+#### Scenario: L'application n'expose aucun événement
+- **WHEN** the application exposes no incremental event
+- **THEN** a full rewrite reconciliation on launch is acceptable, and the pilot
+      record says that is what it does rather than implying a hook it did not build
+
+#### Scenario: Un test ne peut pas appeler l'application
+- **WHEN** the test target cannot reach the application's deletion path
+- **THEN** the pilot records that the wiring is verified by review and by the
+      launch probe, and the effort sheet still carries the row, because a stage
+      nobody measured is a stage nobody can quote
+
+### Requirement: Un test qui touche l'état réel s'isole lui-même
+A test that drives the application's real model SHALL run with its user state
+isolated, because the application may write to the developer's own files when it
+starts. FSNotes creates a trash directory inside the developer's `Documents` on
+first use, so a test that reaches `Storage.shared()` without an isolated `HOME`
+modifies the machine it runs on.
+
+#### Scenario: L'application a un état singleton
+- **WHEN** the test reaches the application's real storage or model
+- **THEN** it runs under an isolated `HOME` and creates its fixtures inside that
+      sandbox, and the record says the isolation exists and why
+
+#### Scenario: L'application n'a pas d'état disque
+- **WHEN** the application keeps no user state on disk
+- **THEN** the test says so, and does not claim an isolation it did not need

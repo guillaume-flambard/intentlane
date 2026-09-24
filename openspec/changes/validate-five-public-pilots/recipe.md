@@ -228,6 +228,18 @@ App Intents is Swift.
 - The identifier's envelope is documented: what it is stable across, and what it
   is not. IINA's `mpvMd5` is stable across runs and across a title change, and
   not across a move or a rename. Say so rather than calling it stable.
+- The test for this stage must drive the application's own mutation path, not the
+  index API. This is where the first two pilots went wrong: the recipe already
+  required the wiring, the capability spec called it optional, and the spec won by
+  default, so `indexSync` was certified while a deleted object stayed searchable.
+- If the application's path cannot be reached from a test, the pilot record says
+  so and states that the wiring is verified by review and by the launch probe. It
+  does not describe the on-demand reindex as if it were the whole story, because
+  the on-demand path is real and it is a different claim.
+- If the application keeps user state in a singleton, the test runs under an
+  isolated `HOME`. FSNotes creates a trash directory inside the developer's
+  `Documents` on first use, so a real-object test that does not isolate itself
+  writes to the developer's disk.
 
 ## Stage 5, tests
 

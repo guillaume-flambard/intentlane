@@ -22,27 +22,58 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       d'alerte. La notification ne porte pas le nœud, donc le bon mouvement est un
       diff de l'ensemble éligible avant et après. Écrit dans la fiche.
 - [x] 0.4 Prouver d'abord que rien n'est câblé, avant d'écrire le test qui l'exige.
-      Fait avec deux sondes qui sortent un fait et non un verdict :
-      `pilots/fsnotes/tests/run-wiring-probe.sh` et
-      `pilots/handbrake/tests/run-wiring-probe.sh`. Les deux constatent que
-      l'index accepte l'entité, que l'application émet bien son événement, et que
-      l'identifiant reste écrit après la suppression, avec zéro appel de retrait
-      dans le chemin de l'application. **Trouvé et nommé** dans les deux pilotes,
-      alors que `indexSync` est certifié pour les deux.
-- [ ] 0.5 Écrire le test rouge qui exige le retrait, pour les deux pilotes, avec
+      Fait avec deux sondes qui sortent un fait et non un verdict. Les deux
+      constatent que l'index accepte l'entité, que l'application émet bien son
+      événement, et que l'identifiant reste écrit après la suppression, avec zéro
+      appel de retrait dans le chemin de l'application. **Trouvé et nommé** dans les
+      deux pilotes, alors que `indexSync` est certifié pour les deux.
+      **Sondes retirées en 0.7.** Elles printaient `FINDING: ... still written`, ce
+      qui est devenu faux, et une commande verte qui affirme le contraire du code
+      est pire que pas de commande du tout. Les suites de 0.5 les remplacent et
+      disent plus : elles lancent l'application. La mesure de 0.4 reste dans ce
+      journal et dans les deux commits.
+- [x] 0.5 Écrire le test rouge qui exige le retrait, pour les deux pilotes, avec
       le nom exact de l'identifiant qui doit disparaître. Vérifié par un run qui
       échoue sur l'assertion et non sur une erreur de compilation.
-- [ ] 0.6 Écrire le harness qui relie l'application à l'index nommé, sans
+      **Fait, et le rouge est un runtime.** Les deux suites compilent avant que la
+      couture existe et échouent ensuite sur une assertion nommée, parce qu'un test
+      qui ne compile pas prouverait moins. FSNotes : 13 vérifications, une seule
+      échoue, « removeRows made the sync drop the removed identifier ». HandBrake :
+      13 vérifications, quatre échouent, la première nommée
+      « the observer dropped the deleted preset's identifier from the index ». Les
+      deux rouges ont été obtenus en retirant la couture, puis vérifiés.
+- [x] 0.6 Écrire le harness qui relie l'application à l'index nommé, sans
       modifier la couture. Pour FSNotes, il appelle le vrai `removeRows` et fournit
       l'énumération nommée. Pour HandBrake, il observe la notification réelle et
       compare l'ensemble éligible avant et après, puisque la notification ne porte
       pas le nœud. Le code testé est la couture de l'application, pas une
       imitation. Vérifié par le test de 0.5 passant une fois la couture câblée.
-- [ ] 0.7 Câbler la suppression dans les deux pilotes, à travers l'entonnoir que
+      **Fait, et le test lance vraiment l'application.** FSNotes compile les 233
+      fichiers que Xcode compile, lus dans le projet et non devinés, lie les objets
+      SwiftPM déjà construits, et tourne sous un `HOME` isolé parce que `Storage`
+      crée un dossier Trash dans le `Documents` du développeur au premier usage.
+      L'entonnoir est le vrai `SidebarOutlineView.removeRows` sur un vrai
+      `Storage.shared()`, et il passe parce que `removeRows` lit
+      `ViewController.shared()` et sort tôt quand il est nil, ce qui arrive après le
+      retrait du stockage. HandBrake compile les vrais `HBPresetsManager`,
+      `HBTreeNode`, `HBPreset` et `HBMutablePreset`, appelle `hb_global_init` comme
+      l'application au démarrage, et supprime un preset intégré réel généré par
+      libhandbrake. Deux fichiers ont dû sortir de `PresetIntegration.swift` vers
+      `PresetRecords.swift` et `PresetObservation.swift`, parce que celui qui lit
+      `NSApplication.shared.delegate` ne se compile pas sans l'application, alors
+      que le mapping d'identifiant et l'observateur sont justement ce qu'un test doit
+      atteindre.
+- [x] 0.7 Câbler la suppression dans les deux pilotes, à travers l'entonnoir que
       l'application expose déjà, jamais en écrivant l'état de l'interface ni en
       interceptant le chemin d'alerte. Pour HandBrake, ne pas s'accrocher à
       `deletePreset:` et ne pas deviner le nœud retiré. Vérifié par le test de 0.5, une ligne de
       deviation et une ligne d'effort par pilote, et `BUILD SUCCEEDED`.
+      **Fait.** FSNotes : un appel dans `removeRows`, qui est le seul endroit où un
+      projet quitte `Storage`, et il prend les enfants que l'entonnoir a lui-même
+      collectés plutôt que la liste de l'appelant. HandBrake : un observateur de
+      `HBPresetsChangedNotification` retenu dans un statique, parce qu'un token de
+      bloc libéré avec sa portée cesserait de réconcilier en silence. `BUILD
+      SUCCEEDED` des deux côtés, huit suites vertes.
 - [ ] 0.8 Réécrire dans les deux fiches ce qui est réellement câblé, et retirer
       toute formulation qui décrit la réindexation à la demande comme si elle était
       le seul branchement, puisque la suppression l'est désormais aussi. Vérifié

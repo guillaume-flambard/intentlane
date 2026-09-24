@@ -238,14 +238,28 @@ No write intent, no note body, no note count. FSNotes has no macOS test target,
 so the ancestor-expansion branch is proven by the build and by reading, not by a
 test, and the pilot says so instead of implying otherwise.
 
-**Index removal is not wired, and the wiring probe says so rather than the claim
-being quietly true.** `bash pilots/fsnotes/tests/run-wiring-probe.sh` reports that
-the index accepts the entity, that the application emits its own funnel on five
-paths, that this funnel makes zero calls to the index, and that the identifier
-therefore survives a deletion. The system reindexes the named index on demand,
-which is real but is not the same as a mutation hook, so `indexSync` certifies the
-lifecycle of the index and not its freshness. The next change, task 0.7, wires it
-through `removeRows(projects:)`.
+**Index removal is wired, and the test that proves it launches FSNotes.**
+`bash pilots/fsnotes/tests/run-deletion-tests.sh` compiles the 233 files Xcode
+compiles, read from the project file rather than guessed, links the SwiftPM objects
+Xcode already built, and runs under an isolated `HOME`. The storage is
+`Storage.shared()`, the notebook is a real `Project`, the funnel is the real
+`SidebarOutlineView.removeRows`, and the source is the same one the intent handlers
+use. No stand-in anywhere in the chain.
+
+That is possible because `removeRows` reads `ViewController.shared()` and returns
+early when it is nil, which happens after the storage removal, so a bare
+`NSOutlineView` is enough. The isolation is not optional: `Storage` creates a trash
+directory in the developer's `Documents` on first use.
+
+The wiring is one call in `removeRows`, because that funnel is the only place a
+project leaves `Storage`. It takes the child projects the funnel itself collected,
+not the caller's list. The identifier is the checksum of the folder path, so a
+rename is a removal and an insertion, which is why the sync also carries a
+`reconcile` that drops whatever the source stopped offering. Thirteen checks, and
+the red was proven by deleting the call, which fails on exactly one line.
+
+`indexSync` now certifies what it says. The system still reindexes the named index
+on demand, and that is now the backstop rather than the whole story.
 
 ### Stage 6 and 7, measured
 

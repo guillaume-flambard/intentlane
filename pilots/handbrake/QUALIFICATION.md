@@ -137,14 +137,29 @@ Same protocols, same availability annotation, same resolver shape.
 
 No Siri conversation, no Spotlight result, and no `system.searchInApp`.
 
-**Index removal is not wired, and HandBrake already has the event that would wire
-it.** `bash pilots/handbrake/tests/run-wiring-probe.sh` reports that the index
-accepts the entity, that `HBPresetsChangedNotification` does fire on every insert,
-removal and replacement, that nothing observes it to remove the entry, and that the
-identifier therefore survives a deletion. So the gap is one observer, not a missing
-event, which is the cheapest shape this defect could have taken. The system
-reindexes the named index on demand, and this pilot does not pretend that is the
-same as a mutation hook. The next change, task 0.7, wires the observer.
+**Index removal is wired, through the event HandBrake already had.**
+`bash pilots/handbrake/tests/run-deletion-tests.sh` compiles the real
+`HBPresetsManager`, `HBTreeNode`, `HBPreset` and `HBMutablePreset`, calls
+`hb_global_init` the way the application does at startup, and deletes one of
+HandBrake's own built-in presets from the real tree. The delete is the real
+`deletePresetAtIndexPath:` and the event is the real
+`HBPresetsChangedNotification`.
+
+The event carries no node, so the wiring cannot be a removal call without guessing
+which preset went away. It reconciles by diffing the eligible set instead, which is
+also what catches a rename, since the identifier is the category and the preset
+name. Thirteen checks, and the red was proven by removing the observer's body, which
+fails on four lines, the first naming the identifier that should have been dropped.
+
+The observer is held in a static and is an `NSObject` rather than the block form,
+because a block token deallocated with its scope would stop reconciling silently.
+That is this defect wearing a different hat.
+
+The tree mapping and the observer moved out of `PresetIntegration.swift` into
+`PresetRecords.swift` and `PresetObservation.swift`, because that file reads
+`NSApplication.shared.delegate` and cannot be compiled without the whole
+application, while the mapping decides the identifier and the observer is the
+wiring. `PresetIndex.swift` speaks no HandBrake symbol again.
 
 ## Not measured
 
