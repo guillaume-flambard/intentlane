@@ -12,11 +12,30 @@
 
 ## 1. Candidate qualification
 
-- [ ] 1.1 Record five official public repositories, licences and contribution
-      paths.
-- [ ] 1.2 Classify the data sensitivity and an honest Siri AI hypothesis for each.
-- [ ] 1.3 Reject a candidate when its data cannot be safely represented or
-      indexed, and record the reason. A rejection is a valid outcome.
+Screening record: `candidates.md`, with the revision, licence, contribution path,
+audit result and data classification for every candidate, and the reason for each
+rejection. Screening clones are in
+`~/projects/active/apps/clients/intentlane-candidates`.
+
+- [x] 1.1 Record nine official public repositories, licences and contribution
+      paths. Five qualified: FSNotes (MIT), LuLu (GPLv3), HandBrake (GPLv2),
+      Transmission (GPLv2 or GPLv3), Cyberduck (GPL). Four rejected with the
+      reason: Krita, Zed, Ardour, CotEditor.
+- [x] 1.2 Classify the data sensitivity and an honest Siri hypothesis for each.
+      The hypothesis is deliberately not "Siri will work": it is whether the object
+      has a stable opaque identifier, a user-visible title, and an action the
+      system can expose without guessing. Discovery is `none` for all nine.
+- [x] 1.3 Reject a candidate when its data cannot be safely represented or
+      indexed, and record the reason. No candidate was rejected on sensitivity
+      alone; the four rejections are on route, on an existing Shortcuts surface,
+      and on a licence that complicates redistribution.
+- [ ] 1.4 Fix `intentlane audit` so a project using
+      `PBXFileSystemSynchronizedRootGroup` is read correctly, then re-run the
+      classification. It is a defect the screening found, and `discovery` is
+      unreliable until it is fixed.
+- [ ] 1.5 Choose the first pilot and say why. HandBrake is the low-sensitivity
+      case and should go first; Cyberduck is the hardest privacy case and should
+      be reserved for after one success.
 
 ## 2. Local proof, per pilot
 
@@ -67,3 +86,7 @@
   most once, on purpose.
 - The gate is still three, and the research set is still five. Neither number was
   moved to make the campaign easier.
+- The screening found two audit defects, recorded in `candidates.md`: targets
+  using `PBXFileSystemSynchronizedRootGroup` are invisible, and a repository with
+  no macOS target can still report `route: native`. Both affect how a pilot is
+  classified, so both are fixed before the first pilot rather than during it.
