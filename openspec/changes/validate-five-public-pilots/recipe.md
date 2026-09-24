@@ -97,6 +97,16 @@ Choose the surface before writing code, then declare it.
 - Deletion, sending, publishing, paying and external sharing are high risk and are
   never in a first pilot.
 - If no Apple schema fits, do not sell Siri AI. Offer automation or nothing.
+- Check that the application has a surface to route into before claiming one.
+  `system.searchInApp` needs a real in-app list or search field. HandBrake's
+  presets view has an `NSTreeController` and no search field at all, so
+  implementing "search" as "select the one node whose name matches" would advertise
+  a system surface the application does not have. The contract declares one
+  intent instead of two, and says why.
+- A claim set may shrink for a stated reason about the application. It may not
+  shrink because of the stack, and it may never grow past what a command proves.
+  The six deterministic claims are the same for every pilot; what the contract
+  exposes inside them is an application fact.
 - Compare the application's own deployment floor with the floor the schema
   requires. Declare the real one: `min_macos` for a macOS application, `min_ios`
   for an iOS one, or both. The `@available(macOS 27.0, *)` annotation is derived
@@ -169,6 +179,12 @@ App Intents is Swift.
 - If the application's own entry point for a behaviour is private, call the public
   callback it already listens to, and write down that making the private method
   internal would be the cleaner change for an upstream pull request.
+- On an Objective-C target, expect to promote accessors before anything compiles.
+  An Objective-C app commonly keeps its controllers, managers and views in class
+  extensions, and Swift can see nothing there. Expect to move a property from a
+  `.m` extension to the `.h` it belongs in, and expect a bridging header to
+  declare the Objective-C classes the Swift file calls. Every promoted property
+  belongs in the pull request; none of it is pilot scaffolding.
 - Index incrementally only if the application exposes its own create, update and
   delete events and the pilot wires them. If it does not, say that the system
   reindexes on demand instead, rather than implying mutation hooks exist.

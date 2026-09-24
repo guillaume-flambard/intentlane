@@ -41,11 +41,21 @@ entities:
     query:
       mode: static
 
-# Same shape as the FSNotes contract, on purpose. The claim set must not change
-# with the stack, or the campaign proves nothing about being adaptable.
+# The surfaces are the ones this application can honestly support.
+#
+# `system.open` is here and is the same shape as FSNotes: selecting a preset is
+# what the app's own preset control does, and it changes the current job's
+# settings, not any file.
+#
+# `system.searchInApp` is deliberately absent. HandBrake's presets view has no
+# search field and no search controller, only an NSTreeController over the preset
+# tree, so there is no in-app search list to route a term into. Implementing
+# "search" as "select the one node whose name matches" would claim a system
+# surface the application does not have, which is the one thing this campaign
+# exists to avoid. The six certified claims are unchanged; what shrinks is the
+# contract's surface count, for a stated reason about the application rather than
+# about the stack.
 intents:
-  # Selecting a preset is what the app's own preset menu does. It changes the
-  # current job's settings, not any file, so it is a UI selection and not a write.
   - id: open_preset
     title:
       en: Open preset
@@ -54,14 +64,3 @@ intents:
       mode: native
     schema: system.open
     target: preset
-
-  - id: search_presets
-    title:
-      en: Search presets
-    description:
-      en: Search HandBrake's built-in presets
-    parameters: []
-    execution:
-      mode: native
-      handler: SearchPresetsHandler
-    schema: system.searchInApp
