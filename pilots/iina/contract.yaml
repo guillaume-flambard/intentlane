@@ -1,0 +1,46 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.iina-pilot
+  name: IINA
+  url_scheme: iina
+  min_ios: "27.0"
+  locales:
+    - en
+    - fr
+
+entities:
+  - id: played_media
+    title:
+      en: Played media
+      fr: Média lu
+    identifier: id
+    display:
+      title: title
+      subtitle: kind
+    query:
+      mode: static
+
+intents:
+  - id: open_played_media
+    title:
+      en: Open played media
+      fr: Ouvrir un média lu
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: played_media
+
+  - id: search_played_media
+    title:
+      en: Search played media
+      fr: Rechercher les médias lus
+    description:
+      en: Search IINA's local playback history
+      fr: Rechercher l'historique de lecture local d'IINA
+    parameters: []
+    execution:
+      mode: native
+      handler: SearchPlayedMediaHandler
+    schema: system.searchInApp

@@ -7,3 +7,6 @@ apps/*/ios/
 apps/*/android/
 apps/*/.expo/
 apps/*/build/
+pilots/*/out/
+pilots/*/tests/.build/
+pilots/*/fixtures/media/
