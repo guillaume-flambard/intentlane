@@ -6,7 +6,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { parse } from "yaml";
-import { collectDoctorChecks, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, scaffoldConfig, validatePilotLedger, type AutomaticVerificationStatus, type ConfigIR, type Diagnostic, type DoctorFacts, type PilotLedgerResult } from "../../core/src/index.js";
+import { collectDoctorChecks, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
@@ -409,7 +409,7 @@ evidence.command("validate <ledger>")
     if (options.strict && result.status === "unverified") process.exitCode = 1;
   });
 
-async function metadataVerificationStatus(path: string | undefined): Promise<AutomaticVerificationStatus> {
+async function metadataVerificationStatus(path: string | undefined): Promise<GateStatus> {
   if (!path) return "missing";
   const input = resolve(path);
   const candidate = input.endsWith("extract.actionsdata") ? input : join(input, "extract.actionsdata");
@@ -422,40 +422,118 @@ async function metadataVerificationStatus(path: string | undefined): Promise<Aut
   }
 }
 
+program.command("claims")
+  .description("List the claims an integration may make, what proves each one, and which need a person")
+  .action(() => {
+    for (const entry of PILOT_CLAIMS) {
+      const scope = entry.defaultClaimed ? "default" : "opt-in";
+      process.stdout.write(`${entry.id}  [${entry.evidence}]  (${scope})\n  ${entry.title}\n  verified by: ${entry.verifiedBy}\n`);
+    }
+  });
+
+type VerifyOptions = {
+  config: string;
+  output: string;
+  pilot?: string;
+  claim?: string[];
+  appTest?: string;
+  integrationTest?: string;
+  indexTest?: string;
+  metadata?: string;
+  ledger?: string;
+  probe?: string;
+  strict?: boolean;
+};
+
 program.command("verify")
-  .description("Run deterministic integration gates and report the remaining live-evidence gate")
+  .description("Certify a declared claim set: every claimed item is named, with what proves it")
   .option("-c, --config <file>", "IntentLane YAML file", "intentlane.yaml")
   .option("-o, --output <directory>", "Generated source directory", "ios/IntentLaneGenerated")
+  .option("--pilot <file>", "Pilot manifest declaring the claim set and the commands that settle it")
+  .option("--claim <id...>", "Add a claim to the declared set, for example siri-conversation")
   .option("--app-test <command>", "Application-owned test command, for example xcodebuild test")
+  .option("--integration-test <command>", "Command exercising the resolver, open path and search routing")
+  .option("--index-test <command>", "Command exercising the named Core Spotlight index")
+  .option("--probe <command>", "Command proving the adapter registers at launch")
   .option("--metadata <path>", "Metadata.appintents directory or extract.actionsdata file produced by the build")
-  .option("--ledger <file>", "Pilot evidence ledger")
-  .option("--strict", "Exit non-zero unless every automatic gate and live evidence are verified")
-  .action(async (options: { config: string; output: string; appTest?: string; metadata?: string; ledger?: string; strict?: boolean }) => {
-    const config = configPath(options.config);
-    const configResult = await parseConfigFile(config);
-    const contract: AutomaticVerificationStatus = configResult.ir && configResult.diagnostics.every((item) => item.severity !== "error") ? "pass" : "fail";
-    const generated = await generatedStatus(config, configResult.ir, resolve(options.output));
-    const generatedGate: AutomaticVerificationStatus = generated === "fresh" ? "pass" : generated === "missing" ? "missing" : "fail";
-    let applicationTests: AutomaticVerificationStatus = "missing";
-    if (options.appTest) {
-      const result = spawnSync(options.appTest, { shell: true, stdio: "inherit" });
-      applicationTests = result.status === 0 ? "pass" : "fail";
+  .option("--ledger <file>", "Evidence ledger, read only when an observed claim is claimed")
+  .option("--strict", "Exit non-zero unless every claimed item is certified")
+  .action(async (options: VerifyOptions) => {
+    let manifest: PilotManifest | undefined;
+    if (options.pilot) {
+      const parsed = parsePilotManifest(parse(await readFile(resolve(options.pilot), "utf8")) as unknown);
+      for (const diagnostic of parsed.diagnostics) {
+        process.stderr.write(`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}\n`);
+      }
+      if (!parsed.manifest) {
+        process.exitCode = 1;
+        return;
+      }
+      manifest = parsed.manifest;
     }
-    const metadata = await metadataVerificationStatus(options.metadata);
-    let liveEvidence: "verified" | "unverified" | "not-requested" = "not-requested";
-    if (options.ledger) {
-      try {
-        liveEvidence = validatePilotLedger(parse(await readFile(resolve(options.ledger), "utf8")) as unknown).status;
-      } catch {
-        liveEvidence = "unverified";
+
+    const manifestDirectory = options.pilot === undefined ? undefined : dirname(resolve(options.pilot));
+    const fromManifest = (value: string): string => (manifestDirectory === undefined ? resolve(value) : resolve(manifestDirectory, value));
+    const configFile = manifest?.contract === undefined ? configPath(options.config) : fromManifest(manifest.contract);
+    const outputDirectory = manifest?.generated === undefined ? resolve(options.output) : fromManifest(manifest.generated);
+    const metadataPath = options.metadata ?? (manifest?.metadata === undefined ? undefined : fromManifest(manifest.metadata));
+    const ledgerPath = options.ledger ?? (manifest?.ledger === undefined ? undefined : fromManifest(manifest.ledger));
+
+    // Manifest commands run from the manifest's own directory, so a shipped manifest is
+    // self-contained. An explicit flag overrides the manifest and keeps the caller's directory.
+    const gateCommands = new Map<string, { command: string; cwd?: string }>();
+    for (const [id, command] of Object.entries(manifest?.gates ?? {})) {
+      gateCommands.set(id, { command, ...(manifestDirectory === undefined ? {} : { cwd: manifestDirectory }) });
+    }
+    if (options.appTest !== undefined) gateCommands.set("applicationTests", { command: options.appTest });
+    if (options.integrationTest !== undefined) gateCommands.set("integrationTests", { command: options.integrationTest });
+    if (options.indexTest !== undefined) gateCommands.set("indexSync", { command: options.indexTest });
+    if (options.probe !== undefined) gateCommands.set("registration", { command: options.probe });
+
+    const declaredClaims = options.claim === undefined && options.pilot === undefined
+      ? defaultClaimSet()
+      : [...(manifest?.claims ?? []), ...(options.claim ?? [])];
+
+    const configResult = await parseConfigFile(configFile);
+    const configValid = configResult.ir !== undefined && configResult.diagnostics.every((item) => item.severity !== "error");
+    const generated = await generatedStatus(configFile, configResult.ir, outputDirectory);
+
+    const gates: Record<string, GateStatus> = {
+      contract: configValid ? "pass" : "fail",
+      generated: generated === "fresh" ? "pass" : generated === "missing" ? "missing" : "fail"
+    };
+    if (metadataPath !== undefined) gates["metadata"] = await metadataVerificationStatus(metadataPath);
+    for (const [id, gate] of gateCommands) {
+      const run = spawnSync(gate.command, { shell: true, stdio: "inherit", ...(gate.cwd === undefined ? {} : { cwd: gate.cwd }) });
+      gates[id] = run.status === 0 ? "pass" : "fail";
+    }
+
+    const observed: Record<string, ObservedStatus> = {};
+    const wantsObservation = declaredClaims.some((id) => PILOT_CLAIMS.find((entry) => entry.id === id)?.evidence === "observed");
+    if (wantsObservation) {
+      if (ledgerPath === undefined) {
+        observed["__absent-ledger"] = "unverified";
+      } else {
+        try {
+          const ledger: PilotLedgerResult = validatePilotLedger(parse(await readFile(resolve(ledgerPath), "utf8")) as unknown);
+          for (const journey of ["siri-conversation", "spotlight-ui-result"]) {
+            if (!declaredClaims.includes(journey)) continue;
+            observed[journey] = ledger.status;
+          }
+        } catch {
+          observed["__unreadable-ledger"] = "unverified";
+        }
       }
     }
-    const result = evaluateReleaseVerification({ contract, generated: generatedGate, applicationTests, metadata, liveEvidence });
-    for (const [name, status] of Object.entries({ contract, generated: generatedGate, applicationTests, metadata, liveEvidence })) {
-      process.stdout.write(`${status === "pass" || status === "verified" ? "pass" : status === "fail" || status === "unverified" ? "fail" : "pending"}  ${name}: ${status}\n`);
+
+    const result = evaluateReleaseVerification({ claims: declaredClaims, gates, observed });
+    for (const outcome of result.claims) {
+      const mark = outcome.status === "verified" ? "pass" : outcome.status === "pending" ? "pending" : "fail";
+      process.stdout.write(`${mark}  ${outcome.id} [${outcome.evidence}]: ${outcome.status}\n`);
     }
     process.stdout.write(`${result.status}: ${result.nextAction}\n`);
-    if (result.blockers.length > 0) process.stdout.write(`blocked gates: ${result.blockers.join(", ")}\n`);
+    if (result.failures.length > 0) process.stdout.write(`failing claims: ${result.failures.join(", ")}\n`);
+    if (result.pending.length > 0) process.stdout.write(`claims waiting on a person: ${result.pending.join(", ")}\n`);
     if (options.strict && result.status !== "certified") process.exitCode = 1;
     if (!options.strict && result.status === "blocked") process.exitCode = 1;
   });
