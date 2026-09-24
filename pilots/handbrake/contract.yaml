@@ -1,0 +1,67 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.handbrake-pilot
+  name: HandBrake
+  # HandBrake's app target deploys to macOS 10.13. App Intents requires macOS 27,
+  # so the availability guard comes from the system schema, not from this floor.
+  min_macos: "10.13"
+  # HandBrake declares no URL scheme today. The pilot's two intents are both
+  # native, so nothing routes through a URL, but a contract must not declare a
+  # scheme the app does not handle: registering it is a task of this pilot and a
+  # line in the pull request.
+  url_scheme: handbrake
+  locales:
+    - en
+
+# One object: a built-in preset, which is a named transcode configuration.
+#
+# Not a title. A title is a transient scan result: the list is empty until the
+# user opens a source, so a pilot over titles could resolve nothing from a cold
+# start. Not a source either: HandBrake has no list of sources, and opening one
+# replaces the current source and resets the current settings.
+#
+# Exposed fields: the preset name, and its category path when it sits under one,
+# so two presets sharing a name in different categories stay two distinct choices.
+# No file path, no JSON content, no encoder settings.
+#
+# A preset the user created is not an entity. Its name is written by the person,
+# and can carry a client or a project name. The same rule that excluded an
+# encrypted notebook in the FSNotes pilot excludes a user preset here. A preset
+# the app marks unsupported for this configuration is excluded too, because
+# offering it would be offering something that cannot run.
+entities:
+  - id: preset
+    title:
+      en: Preset
+    identifier: id
+    display:
+      title: title
+      subtitle: category
+    query:
+      mode: static
+
+# Same shape as the FSNotes contract, on purpose. The claim set must not change
+# with the stack, or the campaign proves nothing about being adaptable.
+intents:
+  # Selecting a preset is what the app's own preset menu does. It changes the
+  # current job's settings, not any file, so it is a UI selection and not a write.
+  - id: open_preset
+    title:
+      en: Open preset
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: preset
+
+  - id: search_presets
+    title:
+      en: Search presets
+    description:
+      en: Search HandBrake's built-in presets
+    parameters: []
+    execution:
+      mode: native
+      handler: SearchPresetsHandler
+    schema: system.searchInApp

@@ -42,7 +42,25 @@ surface is not ours to claim. The audit also reports `data.privacy: missing` and
 a data classification of `sensitive, personal, public` for a note application,
 which is expected and is the reason the pilot runs on fixtures only.
 
-## What the tool found, and the defects the screening exposed
+## What "publicly buildable" turned out to mean
+
+The playbook asks for a publicly buildable application. HandBrake passes that
+test only in a qualified sense, and the qualification matters more than the pass.
+
+From a clean checkout, `xcodebuild` cannot build the app. The project has a target
+named `external` whose products are produced by HandBrake's own `configure` and
+`make`, so the IDE build dies with "never received target ended message" before it
+compiles a line. And `configure` needs `autoconf`, which this machine does not
+have. So the real sequence is: install a system dependency, configure, make, then
+Xcode.
+
+None of that is unusual for a C project, and none of it is a reason to reject
+HandBrake. It is a reason for the recipe to have a stage 0, which it now has, and
+a reason to price the work as "adaptable" rather than "fast": the first thing that
+varies between applications is not the App Intents code, it is getting the
+application to build at all.
+
+
 
 Every candidate scores `0/84 (none)` with `discovery: none`, which is expected:
 none of these applications ships App Intents today. What separates them is

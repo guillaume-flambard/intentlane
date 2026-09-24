@@ -33,6 +33,28 @@ stage cannot be automated.
   application. Only FSNotes is Swift. App Intents is Swift, so four pilots need
   step 4.1 and the recipe is only a method if 4.1 is part of it.
 
+## Stage 0, the repository must build
+
+Before anything else: can this repository produce a running app from a clean
+checkout, with the tools a normal developer already has?
+
+- Run the project's own build first if it has one, then the IDE build. The order
+  matters and it is not obvious: HandBrake's Xcode project has a target named
+  `external` whose products are built by HandBrake's own `configure` and `make`,
+  so `xcodebuild` alone dies with "never received target ended message" before it
+  compiles a line of the app.
+- Record every prerequisite the project needs that the machine does not have. On
+  this machine HandBrake's `configure` stops at `autoconf not found`. Installing a
+  system dependency is a decision for the person who owns the machine, not a step
+  an agent takes quietly.
+- If the app cannot be built, the pilot cannot certify its build claim, and the
+  honest state is blocked with the missing prerequisite named. Do not certify the
+  parts that happen to compile standalone and call the pilot done: for HandBrake
+  the whole point is the Objective-C to Swift step, which is exactly the part a
+  standalone test compile cannot prove.
+- This stage is a cost like any other and belongs in the effort sheet, because
+  "adaptable to every stack" is a claim about time as much as about code.
+
 ## Stage 1, audit
 
 Establish the baseline on the pinned revision, read-only.
