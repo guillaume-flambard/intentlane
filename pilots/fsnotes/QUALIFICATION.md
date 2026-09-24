@@ -100,8 +100,45 @@ folders too, because the folder name is itself the sensitive part.
   subtitle would be quadratic in projects and notes. The count is omitted rather
   than made slow.
 
+## Stage 3, generation, measured
+
+```
+validate   0.58 s
+generate   0.53 s   created pilots/fsnotes/out/IntentLaneGenerated.swift
+                     and the adapter template in the fork
+--check    0.47 s   exit 0, which is the stage's exit criterion
+```
+
+About 1.6 s of tool time in total. The cost of this stage is the contract, not
+the generation, which matters for pricing: once the contract is right, the
+compiler side is free.
+
+The working copy is an isolated clone at
+`~/projects/active/apps/clients/intentlane-fsnotes`, pinned to `a96b9b5`, on
+branch `intentlane/pilot-notebook`. Its `origin` is the local screening clone, so
+it cannot push upstream even by accident.
+
+What the generated code fixes, and what stage 4 must therefore honour:
+
+- Named index `dev.memolabs.intentlane.fsnotes-pilot.notebook`, derived from the
+  app id and the entity id. The index test in stage 5 must use exactly this name.
+- `IntentLaneNotebookEntity(id:title:context:)`, three fields, no more.
+- Three resolver methods: exact identifiers, text match, and suggestions. The
+  template's own wording is that an unknown identifier returns no entity and an
+  unknown name returns no entity.
+- Two handler methods: the open handler receives the entity and must throw rather
+  than substitute a similarly named record; the search handler routes the in-app
+  search and must not open a record, so a query with no exact match opens nothing.
+- Indexing is called after a committed create or update, not at launch, and
+  removal takes exact identifiers.
+- Everything is annotated `@available(macOS 27.0, *)`, which is the availability
+  guard the recipe asks for, already emitted by the generator.
+
+The adapter template deliberately contains no App Shortcuts registration, so the
+pilot advertises no Shortcuts surface.
+
 ## Not yet done
 
-Stages 3 to 8 are not started: generation, mapping, tests, build, metadata,
-certification. The deviation log and the effort sheet have rows for them, marked
-`pending`, so the sheet cannot be mistaken for a finished pilot.
+Stages 4 to 8 are not started: the mapping, the tests, the build, the metadata,
+the certification. The deviation log and the effort sheet have rows for them,
+marked `pending`, so the sheet cannot be mistaken for a finished pilot.

@@ -52,6 +52,11 @@ First pilot: **FSNotes `a96b9b5`**, macOS, the only Swift target among the
 qualified candidates. Each stage is timed with a clock and every deviation is
 logged before the next stage starts.
 
+The tasks below are the plan's own granularity. The recipe's eight stages are the
+measured unit, and they do not map one to one: task 2.3 covers recipe stages 3
+and 4, task 2.5 covers stage 8, and tasks 2.6 and 2.7 close the pilot. The
+effort sheet always counts stages, never tasks.
+
 - [x] 2.1 Run the read-only audit and record the exact revision and SDK.
       FSNotes `a96b9b5`, tag `v7.3.4`, no submodules. macOS 27.0, Xcode
       `27A266a`, arm64, `en-US`, region `US`, five of nine conditions recorded.
