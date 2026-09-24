@@ -1,5 +1,10 @@
 ## 0. Method and measurement, before any candidate
 
+The normative layer for this campaign lives in `specs/`, with `specs/README.md` as
+its index. This file is the plan and its checkboxes. The specs state what must be
+true, the files beside them state what was measured, and neither duplicates the
+other. When this plan and the specs disagree, the specs are the requirement.
+
 - [x] 0.1 Freeze the recipe as a versioned document, the ASRi integration method,
       with one section per stage: audit, contract, generation, mapping, tests,
       build, metadata, certification. `recipe.md`, v1, with a command and an exit

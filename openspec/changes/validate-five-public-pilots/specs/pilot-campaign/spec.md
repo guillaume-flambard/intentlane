@@ -83,6 +83,37 @@ represented or indexed, and the rejection SHALL be recorded.
 - **THEN** it does not count against the five-candidate set being replaced by a
       qualified candidate, and the reason is published with the results
 
+### Requirement: A claim set may shrink for an application reason
+A pilot's declared surfaces MAY be fewer than another pilot's, but only for a
+stated reason about the application. A claim set SHALL NOT shrink because of the
+application's language, framework or build system, SHALL NOT grow past what a
+command proves, and every reduction SHALL be written in the contract.
+
+#### Scenario: The application has no surface for a schema
+- **WHEN** an application exposes no in-app search list to route a term into
+- **THEN** the pilot does not declare `system.searchInApp`, the contract names the
+      application fact, and the six deterministic claims are unchanged
+
+#### Scenario: A substitution would preserve the count
+- **WHEN** the only way to keep a declared surface is to behave differently from what
+      the surface means
+- **THEN** the surface is not declared, because advertising a capability the
+      application does not have is worse than declaring one fewer
+
+#### Scenario: The stack is the reason
+- **WHEN** a claim is hard to settle only because of the application's language or
+      build system
+- **THEN** the claim is kept and the work is done, not dropped
+
+### Requirement: The campaign publishes what it did not observe
+The closing document SHALL name every surface no pilot ever observed, as a limit of
+the method rather than as a missing feature.
+
+#### Scenario: The results are published
+- **WHEN** the campaign closes
+- **THEN** it names the validated domains, the pricing range, the deviation count,
+      and the surfaces that stayed unobserved
+
 ### Requirement: Nothing is sent before a local proof
 The campaign SHALL NOT contact a maintainer or open a pull request before a local
 proof exists for that repository, its licence and contribution rules have been
