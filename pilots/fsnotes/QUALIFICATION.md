@@ -137,8 +137,95 @@ What the generated code fixes, and what stage 4 must therefore honour:
 The adapter template deliberately contains no App Shortcuts registration, so the
 pilot advertises no Shortcuts surface.
 
+## Stages 4 to 8, done, certified
+
+```
+pass  contract [deterministic]: verified
+pass  generated [deterministic]: verified
+pass  applicationTests [deterministic]: verified
+pass  integrationTests [deterministic]: verified
+pass  metadata [deterministic]: verified
+pass  indexSync [deterministic]: verified
+certified: Certified for the declared claims only: contract, generated,
+applicationTests, integrationTests, metadata, indexSync.
+```
+
+`intentlane verify --pilot pilots/fsnotes/pilot.yaml --metadata <extracted> --strict`
+exits 0. 63 checks in three suites, none of which launches FSNotes: 24 pure
+rules, 30 integration, 9 index lifecycle.
+
+### Stage 4, the mapping, and how it was written
+
+Test first, in two red steps, because Swift needs the types to exist before a
+test can fail on a behaviour. The first run failed on missing files, the second
+failed 14 assertions against deliberately empty implementations, and only then
+did the rules get written.
+
+The split is four files, and one of them is the proof:
+
+| File | Imports | Covered by |
+| --- | --- | --- |
+| `NotebookCore.swift` | Foundation only | the 24 pure checks |
+| `NotebookHandlers.swift` | AppIntents | the 30 integration checks |
+| `NotebookIndex.swift` | AppIntents, CoreSpotlight | the 9 index checks |
+| `NotebookIntegration.swift` | AppIntents, AppKit, and FSNotes | the build only |
+
+`NotebookIntegration.swift` is deliberately absent from the test compiles. It is
+the only file that knows `Project`, `Storage`, `ViewController` and the sidebar,
+and it contains no business rule, which is why nothing in it needs a test to be
+believed.
+
+The generated adapter template was deleted rather than filled in. Its three
+implementations became the split above, and keeping a half-filled duplicate would
+have invited someone to edit the wrong one.
+
+The eligibility rule is one line and it is the privacy decision made at stage 2:
+not encrypted, not trashed, not virtual, not a bookmark, and not nameless. The
+nameless part was found by the pure-rules suite, not designed: the first
+implementation proposed an empty folder name as a valid choice, which can never be
+resolved by name and can never be selected, so the test failed and the rule grew.
+
+### The three FSNotes seams, all translation and no logic
+
+- The project list becomes notebook records. The identifier is the application's
+  own `getMd5CheckSum()`; the subtitle is `getNestedPath()`, which is empty for a
+  top-level folder and therefore a `nil` subtitle.
+- Opening finds the project whose checksum matches, expands its ancestors with the
+  same `expandItem` call the app uses when restoring the sidebar, then selects the
+  row exactly as `ViewController` does when it restores a project.
+- Search sets the app's own `SearchTextField` and sends the delegate callback the
+  keyboard sends. The field's `search()` is private, so synthesising the callback
+  is the only way in; making that method internal is the cleaner upstream change
+  and is written down for the pull request rather than done here.
+
+### What is deliberately not done
+
+No write intent, no note body, no note count, no mutation hooks. FSNotes has no
+macOS test target, so the ancestor-expansion branch is proven by the build and by
+reading, not by a test, and the pilot says so instead of implying otherwise. The
+system reindexes the named index on demand; incremental reindexing on
+create, rename and delete is not wired in this pilot.
+
+### Stage 6 and 7, measured
+
+| Fact | Value |
+| --- | --- |
+| Build | `BUILD SUCCEEDED`, one earlier attempt failed on a missing `AppKit` import |
+| Build time | 17.9 s to the first error, the successful rebuild was not timed |
+| Warnings from IntentLane files | none; the only warnings are FSNotes' own |
+| Actions in the metadata | `OpenNotebook` with the `system.OpenIntent` schema, `SearchNotebooks` with `system.SystemSearchInAppIntent` and `outputFlags 4` |
+| Entity in the metadata | `IntentLaneNotebookEntity` |
+| App Shortcuts | none registered, as the contract intends |
+| Extra actions registered | none |
+
+The build needed the five new sources to be added to the target, which FSNotes'
+classic PBXGroup project does not do by itself. `Scripts/add-intentlane-sources.rb`
+does it with the `xcodeproj` gem, is idempotent, and was verified by running it
+twice. Hand-editing a 304K project file would have been the alternative.
+
 ## Not yet done
 
-Stages 4 to 8 are not started: the mapping, the tests, the build, the metadata,
-the certification. The deviation log and the effort sheet have rows for them,
-marked `pending`, so the sheet cannot be mistaken for a finished pilot.
+Nothing is pending inside this pilot except the two deviations that need a
+decision rather than work: whether an upstream pull request should also make
+`search()` internal, and whether incremental reindexing belongs in a later pilot.
+The campaign has not yet produced an observed claim, and that is on purpose.

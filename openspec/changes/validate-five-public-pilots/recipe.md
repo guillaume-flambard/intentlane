@@ -129,7 +129,15 @@ App Intents is Swift.
   records the cost of the alternative.
 - Opening an object may need more than a lookup. If the existing UI hides the
   object until a parent is expanded, expand the ancestors first, through the same
-  API the interface uses, and never by setting UI state directly.
+  API the interface uses, and never by setting UI state directly. That branch
+  cannot be covered by an automated test when the application has no test target,
+  and then the pilot must say so rather than imply it is proven.
+- If the application's own entry point for a behaviour is private, call the public
+  callback it already listens to, and write down that making the private method
+  internal would be the cleaner change for an upstream pull request.
+- Index incrementally only if the application exposes its own create, update and
+  delete events and the pilot wires them. If it does not, say that the system
+  reindexes on demand instead, rather than implying mutation hooks exist.
 
 ### 4.3 Indexing
 
@@ -171,23 +179,47 @@ intentlane verify --pilot <pilot.yaml> --app-test <contract-test-command> \
 
 ## Stage 7, metadata
 
+Compile the generated file alone with const values, then run Apple's metadata
+processor over it. Two things are easy to get wrong and both were wrong in v1 the
+first time it was run:
+
+- The protocol list is an **input**, not an output. `-const-gather-protocols-list`
+  expects a file that already exists, and without both flags the compiler writes
+  no `.swiftconstvalues` and the processor refuses to run. The list is not
+  derivable from the contract, so it is a pilot asset that must be tracked with
+  the pilot, not a scratch file.
+- The processor is not on `PATH`. It lives in the toolchain:
+  `$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor`.
+- The source list contains bare file names, not paths, or the processor fails with
+  "Unable to find matching source file".
+
 ```sh
-intentlane verify --pilot <pilot.yaml> --app-test <contract-test-command> \
-  --integration-test <integration-test-command> \
-  --build-metadata <extracted-metadata.json> --strict
+xcrun --sdk macosx swiftc -target arm64-apple-macos27.0 \
+  -sdk "$(xcrun --sdk macosx --show-sdk-path)" -module-name <Module> \
+  -emit-const-values -const-gather-protocols-list <pilot>/protocols.json \
+  -c IntentLaneGenerated.swift -o IntentLaneGenerated.o
+printf 'IntentLaneGenerated.swift\n' > sources.txt
+printf 'IntentLaneGenerated.swiftconstvalues\n' > constvals.txt
+"$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor" \
+  --output metadata --toolchain-dir "$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain" \
+  --module-name <Module> --sdk-root "$(xcrun --sdk macosx --show-sdk-path)" \
+  --xcode-version 27A266a --platform-family macOS --deployment-target 27.0 \
+  --target-triple arm64-apple-macos27.0 --source-file-list sources.txt \
+  --swift-const-vals-list constvals.txt --force
 ```
 
 - Exit criterion: the extracted metadata contains every action and schema the
   contract advertises, and nothing extra was registered.
 - Metadata that advertises an action the mapping cannot serve is a release
   blocker.
+- The option that hands it to `verify` is `--metadata`, not `--build-metadata`.
 
 ## Stage 8, certification
 
 ```sh
 intentlane verify --pilot <pilot.yaml> --app-test <contract-test-command> \
   --integration-test <integration-test-command> \
-  --build-metadata <extracted-metadata.json> \
+  --metadata <extracted-metadata-dir-or-actionsdata> \
   --index-test <index-test-command> --probe <launch-probe-command> --strict
 ```
 

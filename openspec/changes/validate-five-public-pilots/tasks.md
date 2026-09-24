@@ -72,15 +72,23 @@ effort sheet always counts stages, never tasks.
       trashed, virtual and bookmark folders are excluded, the encrypted one by
       explicit decision. One tool gap found and logged: the contract schema has
       no macOS floor, so a macOS-only pilot must declare a meaningless `min_ios`.
-- [ ] 2.3 Implement only a fixture-backed, minimal mapping in an isolated fork.
-- [ ] 2.4 Split the mapping so the integration tests run without the app, the way
-      the IINA pilot does. If it cannot be split, record that as a deviation.
-- [ ] 2.5 Certify the claim set: `intentlane verify --pilot <path> --strict`
-      passes, and the output names every claim.
-- [ ] 2.6 Record the effort per stage and every deviation for this pilot.
-- [ ] 2.7 Record the exact positive and the exact negative as tests, not as
-      observations: the positive resolves and opens, the negative resolves
-      nothing and opens nothing.
+- [x] 2.3 Implement only a fixture-backed, minimal mapping in an isolated fork.
+      `NotebookCore`, `NotebookHandlers`, `NotebookIndex` and `NotebookIntegration`
+      in the fork, plus one line in `AppDelegate` under `if #available(macOS 27.0,
+      *)`. No write intent, no note body, no note count, no mutation hooks.
+- [x] 2.4 Split the mapping so the integration tests run without the app. Four
+      files, one of which imports FSNotes and is excluded from every test compile.
+      63 checks run without launching the application.
+- [x] 2.5 Certify the claim set: `intentlane verify --pilot pilots/fsnotes/pilot.yaml
+      --metadata <extracted> --strict` exits 0 and names all six claims.
+- [x] 2.6 Record the effort per stage and every deviation for this pilot. Eight
+      deviations, each with its consequence for the recipe; three of them amended
+      v1, including the wrong `verify` option name the recipe itself contained.
+- [x] 2.7 Record the exact positive and the exact negative as tests. Positive: an
+      ordinary folder resolves by id and by label and selects that exact row.
+      Negative, three cases: an unknown identifier, a trashed folder and an
+      encrypted folder all resolve nothing, throw, and call the opening seam zero
+      times, including when a plain folder shares the encrypted one's name.
 
 ## 3. Observed claim, on at most one pilot
 

@@ -33,11 +33,11 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | FSNotes `a96b9b5` | 2 | not instrumented, authoring | manual | the validate command itself is fast; the cost was reading the model and deciding what not to expose |
 | FSNotes `a96b9b5` | 3 | 1.6 s of tool time | `/usr/bin/time -p` on each of validate, generate, `--check` | generation is effectively free once the contract is right; the cost of this stage was paid in stage 2 |
 | FSNotes `a96b9b5` | 3 | pending | | |
-| FSNotes `a96b9b5` | 4 | pending | | Swift target, so 4.1 does not apply |
-| FSNotes `a96b9b5` | 5 | pending | | |
-| FSNotes `a96b9b5` | 6 | pending | | |
-| FSNotes `a96b9b5` | 7 | pending | | |
-| FSNotes `a96b9b5` | 8 | pending | | |
+| FSNotes `a96b9b5` | 4 | not measured separately | manual | the cost sits in stage 5, because the mapping was written test-first |
+| FSNotes `a96b9b5` | 5 | 4 test suites run, all under 5 s each | shell, four runs | two red runs, then green; 63 checks total |
+| FSNotes `a96b9b5` | 6 | 17.9 s to the first error, successful rebuild not timed | `/usr/bin/time -p` on the first attempt only | one failed build on a missing `AppKit` import, then a clean one |
+| FSNotes `a96b9b5` | 7 | 0.5 s compile, plus one failed metadata round | `/usr/bin/time -p` on the compile | first round failed on a missing protocol list, then succeeded |
+| FSNotes `a96b9b5` | 8 | under 1 s plus the gate suites | `/usr/bin/time -p` on the compile | reruns the suites; the claim costs nothing of its own |
 | HandBrake `1255087` | Q | 3 | `time` around the audit | 77 `.m`, no Swift |
 | HandBrake `1255087` | 1 to 8 | not started | | |
 | LuLu `7d2669e` | Q | not instrumented | manual | done before this sheet existed |
