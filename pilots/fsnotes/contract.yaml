@@ -4,11 +4,10 @@ app:
   id: dev.memolabs.intentlane.fsnotes-pilot
   name: FSNotes
   url_scheme: fsnotes
-  # The contract schema has no macOS floor and rejects unknown app keys, so a
-  # macOS-only pilot still has to declare min_ios. FSNotes deploys to macOS 10.14;
-  # App Intents requires macOS 27, so the real floor is enforced in the adapter
-  # with an availability check, not here. Logged as a deviation at stage 2.
-  min_ios: "27.0"
+  # FSNotes deploys to macOS 10.14. App Intents requires macOS 27, so the guard
+  # that protects the user is the availability annotation the generator emits from
+  # the system schema, not this floor.
+  min_macos: "10.14"
   locales:
     - en
 

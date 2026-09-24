@@ -47,9 +47,14 @@ export const intentLaneConfigSchema = z.object({
     id: z.string().regex(/^[A-Za-z0-9.-]+$/),
     name: z.string().min(1),
     url_scheme: z.string().regex(/^[a-z][a-z0-9+.-]*$/),
-    min_ios: z.string().regex(/^\d+\.\d+$/),
+    min_ios: z.string().regex(/^\d+\.\d+$/).optional(),
+    min_macos: z.string().regex(/^\d+\.\d+$/).optional(),
     locales: z.array(z.string().min(1)).min(1).refine((values) => new Set(values).size === values.length, "Locales must be unique")
-  }).strict(),
+  })
+    .strict()
+    .refine((app) => app.min_ios !== undefined || app.min_macos !== undefined, {
+      message: "An app must declare min_ios or min_macos."
+    }),
   entities: z.array(z.object({
     id: identifierSchema,
     title: localizedSchema,

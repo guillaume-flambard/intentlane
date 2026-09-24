@@ -672,6 +672,44 @@ describe("results and snippets", () => {
     expect(swift.match(/struct IntentLaneSnippetView: View \{/g)).toHaveLength(1);
     expect(swift).toContain("Text(fields[index].0).foregroundStyle(.secondary)");
   });
+  it("keeps the macOS availability annotation for a macOS-only contract using a system schema", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = config.app;
+    const result = parseConfig({
+      ...config,
+      app: { ...appWithoutIos, min_macos: "10.14", locales: ["en"] },
+      entities: [
+        {
+          id: "notebook",
+          title: { en: "Notebook" },
+          identifier: "id",
+          display: { title: "title" },
+          query: { mode: "static" }
+        }
+      ],
+      intents: [
+        {
+          id: "open_notebook",
+          title: { en: "Open notebook" },
+          parameters: [],
+          execution: { mode: "native", handler: "OpenNotebookHandler" },
+          target: "notebook",
+          schema: "system.open"
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+
+    const swift = generateSwift(result.ir!);
+    expect(swift).toContain("@available(macOS 27.0, *)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
+  });
+
+  it("leaves the macOS availability annotation off when no system schema is used and no floor reaches 27", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = config.app;
+    const result = parseConfig({ ...config, app: { ...appWithoutIos, min_macos: "13.0" } });
+    expect(result.diagnostics).toEqual([]);
+
+    expect(generateSwift(result.ir!)).not.toContain("@available(macOS 27.0, *)");
+  });
 });
 
 describe("route builder", () => {

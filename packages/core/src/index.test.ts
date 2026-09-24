@@ -27,8 +27,54 @@ describe("parseConfig", () => {
     expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "IL1501", path: "intents[0].risk.confirmation" }));
   });
 
-  it("rejects invalid identifiers before code generation", () => {
-    const result = parseConfig({ ...base, intents: [{ ...base.intents[0], id: "Create-Idea" }] });
+  it("accepts a macOS-only app that declares min_macos and no min_ios", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = base.app;
+    const result = parseConfig({ ...base, app: { ...appWithoutIos, min_macos: "10.14" } });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.app.minMacos).toBe("10.14");
+  });
+
+  it("keeps accepting an app that declares both floors", () => {
+    const result = parseConfig({ ...base, app: { ...base.app, min_macos: "12.0" } });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.app.minIos).toBe("18.0");
+    expect(result.ir?.app.minMacos).toBe("12.0");
+  });
+
+  it("rejects an app that declares neither floor", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = base.app;
+    const result = parseConfig({ ...base, app: appWithoutIos });
+
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1301", path: "app", message: expect.stringContaining("min_ios or min_macos") })
+    );
+  });
+
+  it("does not judge a macOS floor against an iOS catalogue entry", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = base.app;
+    const result = parseConfig({
+      ...base,
+      app: { ...appWithoutIos, min_macos: "27.0", locales: ["en"] },
+      entities: [
+        {
+          id: "sound",
+          title: { en: "Sound" },
+          identifier: "id",
+          display: { title: "title", subtitle: "providerName" },
+          query: { mode: "static" },
+          schema: "audio.liveRadioStation"
+        }
+      ],
+      intents: [{ ...base.intents[0], parameters: [], execution: { mode: "open_app", route: "/stop" } }]
+    });
+
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("rejects invalid identifiers before code generation", () => {    const result = parseConfig({ ...base, intents: [{ ...base.intents[0], id: "Create-Idea" }] });
     expect(result.ir).toBeUndefined();
     expect(result.diagnostics[0]).toMatchObject({ code: "IL1101", path: "intents.0.id" });
   });

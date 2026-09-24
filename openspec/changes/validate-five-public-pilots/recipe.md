@@ -63,13 +63,12 @@ Choose the surface before writing code, then declare it.
   never in a first pilot.
 - If no Apple schema fits, do not sell Siri AI. Offer automation or nothing.
 - Compare the application's own deployment floor with the floor the schema
-  requires. When the app deploys lower, the registration and the adapter are
-  guarded by an availability check, and the contract's declared floor is not the
-  one that protects the user. FSNotes deploys to macOS 10.14 and App Intents needs
-  macOS 27, so the guard is in the code.
-- The contract schema has no macOS floor and rejects unknown app keys, so a
-  macOS-only pilot currently has to declare a meaningless `min_ios`. Record it as
-  a deviation rather than letting it pass as if it were enforced.
+  requires. Declare the real one: `min_macos` for a macOS application, `min_ios`
+  for an iOS one, or both. The `@available(macOS 27.0, *)` annotation is derived
+  from the system schema the contract uses, not from the declared floor, so an
+  application that deploys to macOS 10.14 still gets the guard it needs. FSNotes
+  deploys to 10.14 and App Intents needs 27, and the generator handles that
+  without the contract lying about either number.
 - Write `contract.yaml`, then `pilot.yaml`, declaring the claim set and naming
   the command that settles each claim. The default claim set is deterministic and
   excludes `siri-conversation` and `spotlight-ui-result`.

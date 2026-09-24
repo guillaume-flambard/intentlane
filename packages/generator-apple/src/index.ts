@@ -13,7 +13,17 @@ const shortcutPhrase = (value: string): string => swiftString(value).replace(/\$
 const defaultLocale = (ir: ConfigIR): string => ir.app.locales[0] ?? "en";
 const localized = (values: LocalizedText, locale: string): string => values[locale] ?? values[Object.keys(values).sort()[0] ?? ""] ?? "";
 const localizedResource = (value: string): string => `LocalizedStringResource(${swiftString(value)}, table: ${swiftString(STRING_TABLE)})`;
-const macOS27Availability = (ir: ConfigIR): string => Number(ir.app.minIos.split(".")[0]) >= 27 ? "@available(macOS 27.0, *)\n" : "";
+// A system App Intents schema requires macOS 27, so the availability annotation
+// follows the schemas the contract uses, not the app's deployment floor. A
+// macOS-only contract declaring an older floor still needs the annotation, and a
+// contract that declares no floor and no system schema needs none.
+const usesSystemSchema = (ir: ConfigIR): boolean =>
+  ir.entities.some((entity) => entity.schema !== undefined) ||
+  ir.intents.some((intent) => intent.schema !== undefined);
+const declaresMacOS27 = (ir: ConfigIR): boolean =>
+  [ir.app.minMacos, ir.app.minIos].some((floor) => floor !== undefined && Number(floor.split(".")[0]) >= 27);
+const macOS27Availability = (ir: ConfigIR): string =>
+  usesSystemSchema(ir) || declaresMacOS27(ir) ? "@available(macOS 27.0, *)\n" : "";
 
 const SWIFT_TYPES: Readonly<Record<string, string>> = {
   string: "String",

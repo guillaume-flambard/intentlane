@@ -82,7 +82,7 @@ export type EntityIR = Readonly<{
 }>;
 export type ConfigIR = Readonly<{
   schemaVersion: "0.1";
-  app: Readonly<{ id: string; name: string; urlScheme: string; minIos: string; locales: readonly string[] }>;
+  app: Readonly<{ id: string; name: string; urlScheme: string; minIos?: string; minMacos?: string; locales: readonly string[] }>;
   intents: readonly IntentIR[];
   entities: readonly EntityIR[];
 }>;
@@ -155,7 +155,10 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       const expected = entry.properties.map((name) => `'${name}'`).join(", ");
       diagnostics.push(error("IL1401", `Schema '${reference}' requires the properties ${expected}, declared in that order as display.title then display.subtitle.`, path));
     }
-    if (compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
+    // The catalogue states iOS floors only, so a macOS floor is never judged
+    // against an iOS entry. A macOS-only contract declares min_macos and is
+    // checked by its own availability guard in the adapter, not here.
+    if (config.app.min_ios !== undefined && compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
     }
   }
@@ -215,7 +218,10 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
         diagnostics.push(error("IL1401", `Schema '${reference}' declares no return value, so intent '${intent.id}' must not declare result.returns.`, `${intentPath}.result.returns`));
       }
     }
-    if (compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
+    // The catalogue states iOS floors only, so a macOS floor is never judged
+    // against an iOS entry. A macOS-only contract declares min_macos and is
+    // checked by its own availability guard in the adapter, not here.
+    if (config.app.min_ios !== undefined && compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
     }
   }
@@ -307,7 +313,14 @@ export function parseConfig(value: unknown): ParseResult {
   if (diagnostics.some((item) => item.severity === "error")) return { diagnostics };
   const ir: ConfigIR = {
     schemaVersion: parsed.data.schema,
-    app: { id: parsed.data.app.id, name: parsed.data.app.name, urlScheme: parsed.data.app.url_scheme, minIos: parsed.data.app.min_ios, locales: [...parsed.data.app.locales] },
+    app: {
+      id: parsed.data.app.id,
+      name: parsed.data.app.name,
+      urlScheme: parsed.data.app.url_scheme,
+      ...(parsed.data.app.min_ios ? { minIos: parsed.data.app.min_ios } : {}),
+      ...(parsed.data.app.min_macos ? { minMacos: parsed.data.app.min_macos } : {}),
+      locales: [...parsed.data.app.locales]
+    },
     entities: [...parsed.data.entities].sort((left, right) => left.id.localeCompare(right.id)).map((entity) => ({
       id: entity.id,
       swiftName: swiftName(entity.id),
