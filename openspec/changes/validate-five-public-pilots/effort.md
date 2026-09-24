@@ -40,7 +40,7 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | FSNotes `a96b9b5` | 7 | 0.5 s compile, plus one failed metadata round | `/usr/bin/time -p` on the compile | first round failed on a missing protocol list, then succeeded |
 | FSNotes `a96b9b5` | 8 | under 1 s plus the gate suites | `/usr/bin/time -p` on the compile | reruns the suites; the claim costs nothing of its own |
 | HandBrake `1255087` | Q | 3 | `time` around the audit | 77 `.m`, no Swift |
-| HandBrake `1255087` | 0 | 1 failed Xcode run, then a configure run | manual | stopped at the missing prerequisite rather than installing it |
+| HandBrake `1255087` | 0 | 6 packages, 87 s of component download, then BUILD SUCCEEDED | `brew install`, `xcodebuild -downloadComponent`, `/usr/bin/time -p` | the cost is prerequisites, not code: six Homebrew packages, a 838.9 MB Metal Toolchain, a stale-directory cleanup and a remote correction |
 | HandBrake `1255087` | 1 | 3 s of tool time, counted inside Q | `/usr/bin/time -p` | route `native/high`, 8 macOS targets |
 | HandBrake `1255087` | 2 | not instrumented, authoring | manual | the object choice came from reading the model, not from running a tool |
 | HandBrake `1255087` | 3 | under 1 s for validate, generate and check | `/usr/bin/time -p` on generate | same as FSNotes: generation is free once the contract is right |

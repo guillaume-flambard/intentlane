@@ -43,6 +43,19 @@ checkout, with the tools a normal developer already has?
   `external` whose products are built by HandBrake's own `configure` and `make`,
   so `xcodebuild` alone dies with "never received target ended message" before it
   compiles a line of the app.
+- Expect the project's build to probe for tools one missing one at a time, and
+  count them. HandBrake needed six Homebrew packages before it would configure,
+  and the sixth was not obvious: its bundled libraries need `glibtoolize`, which
+  is Homebrew's `libtool`, not the `libtool` macOS already ships.
+- Expect the toolchain itself to be a prerequisite. HandBrake's core compiles
+  Metal shaders, and Xcode 27 no longer includes the Metal compiler, so the Metal
+  Toolchain has to be downloaded before the project builds at all.
+- If the build is interrupted, clean its own state before retrying. An interrupted
+  autotools run leaves directories behind that the project's clean step does not
+  remove, and the next run fails on a directory that already exists.
+- When the fork's origin is a local path, point it at the real upstream before
+  building. A C project's build system records the origin in its generated
+  configuration, and the wrong provenance ends up baked into the build.
 - Record every prerequisite the project needs that the machine does not have. On
   this machine HandBrake's `configure` stops at `autoconf not found`. Installing a
   system dependency is a decision for the person who owns the machine, not a step

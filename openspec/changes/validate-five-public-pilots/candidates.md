@@ -45,20 +45,32 @@ which is expected and is the reason the pilot runs on fixtures only.
 ## What "publicly buildable" turned out to mean
 
 The playbook asks for a publicly buildable application. HandBrake passes that
-test only in a qualified sense, and the qualification matters more than the pass.
+test only in a qualified sense, and the qualification is the useful part.
 
-From a clean checkout, `xcodebuild` cannot build the app. The project has a target
-named `external` whose products are produced by HandBrake's own `configure` and
-`make`, so the IDE build dies with "never received target ended message" before it
-compiles a line. And `configure` needs `autoconf`, which this machine does not
-have. So the real sequence is: install a system dependency, configure, make, then
-Xcode.
+From a clean checkout on this machine, the build needed, in order:
 
-None of that is unusual for a C project, and none of it is a reason to reject
-HandBrake. It is a reason for the recipe to have a stage 0, which it now has, and
-a reason to price the work as "adaptable" rather than "fast": the first thing that
-varies between applications is not the App Intents code, it is getting the
-application to build at all.
+1. Six Homebrew packages: `autoconf`, `automake`, `meson`, `nasm`, `cmake` and
+   `libtool`. `configure` probes for each one and stops at the first absence, so
+   the list was discovered one failure at a time. `libtool` is the non-obvious
+   one: HandBrake's bundled libraries need `glibtoolize`, which is Homebrew's
+   `libtool`, and Apple's own `libtool` is a different program with the same
+   name.
+2. The Metal Toolchain, 838.9 MB in 87 s, because HandBrake's core compiles Metal
+   shaders and Xcode 27 no longer ships the compiler.
+3. A stale-directory cleanup, because an interrupted run leaves `m4` behind in
+   jansson and the Makefile's own clean step does not remove it.
+4. One remote correction: a fork cloned from a local path records that local path
+   as the project's provenance, which then ends up inside the generated build
+   configuration. The fork's origin has to be the real upstream.
+
+None of that is a reason to reject HandBrake, and none of it is unusual for a C
+project with bundled dependencies. It is the reason the recipe has a stage 0, and
+the reason the offer is priced as "adaptable" rather than "fast": the first thing
+that varies between applications is not the App Intents code, it is getting the
+application to build at all. The audit also reports a deployment target of 10.13,
+below the 12.0 floor Xcode 27 supports, which produces a warning on every target
+and is a real forward-compatibility problem for the application rather than for
+this pilot.
 
 
 
