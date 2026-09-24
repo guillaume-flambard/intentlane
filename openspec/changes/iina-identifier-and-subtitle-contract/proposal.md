@@ -35,6 +35,6 @@ before the live evidence is collected, because changing either invalidates recor
 
 ## Impact
 
-Pilot contract `/tmp/il-pilot/iina-pilot/intentlane-playedmedia.yaml`, pilot adapter and core,
+Pilot contract `pilots/iina/contract.yaml`, pilot adapter and core,
 `PILOT-IINA-DISCOVERY.md`, and the privacy section of the entity dossier. No upstream change, no
 contact, no PR.

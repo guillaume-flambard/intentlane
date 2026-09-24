@@ -31,5 +31,6 @@ conclude the adapter was tested. It was not.
 
 ## Impact
 
-Pilot worktree `/tmp/il-pilot/iina`, pilot workspace `/tmp/il-pilot/iina-pilot/tests`, and the
+Pilot worktree `~/projects/active/apps/clients/intentlane-iina`, pilot test workspace
+`pilots/iina/tests` in the product repository, and the
 verification documentation that describes the gate. No upstream change, no contact, no PR.

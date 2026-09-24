@@ -30,5 +30,5 @@ prove Siri, and a case study may not exceed the status of its evidence ledger.
 ## Impact
 
 Human effort on the pilot machine and a second tester. Fixture files under
-`/tmp/il-pilot/fixtures`, a ledger file in the product repository, and the pilot documentation.
+`pilots/iina/fixtures`, a ledger file in the product repository, and the pilot documentation.
 No upstream change, no contact with IINA, no PR.

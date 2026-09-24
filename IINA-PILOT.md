@@ -7,9 +7,29 @@ revendication. IINA impose un Design Proposal issue avant tout changement
 d'UI et la divulgation de l'usage d'IA dans toute PR (voir son
 [CONTRIBUTING](https://github.com/iina/iina/blob/develop/CONTRIBUTING.md)).
 
+## Où vit le pilote aujourd'hui
+
+| Élément | Emplacement |
+|---|---|
+| Copie de travail IINA | `~/projects/active/apps/clients/intentlane-iina`, branche `intentlane/pilot-playedmedia`, commit `bab9c834` |
+| Contrat, tests, fixtures, ledger, runbook | `pilots/iina/` dans ce dépôt |
+| Sortie générée et métadonnées extraites | `pilots/iina/out/` (non versionné, reproductible) |
+
+Commande de test du pilote, celle que `intentlane verify` consomme :
+
+```sh
+bash pilots/iina/tests/run-all-tests.sh
+```
+
+Le pilote a d'abord vécu dans `/tmp/il-pilot`, qui a été purgé par le système le
+2026-09-24 alors que le travail n'était pas commité. La copie de travail et le
+workspace ont été reconstruits à l'identique depuis les sources du projet, puis
+versionnés. Les sections ci-dessous qui citent `/tmp/il-pilot` sont le journal
+des exécutions passées, pas la procédure courante.
+
 ## Audit (lecture seule)
 
-`intentlane audit /tmp/il-pilot/iina/iina --platform macos`
+`intentlane audit ~/projects/active/apps/clients/intentlane-iina/iina --platform macos`
 
 - score **0/100** (bande `none`) — aucune capacité App Intents détectée ;
 - route `native (high)` ; données `public (privacy unknown)` ;
@@ -126,7 +146,7 @@ Fichiers ajoutés/modifiés dans la copie IINA :
 - `iina/HistoryWindowController.swift` — `applySearch(_:)`, entrée minimale pour
   le handler de recherche.
 
-Tests métier (`/tmp/il-pilot/iina-pilot/tests/`, commande `run-tests.sh`) :
+Tests métier (`pilots/iina/tests/`, commande `run-all-tests.sh`) :
 **18/18 verts** — mapping sans chemin, titre stocké/nom, type audio/vidéo,
 homonymes, casse, diacritiques, requête vide, fichier supprimé, historique vidé,
 et mapping partagé (ordre, règle unique, fichier disparu exclu).
