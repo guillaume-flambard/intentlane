@@ -1,0 +1,62 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.fsnotes-pilot
+  name: FSNotes
+  url_scheme: fsnotes
+  # The contract schema has no macOS floor and rejects unknown app keys, so a
+  # macOS-only pilot still has to declare min_ios. FSNotes deploys to macOS 10.14;
+  # App Intents requires macOS 27, so the real floor is enforced in the adapter
+  # with an availability check, not here. Logged as a deviation at stage 2.
+  min_ios: "27.0"
+  locales:
+    - en
+
+# One object only: a notebook, which is a folder on disk. Notes are deliberately
+# not exposed. The body of a note is the sensitive payload, and the recipe indexes
+# the minimum the surface needs.
+#
+# Exposed fields: the folder name, and the ancestor path only when the folder is
+# nested, so two folders with the same name remain two distinct choices. No file
+# path, no note count, no preview text, no tag list.
+#
+# A folder that is encrypted is not an entity at all, locked or not. Its name can
+# itself be sensitive, so it must not reach Spotlight or Siri. A trashed,
+# virtual or bookmark project is excluded for the same reason: it is not a
+# notebook the user chose to expose.
+entities:
+  - id: notebook
+    title:
+      en: Notebook
+    identifier: id
+    display:
+      title: title
+      subtitle: context
+    query:
+      mode: static
+
+intents:
+  # Opens one notebook in the existing sidebar. There is no write intent in this
+  # pilot: no create, no rename, no delete. The recipe excludes writes from a
+  # first pilot, and nothing here needs one.
+  - id: open_notebook
+    title:
+      en: Open notebook
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: notebook
+
+  # Lands in FSNotes' own list, filtered by the requested term. It does not pick
+  # an arbitrary object.
+  - id: search_notebooks
+    title:
+      en: Search notebooks
+    description:
+      en: Search notebooks in FSNotes
+    parameters: []
+    execution:
+      mode: native
+      handler: SearchNotebooksHandler
+    schema: system.searchInApp

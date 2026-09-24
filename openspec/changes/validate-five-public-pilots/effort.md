@@ -30,7 +30,8 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | --- | --- | --- | --- | --- |
 | FSNotes `a96b9b5` | Q | not instrumented | manual | done before this sheet existed; see `candidates.md` |
 | FSNotes `a96b9b5` | 1 | 3.4 s of tool time, plus reading | `/usr/bin/time -p` | re-measured after the tool fixes; the tool is fast, the reading is the cost |
-| FSNotes `a96b9b5` | 2 | pending | | |
+| FSNotes `a96b9b5` | 2 | not instrumented, authoring | manual | the validate command itself is fast; the cost was reading the model and deciding what not to expose |
+| FSNotes `a96b9b5` | 3 | pending | | instrumented from here on |
 | FSNotes `a96b9b5` | 3 | pending | | |
 | FSNotes `a96b9b5` | 4 | pending | | Swift target, so 4.1 does not apply |
 | FSNotes `a96b9b5` | 5 | pending | | |

@@ -26,6 +26,7 @@ ambiguous. It is not recorded for a stage that simply took longer.
 | Pilot | Stage | Recipe said | This pilot needed | Why | Extra effort | Consequence |
 | --- | --- | --- | --- | --- | --- | --- |
 | FSNotes `a96b9b5` | 1, audit | Audit the pinned revision and keep the JSON | Re-audit after two tool fixes, then re-measure | The first classification used a tool that missed an inherited SDKROOT and could claim a native route with no target | 0, already spent fixing the tool | keep |
+| FSNotes `a96b9b5` | 2, contract | Declare the app with its real deployment floor | Declared `min_ios: "27.0"` for a macOS application that deploys to 10.14 | The contract schema has no macOS floor and rejects unknown app keys, so `min_ios` is mandatory and meaningless here | 0, but the floor is unenforceable from the contract | amend: tool gap, and it will hit all four macOS candidates |
 | FSNotes `a96b9b5` | 4, mapping | Map the client object | Not started | Not reached | 0 | not reached |
 | FSNotes `a96b9b5` | 5, tests | Contract, integration and the exact negative | Not started | Not reached | 0 | not reached |
 | FSNotes `a96b9b5` | 6, build | Build the app target | Not started | Not reached | 0 | not reached |
@@ -49,3 +50,9 @@ ambiguous. It is not recorded for a stage that simply took longer.
   made: the language of each app target is known from stage 1. The effort column
   stays empty until the stage actually runs, because an estimate recorded as a
   measurement would corrupt the sheet this campaign exists to produce.
+- The stage 2 `min_ios` row is a tool gap, not an application problem, and it
+  applies to every macOS candidate. Until the schema grows a macOS floor, a
+  macOS-only pilot must declare an iOS version that means nothing, and the real
+  floor can only be enforced by an availability check in the adapter. That is
+  the kind of finding this campaign exists to surface early and cheaply, on the
+  cheapest possible pilot.

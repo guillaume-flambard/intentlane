@@ -62,6 +62,14 @@ Choose the surface before writing code, then declare it.
 - Deletion, sending, publishing, paying and external sharing are high risk and are
   never in a first pilot.
 - If no Apple schema fits, do not sell Siri AI. Offer automation or nothing.
+- Compare the application's own deployment floor with the floor the schema
+  requires. When the app deploys lower, the registration and the adapter are
+  guarded by an availability check, and the contract's declared floor is not the
+  one that protects the user. FSNotes deploys to macOS 10.14 and App Intents needs
+  macOS 27, so the guard is in the code.
+- The contract schema has no macOS floor and rejects unknown app keys, so a
+  macOS-only pilot currently has to declare a meaningless `min_ios`. Record it as
+  a deviation rather than letting it pass as if it were enforced.
 - Write `contract.yaml`, then `pilot.yaml`, declaring the claim set and naming
   the command that settles each claim. The default claim set is deterministic and
   excludes `siri-conversation` and `spotlight-ui-result`.
@@ -119,6 +127,9 @@ App Intents is Swift.
   without the application binary, which is what makes them fast and deterministic.
 - If the split cannot be done, that is a deviation with a reason, and the pilot
   records the cost of the alternative.
+- Opening an object may need more than a lookup. If the existing UI hides the
+  object until a parent is expanded, expand the ancestors first, through the same
+  API the interface uses, and never by setting UI state directly.
 
 ### 4.3 Indexing
 

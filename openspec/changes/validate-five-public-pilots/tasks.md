@@ -58,8 +58,15 @@ logged before the next stage starts.
       Route `native/high`, 229 Swift files in the macOS app target, 0 quality
       issues, data classified `sensitive, personal, public` with the privacy
       manifest reported missing. Recorded in `pilots/fsnotes/QUALIFICATION.md`.
-- [ ] 2.2 Write the contract, declare the claim set in a `pilot.yaml`, and name
-      the command that settles each application-owned claim.
+- [x] 2.2 Write the contract, declare the claim set in a `pilot.yaml`, and name
+      the command that settles each application-owned claim. One entity
+      (`notebook`, a folder on disk), two surfaces (`system.open`,
+      `system.searchInApp`), no write intent. The contract validates with
+      `2 intent(s) ready`, and `verify --strict` correctly reports `contract` as
+      `pass` and `blocked` on the five claims that need the code. Encrypted,
+      trashed, virtual and bookmark folders are excluded, the encrypted one by
+      explicit decision. One tool gap found and logged: the contract schema has
+      no macOS floor, so a macOS-only pilot must declare a meaningless `min_ios`.
 - [ ] 2.3 Implement only a fixture-backed, minimal mapping in an isolated fork.
 - [ ] 2.4 Split the mapping so the integration tests run without the app, the way
       the IINA pilot does. If it cannot be split, record that as a deviation.
