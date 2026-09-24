@@ -27,10 +27,11 @@ feasible schema-backed journey. Generic shortcuts alone do not pass.
 ## Phase B: macOS 27 proof
 
 Choose a public macOS content app and prove discover named content, open it and
-perform one safe follow-up action. Prefer System search/open only when the app
-model legitimately fits. Deliver audit baseline and delta, schema and adapter
-change, `AppIntentsTesting`, extracted metadata, Shortcuts evidence, Spotlight
-evidence, manual Siri evidence and a reproducibility ledger.
+perform one safe follow-up action. Prefer System `searchInApp`/`open` only when
+the app model legitimately fits. Deliver audit baseline and delta, schema and
+adapter change, `AppIntentsTesting`, extracted metadata, Spotlight evidence,
+manual Siri evidence and a reproducibility ledger. Add Shortcuts evidence only
+when the pilot explicitly claims an automation surface.
 
 **Gate:** a second developer reproduces every documented layer on macOS 27.
 

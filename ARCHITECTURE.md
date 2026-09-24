@@ -79,7 +79,8 @@ Lecture, validation sémantique, capability resolution, diagnostics avec code st
 
 - un type Swift par intention ;
 - entités et queries ;
-- `AppShortcutsProvider` ;
+- `AppShortcutsProvider` only for contracts that explicitly declare shortcut phrases ;
+- a customer-owned adapter template for stable-ID resolution and Spotlight lifecycle ;
 - ressources localisées ;
 - registre de handlers ;
 - snippets simples ;
@@ -134,4 +135,3 @@ Chaque fonction générée possède une disponibilité minimale. Les fonctions r
 - ADR-004 : pas de handler JS garanti en background.
 - ADR-005 : code généré clairement isolé et remplaçable.
 - ADR-006 : la sortie est neutre vis-à-vis de la plateforme. Le Swift généré compile pour iOS comme pour macOS et le toolchain en extrait les mêmes métadonnées App Intents ; `apps/example-macos` le prouve sans projet Xcode, en compilant avec `swiftc` puis en invoquant `appintentsmetadataprocessor`. Expo reste le premier adaptateur d'intégration (ADR-003) parce qu'une app Expo régénère son dossier natif à chaque prebuild, mais ce n'est pas une contrainte du générateur : un target Swift natif commite simplement le fichier généré.
-

@@ -4,13 +4,18 @@ IntentLane is a deterministic compiler from a versioned YAML contract to Apple A
 
 ## Status
 
-Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum` and `entity` parameters, plus an `AppShortcutsProvider` for intents that declare phrases.
+Phase 1 is done: the `0.1` contract validates, and the generator emits compilable Swift `AppIntent` values for `open_app` actions with `string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum` and `entity` parameters. `AppShortcutsProvider` is emitted only when an app explicitly declares shortcut phrases; it is not the default Siri AI integration path.
 
 Phase 2 is done except its gate: `init` and `doctor` exist, the Expo config plugin resolves the generator from the consuming project and registers the generated Swift and the `<locale>.lproj` resources in the Xcode target idempotently, and `apps/example-expo` proves the flow from YAML to an installed simulator build. The gate (an external user following the quickstart in under 30 minutes) is not measured yet.
 
 Phase 3 is complete on paper: primitive and enum parameters, static App Entities with a resolver protocol, localized titles and prompts, the risk policy, a result dialog with a snippet view, a macOS runner in CI, and two example apps. Its gate (five pilots, two of them existing apps) is not measured either. The macOS target is proven separately by `apps/example-macos`, without Expo and without an Xcode project.
 
 Still out of scope: endpoint entity queries, HTTP execution, enum schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
+
+For product scoping, read [the complete Apple schema reference](APPLE-SCHEMA-REFERENCE.md),
+the [application-agnostic integration method](APP-AGNOSTIC-INTEGRATION-METHOD.md),
+and the [NetNewsWire pilot backlog](NETNEWSWIRE-ACTION-BACKLOG.md). They distinguish
+Apple system journeys from custom automation and record the required proof for each.
 
 ## Quickstart
 
@@ -77,6 +82,15 @@ The program reports its version with `intentlane --version` (`-V`) and prints us
 - `--config <file>`: YAML source, default `intentlane.yaml`.
 - `--output <directory>`: generated-source directory, default `ios/IntentLaneGenerated`.
 
+`intentlane verify`
+
+Runs the release gates for one client integration: valid contract, fresh
+generated source, an application-owned test command, extracted App Intents
+metadata and optional pilot evidence. It deliberately reports live Siri and
+Spotlight evidence separately from a green build. See
+[AUTOMATED-VERIFICATION.md](AUTOMATED-VERIFICATION.md) for the command and
+the client test contract.
+
 `intentlane audit [directory]`
 
 - `--platform <macos|ios>`: target platform, default `macos`.
@@ -96,6 +110,30 @@ The report also states whether a schema domain is complete. A domain counts as c
 The advanced groups stay advisory until a pilot asks for them. `discovery`, `cross-app`, `relevance` and `execution` cover indexed entities, transfer and handoff, donations and relevance, sync and long-running work, and IntentLane adds each of them only with a documented pilot journey, a platform matrix and safety fixtures. A project that does not implement one reports `ILA150` with the group named, and the gap never blocks `--strict`, because an advisory finding is a scope hint rather than a defect.
 
 Every report also carries a compatibility score. It is deterministic: each capability the target platform ships is worth up to three points, `detected` earns one, `implemented` two and `tested` three, and a capability the platform does not ship is left out of the denominator. The text output prints it on a `score <n>/100 (<band>, <discovery>) <points>/<maximum> points` line, and the JSON output adds a `score` object with the same numbers plus a count of every state. The band is `none` at zero, `early` up to 33, `partial` up to 66, `close` below 100 and `ready` at 100. `discovery` separates the two promises: `schema-backed` when a `semantics` capability is at least `implemented`, `shortcuts-only` when only the Shortcuts surface is, and `none` otherwise.
+
+## Siri AI content integration
+
+For a new macOS 27 content integration, the primary target is the System App
+Schema pair `.system.searchInApp` and `.system.open`, an `IndexedEntity`, and
+an application-owned entity resolver. This is distinct from App Shortcuts: do
+not add `shortcuts.phrases` unless the customer explicitly wants automation in
+Shortcuts.
+
+IntentLane can generate the safe mapping seam without guessing the customer's
+database or navigation stack:
+
+```sh
+intentlane generate -c intentlane.yaml -o Mac/IntentLaneGenerated \
+  --adapter-output Mac/IntentLaneAdapter.swift
+```
+
+The adapter file is created once and remains application-owned. It contains
+TODOs for stable-ID lookup, approved records, registration and the Spotlight
+index/update/delete lifecycle. A later run refuses to overwrite it unless
+`--overwrite-adapter` is explicit. The template deliberately contains no App
+Shortcuts registration. See
+[the macOS 27 implementation research](APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md)
+for the Apple sources and the required positive, negative and reindex tests.
 
 The report also qualifies the integration route, because the same work costs a different amount depending on how the app is built. It prints `route <route> (<confidence>)`, and the JSON output adds a `route` object with the evidence and a next action. `native` means a Swift or Xcode target carries the code, `bridged` means a cross-platform framework does (Expo, React Native, Capacitor, Flutter, Tauri) and the native target comes out of its build, `ineligible` means a web-only project that can carry App Intents only through a native target or a bridge, and `unknown` means nothing recognizable was found. A bridge whose native target is not generated yet is `bridged` with medium confidence rather than a guess.
 
@@ -252,7 +290,7 @@ intents:
 
 A schema without a protocol can still take parameters. `reader.rotatePages` supplies `pages` and `isClockwise`, so the intent declares no parameter and no result: it names the entity it acts on with `target`, runs natively with a handler, and the generator declares each `@Parameter` from the schema, mapping the schema types to `String`, `Bool`, `Int`, `Double`, the target entity, or an array of it.
 
-Today the table holds 35 intents (four without a protocol, sixteen `open` and fifteen `delete`) and twenty entities. Enum conformances are not generated yet.
+Today the table holds 36 intents (five without a protocol, sixteen `open` and fifteen `delete`) and twenty entities. Enum conformances are not generated yet.
 
 A schema that exists but that IntentLane cannot satisfy is refused with IL1401, and the message says what is missing. The same code covers a reference that is not `domain.member`, a reference Xcode does not know, a schema of the other kind, a conformed intent that declares a parameter or a return value, a conformed entity whose display properties do not follow the schema order, and a schema that needs a newer iOS than the app declares in `min_ios`. For a protocol-backed schema it also refuses a missing or unknown `target`, a `target` on a schema that has no protocol, an execution mode that is not `native`, and a declared parameter or result, because the schema provides all of them. A schema that supplies its own parameters refuses the same way: a missing or unknown `target`, a mode that is not `native`, and a declared result.
 

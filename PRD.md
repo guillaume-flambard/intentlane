@@ -6,7 +6,7 @@ Permettre aux équipes cross-platform d'exposer les capacités de leur applicati
 
 ## Objectif MVP
 
-Un développeur Expo peut déclarer des actions et des entités en YAML, générer le code Swift nécessaire, compiler son projet et retrouver ces actions dans Shortcuts/Siri sans écrire manuellement App Intents.
+Un développeur peut déclarer des actions et des entités en YAML, générer le code Swift nécessaire, compiler son projet et intégrer un parcours Siri AI avec les App Schemas, les entités indexées et un adaptateur métier. Les Raccourcis restent une surface optionnelle, demandée explicitement.
 
 ## Non-objectifs MVP
 
@@ -102,11 +102,10 @@ Install → init → edit YAML → validate → generate → expo prebuild → r
 
 ## Critères d'acceptation de la démo
 
-1. `create_idea(title)` apparaît dans Shortcuts.
-2. La phrase vocale transmet le titre.
-3. L'intention ouvre l'app ou exécute un handler natif.
+1. Une entité indexée est retrouvée dans Spotlight.
+2. Une recherche Siri AI est routée vers l'app avec la requête exacte.
+3. L'ouverture d'une entité résolue route vers l'interface existante, sans substituer une autre entité.
 4. Le résultat affiche une vue de confirmation.
 5. Une entité `Idea` est sélectionnable.
 6. Une erreur réseau produit un message contrôlé.
 7. Les tests et snapshots passent dans CI.
-

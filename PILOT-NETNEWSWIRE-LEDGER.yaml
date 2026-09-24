@@ -5,41 +5,39 @@ revision: 0184ca38c586078117a21f96f68eef78d39b8f68
 conditions:
   osBuild: macOS 27.0 build 26A428
   xcode: Xcode 27.0 build 27A266a
-  locale: en-US
+  locale: C.UTF-8 (system UI observed in English)
   device: local Mac
+  scope: "ASRi macOS 27: system searchInApp/open, indexed article entities, Spotlight, and Siri AI; Reader schemas are excluded because Apple classifies them as Shortcuts-only."
+  feedObservation: macOS 27.0 build 26A428; C.UTF-8; Pilot feed displayed Alpha, Beta, and Gamma; final fixture state was Alpha and Gamma unread, Beta read.
+  asriObservation: macOS 27.0 build 26A428; C.UTF-8; the AppIntentsTesting integration plan passed 5/5 on 2026-09-23. It exercised entity resolution, IndexedEntity Spotlight query, direct OpenIntent navigation, MarkArticleRead, and the invented-title negative case through the public out-of-process App Intents surface. The visible Spotlight and conversational Siri checks remain manual gates.
 journeys:
-  - id: find-alpha
-    claimed: [shortcuts, spotlight, siri]
+  - id: search-and-open-alpha
+    claimed: [spotlight, siri]
     layers:
       contract: pass
       build: pass
-      shortcuts: blocked
-      spotlight: blocked
-      siri: blocked
-    risky: false
-  - id: open-alpha
-    claimed: [shortcuts, siri]
-    layers:
-      contract: pass
-      build: pass
-      shortcuts: blocked
-      siri: blocked
+      spotlight: pass
+      siri: fail
     risky: false
   - id: mark-beta-read
     claimed: [shortcuts, siri]
     layers:
       contract: pass
       build: pass
-      shortcuts: blocked
-      siri: blocked
-    risky: true
-    riskEvidence:
-      confirmation: false
-      authentication: false
-      ownership: false
+      shortcuts: fail
+      siri: fail
+    risky: false
+  - id: invented-title-does-not-resolve
+    claimed: [spotlight, siri]
+    layers:
+      contract: pass
+      build: pass
+      spotlight: pass
+      siri: fail
+    risky: false
 reproduction:
   by: pending-second-reviewer
-  status: blocked
+  status: fail
 artifacts:
   notes: ./PILOT-NETNEWSWIRE.md
   baseline: ./audit-baseline.json

@@ -13,7 +13,7 @@ arbitrary language understanding.
 | --- | --- | --- |
 | Auditor | We identify App Intents and schema gaps in your repository. | Deterministic fixtures and a real audit. |
 | Build | We implement verified App Intents for your target SDK. | Build, metadata and tests. |
-| Surfaces | Selected actions appear in Shortcuts and, where applicable, Spotlight. | Installed-app evidence. |
+| Surfaces | The explicitly contracted surface appears in Spotlight or Shortcuts. | Installed-app evidence. |
 | Siri journey | We validated named journeys on macOS 27 or iOS 27. | Full pilot evidence ladder. |
 | Domain package | We support the named domain and documented journeys. | Two independent pilots. |
 
@@ -44,7 +44,8 @@ Every statement this repository publishes, with its evidence and its status, is 
 
 One domain package and two or three named journeys. Include customer-owned
 native adapters, contracts, validation, automated tests, build metadata,
-Shortcuts and Spotlight checks where relevant, and manual Siri evidence. End
+Spotlight checks, and Shortcuts checks only where explicitly requested, plus
+manual Siri evidence. End
 with an evidence ledger, not a promise about future Apple model behaviour.
 
 ## Marketing gate

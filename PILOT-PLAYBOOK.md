@@ -1,12 +1,19 @@
 # IntentLane pilot playbook
 
+This playbook is the operational counterpart of the
+[application-agnostic integration method](APP-AGNOSTIC-INTEGRATION-METHOD.md).
+Use [the Apple schema reference](APPLE-SCHEMA-REFERENCE.md) to enumerate
+candidate actions, then select only the ones whose client-side business
+contract and evidence can be established.
+
 ## Candidate criteria
 
 Choose a public, actively buildable, legally forkable app with a native macOS
-or iOS target, a small real content model and two or three actions matching an
-Apple schema domain. Reject apps requiring production credentials, unclear
-licensing, web-view-only architecture, no reproducible build, or an unsupported
-schema for the desired action.
+27 or iOS 27 target, a small real content model and two or three actions
+matching a **primary Siri AI schema domain**. For a content app, start with
+`.system.searchInApp` and `.system.open`. Reject apps requiring production
+credentials, unclear licensing, web-view-only architecture, no reproducible
+build, or a Shortcuts-only schema for the desired ASRi action.
 
 Record upstream revision, licence, target and deployment floor, Xcode and OS
 build, device or simulator, selected domain, selected journeys and schema fit.
@@ -36,7 +43,7 @@ ownership and failure before implementation.
 | --- | --- |
 | Contract | `AppIntentsTesting` covers result, query and negative or risk path. |
 | Build | Target compiles and metadata contains advertised actions and schemas. |
-| Shortcuts | Installed app shows correct action, parameters and result shape. |
+| Shortcuts | Optional: installed app shows correct action, parameters and result shape, only when the pilot explicitly claims automation support. |
 | Spotlight | Intended content is found and linked when this is claimed. |
 | Siri | Manual macOS or iOS test completes exact phrasing and expected action. |
 
@@ -46,9 +53,11 @@ but never replace tests, logs or metadata.
 
 ## Platform procedure
 
-For macOS 27: build, install or launch, check Shortcuts, check Spotlight when
-claimed, run the Siri journey, repeat a negative or unsafe case, then export
-the audit delta and evidence ledger. Then export the delta between the pinned
+For macOS 27: build, install or launch, run `AppIntentsTesting` for entity
+resolution and the negative path, check Spotlight, run the Siri AI journey,
+then repeat a negative or unsafe case. Check Shortcuts only when it is claimed
+as a separate automation surface. Then export the audit delta and evidence
+ledger. Export the delta between the pinned
 baseline and the post-implementation report with
 `npx intentlane audit-diff baseline.json candidate.json --fail-on regression`,
 keep the rendered delta next to the evidence ledger, and treat any regression
@@ -89,11 +98,10 @@ conditions:
   device: MacBook Pro 14-inch
 journeys:
   - id: find-alpha
-    claimed: [shortcuts, spotlight, siri]
+    claimed: [spotlight, siri]
     layers:
       contract: pass
       build: pass
-      shortcuts: pass
       spotlight: pass
       siri: pass
     risky: false

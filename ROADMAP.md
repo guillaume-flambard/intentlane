@@ -121,4 +121,42 @@ Ne construire le dashboard que si les utilisateurs réclament historique, équip
 10. `feat(cli): implement doctor` **fait**
 11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
 
-Ticket suivant : `feat(pilot): drive the Siri journey evidence on the NetNewsWire fork`.
+Ticket suivant : `feat(pilot): implement the macOS 27 ASRi path on the NetNewsWire fork`.
+It must use `.system.searchInApp` and `.system.open`, indexed article entities and
+`AppIntentsTesting`. Reader schemas remain an optional Shortcuts package and
+cannot close this gate.
+
+## Client-Ready v1 (état au 23 septembre 2026)
+
+Périmètre, critères de sortie vérifiables (E1–E10) et preuves : voir
+[CLIENT-READY-V1.md](CLIENT-READY-V1.md). Guide d'intégration client :
+[CLIENT-QUICKSTART.md](CLIENT-QUICKSTART.md).
+
+- Parcours natif (audit, contrat, génération, adaptateur, `verify`,
+  exemple macOS). **fait et vérifié** : `apps/example-macos` +
+  `verify.mjs`, adaptateur `--adapter-output`, métadonnées extraites
+  (Xcode 27A266a).
+- Parcours Expo/React Native (plugin idempotent, adaptateur exemple, tests de
+  route, build simulateur, métadonnées). **fait et vérifié** :
+  `apps/example-expo`, plugin `@intentlane/expo`, `withIdeaResolver.cjs`,
+  `routes.test.ts`, job CI `simulator`.
+- `intentlane verify` et `verify --strict`. **fait et prouvé** : portes
+  `contract` / `generated` / `applicationTests` / `metadata` / `liveEvidence` ;
+  sortie non nulle sur porte bloquée ou ledger non `verified`.
+- Contrôle de preuves (`evidence validate --strict`, `audit-diff`). **fait**.
+- Suite complète verte. **fait** : `pnpm test` 318/318, `pnpm build`,
+  `pnpm validate`, `generate --check`, probe `swiftc`, `verify.mjs`.
+- Documentation client (spec v1, quickstart). **fait** : `CLIENT-READY-V1.md`,
+  `CLIENT-QUICKSTART.md`.
+
+Bloqueurs réels vers une v1 commercialisable (rien n'est coché sans preuve) :
+
+- Publication npm (`@intentlane/cli`, `@intentlane/expo`) : paquets prêts
+  (`npm pack` vérifié) mais **non publiés** — `npm whoami` répond 401
+  Unauthorized sur cette machine.
+- Gate R1 (personne externe suit le quickstart en moins de 30 minutes) :
+  **non mesuré**.
+- Preuves Siri/Spotlight visuelles P1/P2 : **non automatisables** ; exigent
+  observation réelle et reproduction par un second testeur ; le ledger reste
+  `unverified` sans cela.
+- Second pilote (P3, FSNotes ou remplaçant) et cohorte (P5) : **non atteints**.

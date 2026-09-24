@@ -31,7 +31,7 @@ Primary sources: [App schema domains](https://developer.apple.com/documentation/
 | `AppShortcutsProvider` | Curated App Shortcuts and invocation phrases, available after installation. | Provider, phrases with the required app-name placeholder, localised titles, device validation. | **Generates** registered shortcuts and phrases. |
 | `AppEntity`, `AppEnum`, queries | A structured representation of app data and choices; lets the system resolve intent parameters. `AppEntity` needs identity, display representation, exposed properties and a query. | Model-to-entity mapping, `@Property` metadata, `EntityQuery`/specialised query behavior, real resolver coverage. Entity instances have a 10 MB total limit. | **Generates basic entities**, `AppEnum`, and an identifier/suggested `EntityQuery`; resolver remains application-owned. |
 | App Schemas and domains | Standard contracts that allow Apple Intelligence and Siri to reason about content and actions, rather than treating them as custom actions. Apply with `@AppIntent(schema:)`, `@AppEntity(schema:)`, or `@AppEnum(schema:)`. | Domain fit, all required companion entities/enums/parameters/results and exact schema conformance. Test against the target SDK, since schemas can evolve. | **Partial**: knows 254 public references but can generate only 3 intent and 20 entity conformances; no enum conformance or schema-completeness audit. |
-| Primary Siri/Apple Intelligence domains | Audio, Calendar, Reminders, and System/in-app search are primary schema domains. The broad `.system.search` and `.system.open` fit many content apps. Other documented Siri domains include Camera, Clock, Files, Mail, Maps, Messages, Notes, Phone, and Photos. | Match the app's real domain and existing core nouns/actions, then implement the required domain contract rather than merely assigning a schema name. | **Only camera stop/switch and audio create-station are generatable intent schemas.** |
+| Primary Siri/Apple Intelligence domains | Audio, Calendar, Reminders, and System/in-app search are primary schema domains. On macOS 27, the broad `.system.searchInApp` and `.system.open` fit many content apps. Other documented Siri domains include Camera, Clock, Files, Mail, Maps, Messages, Notes, Phone, and Photos. | Match the app's real domain and existing core nouns/actions, then implement the required domain contract rather than merely assigning a schema name. | **Only camera stop/switch and audio create-station are generatable intent schemas.** |
 | Shortcuts-only schemas | Books, Browser, Files, Journaling, Presentation, Reader, Spreadsheet, Whiteboard, and Word Processor schemas are documented as Shortcuts-specific and do **not** make conforming types discoverable by Apple Intelligence and Siri. | Market and scope them as Shortcuts automation, not Siri/Apple Intelligence coverage. | Reference knowledge only; no broad implementation. |
 | `IndexedEntity` and Spotlight | Makes an entity indexable in the app's Spotlight index. Apple describes it as a prerequisite for making an entity available in Spotlight; it also helps discovery and some Siri use cases. | Privacy review, indexing-key mapping, donation/update/delete lifecycle, Spotlight search verification. | **Not generated or audited.** The current docs explicitly caution against indexing private values without opt-in. |
 | Entity variants and ownership | `UniqueAppEntity`, `FileEntity`, transient and URL-representable entities cover singleton settings, files, temporary concepts and navigable content. `OwnershipProvidingEntity`/`EntityOwnership` conveys personal versus shared/public context; sharing can require confirmation for sensitive or destructive work. | Entity-kind fit, universal-link/file behavior, ownership and confirmation test cases. | **Not supported/audited.** |
@@ -139,13 +139,14 @@ implemented, tested, and verifiably working.
 
 ### Phase B: prove one broad, sellable path
 
-Prioritise `.system.search` and `.system.open` for a public macOS content app.
+Prioritise `.system.searchInApp` and `.system.open` for a public macOS content app.
 They are broad enough for realistic repos and are expressly intended for apps
 that search/open content. Add schema-complete entity support, `IndexedEntity`,
 and `IntentValueQuery` where it is required. Build a pilot that exercises three
-journeys: find content, open a named item, and act on that item. Validate in
-`AppIntentsTesting`, Spotlight, Shortcuts, and finally a real Siri interaction
-on macOS 27. Record exact OS/Xcode/build conditions.
+journeys: find content, open a named item, and reject an invented item. Validate
+in `AppIntentsTesting`, Spotlight, and finally a real Siri interaction on macOS
+27. Shortcuts is an optional, separately claimed automation surface. Record
+exact OS/Xcode/build conditions.
 
 ### Phase C: domain packages, not universal claims
 
