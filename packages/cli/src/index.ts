@@ -6,8 +6,8 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { parse } from "yaml";
-import { collectDoctorChecks, deriveScaffoldDefaults, parseConfigFile, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type PilotLedgerResult } from "../../core/src/index.js";
-import { GENERATED_SWIFT_FILE, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
+import { collectDoctorChecks, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, scaffoldConfig, validatePilotLedger, type AutomaticVerificationStatus, type ConfigIR, type Diagnostic, type DoctorFacts, type PilotLedgerResult } from "../../core/src/index.js";
+import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -206,8 +206,10 @@ program.command("validate")
 program.command("generate")
   .option("-c, --config <file>", "IntentLane YAML file", "intentlane.yaml")
   .option("-o, --output <directory>", "Generated source directory", "ios/IntentLaneGenerated")
+  .option("--adapter-output <file>", "Write a customer-owned App Intents adapter template")
+  .option("--overwrite-adapter", "Allow replacement of an existing adapter template")
   .option("--check", "Fail if generated files are stale")
-  .action(async (options: { config: string; output: string; check?: boolean }) => {
+  .action(async (options: { config: string; output: string; adapterOutput?: string; overwriteAdapter?: boolean; check?: boolean }) => {
     const config = configPath(options.config);
     const ir = await load(config);
     if (!ir) return;
@@ -242,6 +244,16 @@ program.command("generate")
       return;
     }
     for (const item of expected) await atomicWrite(item.file, item.contents);
+    if (options.adapterOutput) {
+      const adapter = resolve(options.adapterOutput);
+      if (existsSync(adapter) && !options.overwriteAdapter) {
+        process.stderr.write(`${adapter} already exists. IntentLane will not overwrite application-owned mapping code; use --overwrite-adapter to replace the template.\n`);
+        process.exitCode = 1;
+        return;
+      }
+      await atomicWrite(adapter, generateAdapterTemplate(ir));
+      process.stdout.write(`Created ${adapter}\n`);
+    }
     process.stdout.write(`Generated ${join(output, GENERATED_SWIFT_FILE)}\n`);
   });
 
@@ -395,6 +407,57 @@ evidence.command("validate <ledger>")
       }
     }
     if (options.strict && result.status === "unverified") process.exitCode = 1;
+  });
+
+async function metadataVerificationStatus(path: string | undefined): Promise<AutomaticVerificationStatus> {
+  if (!path) return "missing";
+  const input = resolve(path);
+  const candidate = input.endsWith("extract.actionsdata") ? input : join(input, "extract.actionsdata");
+  if (!existsSync(candidate)) return "fail";
+  try {
+    const metadata = JSON.parse(await readFile(candidate, "utf8")) as { actions?: unknown };
+    return metadata.actions !== undefined && typeof metadata.actions === "object" ? "pass" : "fail";
+  } catch {
+    return "fail";
+  }
+}
+
+program.command("verify")
+  .description("Run deterministic integration gates and report the remaining live-evidence gate")
+  .option("-c, --config <file>", "IntentLane YAML file", "intentlane.yaml")
+  .option("-o, --output <directory>", "Generated source directory", "ios/IntentLaneGenerated")
+  .option("--app-test <command>", "Application-owned test command, for example xcodebuild test")
+  .option("--metadata <path>", "Metadata.appintents directory or extract.actionsdata file produced by the build")
+  .option("--ledger <file>", "Pilot evidence ledger")
+  .option("--strict", "Exit non-zero unless every automatic gate and live evidence are verified")
+  .action(async (options: { config: string; output: string; appTest?: string; metadata?: string; ledger?: string; strict?: boolean }) => {
+    const config = configPath(options.config);
+    const configResult = await parseConfigFile(config);
+    const contract: AutomaticVerificationStatus = configResult.ir && configResult.diagnostics.every((item) => item.severity !== "error") ? "pass" : "fail";
+    const generated = await generatedStatus(config, configResult.ir, resolve(options.output));
+    const generatedGate: AutomaticVerificationStatus = generated === "fresh" ? "pass" : generated === "missing" ? "missing" : "fail";
+    let applicationTests: AutomaticVerificationStatus = "missing";
+    if (options.appTest) {
+      const result = spawnSync(options.appTest, { shell: true, stdio: "inherit" });
+      applicationTests = result.status === 0 ? "pass" : "fail";
+    }
+    const metadata = await metadataVerificationStatus(options.metadata);
+    let liveEvidence: "verified" | "unverified" | "not-requested" = "not-requested";
+    if (options.ledger) {
+      try {
+        liveEvidence = validatePilotLedger(parse(await readFile(resolve(options.ledger), "utf8")) as unknown).status;
+      } catch {
+        liveEvidence = "unverified";
+      }
+    }
+    const result = evaluateReleaseVerification({ contract, generated: generatedGate, applicationTests, metadata, liveEvidence });
+    for (const [name, status] of Object.entries({ contract, generated: generatedGate, applicationTests, metadata, liveEvidence })) {
+      process.stdout.write(`${status === "pass" || status === "verified" ? "pass" : status === "fail" || status === "unverified" ? "fail" : "pending"}  ${name}: ${status}\n`);
+    }
+    process.stdout.write(`${result.status}: ${result.nextAction}\n`);
+    if (result.blockers.length > 0) process.stdout.write(`blocked gates: ${result.blockers.join(", ")}\n`);
+    if (options.strict && result.status !== "certified") process.exitCode = 1;
+    if (!options.strict && result.status === "blocked") process.exitCode = 1;
   });
 
 program.parseAsync().catch((reason: unknown) => {

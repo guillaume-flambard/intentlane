@@ -20,6 +20,7 @@ export * from "./audit-sdk.js";
 export * from "./audit-score.js";
 export * from "./audit-targets.js";
 export * from "./pilot-ledger.js";
+export * from "./release-verification.js";
 export * from "./app-schemas.js";
 
 export type Severity = "error" | "warning";
@@ -186,10 +187,14 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
         diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own result, so intent '${intent.id}' must not declare one.`, `${intentPath}.result`));
       }
     } else if (entry.parameters.length > 0) {
-      if (!intent.target) {
-        diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must name the entity it acts on with 'target'.`, `${intentPath}.target`));
-      } else if (!entityIds.has(intent.target)) {
-        diagnostics.push(error("IL1401", `Schema '${reference}' target references unknown entity '${intent.target}'.`, `${intentPath}.target`));
+      if (entry.requiresTarget !== false) {
+        if (!intent.target) {
+          diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must name the entity it acts on with 'target'.`, `${intentPath}.target`));
+        } else if (!entityIds.has(intent.target)) {
+          diagnostics.push(error("IL1401", `Schema '${reference}' target references unknown entity '${intent.target}'.`, `${intentPath}.target`));
+        }
+      } else if (intent.target !== undefined) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' searches within the app, so intent '${intent.id}' must not name a target entity.`, `${intentPath}.target`));
       }
       if (intent.execution.mode !== "native") {
         diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must use native execution with a handler.`, `${intentPath}.execution.mode`));

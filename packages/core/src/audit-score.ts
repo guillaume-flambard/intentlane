@@ -44,12 +44,14 @@ function band(score: number): AuditScoreBand {
 function discovery(findings: readonly AuditFinding[]): AuditSiriDiscovery {
   const schemaBacked = findings.some(
     (finding) =>
-      finding.capability.startsWith("semantics.") &&
-      (finding.state === "implemented" || finding.state === "tested")
+      finding.capability === "proof.siri-surface" &&
+      (finding.state === "detected" || finding.state === "implemented" || finding.state === "tested")
   );
   if (schemaBacked) return "schema-backed";
   const shortcuts = findings.some(
-    (finding) => finding.capability === "proof.shortcuts-surface" && finding.state === "implemented"
+    (finding) =>
+      (finding.capability === "proof.shortcuts-surface" || finding.capability === "semantics.shortcuts-only-schema") &&
+      (finding.state === "implemented" || finding.state === "tested")
   );
   return shortcuts ? "shortcuts-only" : "none";
 }

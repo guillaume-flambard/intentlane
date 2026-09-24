@@ -78,7 +78,7 @@ describe("audit score", () => {
       createAuditReport(target, [
         finding("foundation.shortcuts-provider", "implemented"),
         finding("proof.shortcuts-surface", "implemented"),
-        finding("semantics.app-schema", "implemented")
+        finding("proof.siri-surface", "detected")
       ])
     );
     expect(schemaBacked.discovery).toBe("schema-backed");

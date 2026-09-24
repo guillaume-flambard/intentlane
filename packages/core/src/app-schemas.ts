@@ -8,7 +8,8 @@ export type AppSchemaParameterType =
   | "date"
   | "datetime"
   | "entity"
-  | "entityArray";
+  | "entityArray"
+  | "searchCriteria";
 
 export type AppSchemaParameter = Readonly<{
   name: string;
@@ -21,6 +22,7 @@ export type AppSchemaEntry = Readonly<{
   identifier: string;
   minIos: number;
   protocol?: "open" | "delete";
+  requiresTarget?: boolean;
   parameters: readonly AppSchemaParameter[];
   properties: readonly string[];
 }>;
@@ -49,6 +51,7 @@ export const APP_SCHEMAS: readonly AppSchemaEntry[] = [
   { kind: "intent", reference: "spreadsheet.open", identifier: "OpenSpreadsheetIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
   { kind: "intent", reference: "spreadsheet.openSheet", identifier: "OpenSheetIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
   { kind: "intent", reference: "system.open", identifier: "OpenIntent", minIos: 27, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
+  { kind: "intent", reference: "system.searchInApp", identifier: "SystemSearchInAppIntent", minIos: 27, requiresTarget: false, parameters: [{ name: "criteria", type: "searchCriteria" }], properties: [] },
   { kind: "intent", reference: "whiteboard.openBoard", identifier: "OpenCanvasBoardIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
   { kind: "intent", reference: "wordProcessor.open", identifier: "OpenWordProcessorDocumentIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },
   { kind: "intent", reference: "wordProcessor.openPage", identifier: "OpenWordProcessorPageIntent", minIos: 18, protocol: "open", parameters: [{ name: "target", type: "entity" }], properties: [] },

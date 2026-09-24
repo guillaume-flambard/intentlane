@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runAudit } from "./audit-run.js";
+import { scoreAuditReport } from "./audit-score.js";
 import type { AuditFinding, AuditReport } from "./audit.js";
 
 const providerOnly = [
@@ -41,6 +42,22 @@ const schemaBacked = [
   "}"
 ].join("\n");
 
+const readerSchemaOnly = [
+  "import AppIntents",
+  "",
+  "@AppEntity(schema: .reader.page)",
+  "struct ReaderPage: AppEntity {",
+  "  static var defaultQuery = ReaderPageQuery()",
+  "}",
+  "",
+  "struct ReaderPageQuery: EntityQuery {",
+  "}",
+  "",
+  "@AppIntent(schema: .reader.openPage)",
+  "struct OpenReaderPage: AppIntent {",
+  "}"
+].join("\n");
+
 async function fixture(contents: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "intentlane-run-"));
   await mkdir(join(root, "Sources", "App"), { recursive: true });
@@ -64,6 +81,16 @@ describe("runAudit", () => {
     expect(finding(report, "semantics.app-schema")).toMatchObject({ state: "unknown", confidence: "low" });
     expect(finding(report, "proof.siri-surface")).toMatchObject({ state: "unknown", confidence: "medium" });
     expect(finding(report, "proof.siri-surface").gaps.map((gap) => gap.code)).toEqual(["ILA140"]);
+  });
+
+  it("does not treat a Reader schema as Siri AI evidence", async () => {
+    const report = await runAudit({ directory: await fixture(readerSchemaOnly), platform: "macos", name: "Reader" });
+
+    expect(finding(report, "semantics.shortcuts-only-schema")).toMatchObject({ state: "implemented", confidence: "high" });
+    expect(finding(report, "semantics.app-schema")).toMatchObject({ state: "unknown", confidence: "low" });
+    expect(finding(report, "proof.siri-surface")).toMatchObject({ state: "unknown", confidence: "medium" });
+    expect(finding(report, "proof.siri-surface").gaps.map((gap) => gap.code)).toEqual(["ILA140"]);
+    expect(scoreAuditReport(report).discovery).toBe("shortcuts-only");
   });
 
   it("marks a capability that the platform does not ship as unsupported", async () => {
@@ -156,15 +183,15 @@ describe("schema domain completeness", () => {
   const domainSource = (entitySchema: boolean) => [
     "import AppIntents",
     "",
-    entitySchema ? "@AppEntity(schema: .reader.page)" : "@AppEntity",
-    "struct PageEntity: AppEntity {",
+    entitySchema ? "@AppEntity(schema: .notes.note)" : "@AppEntity",
+    "struct NoteEntity: AppEntity {",
     "  var id: String",
     "  var label: String",
     "}",
     "",
-    "@AppIntent(schema: .reader.openPage)",
-    "struct OpenPage: AppIntent {",
-    "  var target: PageEntity",
+    "@AppIntent(schema: .notes.createNote)",
+    "struct CreateNote: AppIntent {",
+    "  var target: NoteEntity",
     "}"
   ];
 
@@ -180,7 +207,7 @@ describe("schema domain completeness", () => {
     const completeness = finding(report, "semantics.schema-completeness");
     expect(completeness).toMatchObject({ state: "detected", confidence: "high" });
     expect(completeness.gaps).toContainEqual(
-      expect.objectContaining({ code: "ILA130", message: expect.stringContaining("reader conforms 1 intent(s) and 0 entity(ies)") })
+      expect.objectContaining({ code: "ILA130", message: expect.stringContaining("notes conforms 1 intent(s) and 0 entity(ies)") })
     );
   });
 });

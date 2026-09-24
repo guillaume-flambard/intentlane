@@ -689,6 +689,23 @@ describe("schema parameters", () => {
     expect(result.ir?.intents[0]).toMatchObject({ mode: "native", schema: "reader.rotatePages", target: "page" });
   });
 
+  it("accepts system searchInApp without inventing a target entity", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      intents: [
+        {
+          ...base.intents[0],
+          parameters: [],
+          execution: { mode: "native", handler: "SearchInAppHandler" },
+          schema: "system.searchInApp"
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.intents[0]).toMatchObject({ schema: "system.searchInApp", handler: "SearchInAppHandler" });
+  });
+
   it("requires a target on a parameter schema", () => {
     const result = parseConfig(withRotate({ target: undefined }));
     expect(result.ir).toBeUndefined();

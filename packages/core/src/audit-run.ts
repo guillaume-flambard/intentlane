@@ -8,7 +8,7 @@ import {
   detectSources,
   detectedCapabilities,
   evidenceFor,
-  hasSchemaEvidence,
+  isShortcutsOnlySchemaDomain,
   partialSchemaDomains
 } from "./audit-detect.js";
 import { discoverProjects, listProjectFiles } from "./audit-project.js";
@@ -91,10 +91,12 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
   const sources = await readSources(options.directory, scoped);
   const detections = detectSources(sources);
   const detected = detectedCapabilities(detections);
-  const schemaEvidence = hasSchemaEvidence(detections);
   const domains = detectSchemaDomains(sources);
-  const completeDomains = completeSchemaDomains(domains);
-  const partialDomains = partialSchemaDomains(domains);
+  const shortcutsOnlyDomains = domains.filter((domain) => isShortcutsOnlySchemaDomain(domain.domain));
+  const siriDomains = domains.filter((domain) => !isShortcutsOnlySchemaDomain(domain.domain));
+  const schemaEvidence = siriDomains.length > 0;
+  const completeDomains = completeSchemaDomains(siriDomains);
+  const partialDomains = partialSchemaDomains(siriDomains);
   const metadata = options.buildMetadata ? await readBuildMetadata(options.buildMetadata) : undefined;
   const sdk = options.sdkPath ? await readSdkInfo(options.sdkPath) : undefined;
   const route = detectIntegrationRoute(files, await discoverProjects(options.directory));
@@ -114,6 +116,11 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       line: item.line,
       platform: options.platform
     }));
+    if (record.id === "semantics.shortcuts-only-schema") {
+      for (const domain of shortcutsOnlyDomains) {
+        evidence.push({ kind: "swift", path: domain.path, platform: options.platform });
+      }
+    }
     const gaps: AuditGap[] = [];
     let state: AuditState;
     let confidence: AuditConfidence;
@@ -133,8 +140,14 @@ export async function runAudit(options: AuditOptions): Promise<AuditReport> {
       });
       nextAction = `Build against ${options.platform} ${version} or newer before relying on ${record.id}.`;
     } else {
+      const detectedRecord =
+        record.id === "semantics.shortcuts-only-schema"
+          ? shortcutsOnlyDomains.length > 0
+          : record.classification === "siri-eligible" && record.id.startsWith("semantics.")
+            ? schemaEvidence && detected.has(record.id)
+            : detected.has(record.id);
       const missing = record.companions.filter((id) => !detected.has(id));
-      if (detected.has(record.id)) {
+      if (detectedRecord) {
         if (missing.length === 0) {
           state = "implemented";
           confidence = "high";

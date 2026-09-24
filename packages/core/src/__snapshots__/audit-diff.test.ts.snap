@@ -338,7 +338,7 @@ exports[`formatDelta > renders a parseable JSON delta 1`] = `
           "tested": 1,
           "feasible": 0
         },
-        "discovery": "schema-backed"
+        "discovery": "none"
       }
     }
   ],
@@ -352,7 +352,7 @@ exports[`formatDelta > renders a parseable JSON delta 1`] = `
 
 exports[`formatDelta > renders a stable text delta 1`] = `
 "baseline 1 report(s), candidate 1 report(s)
-score macos 33/100 (early, none) -> 83/100 (close, schema-backed)
+score macos 33/100 (early, none) -> 83/100 (close, none)
 macos progression foundation.app-intent: detected -> implemented
 macos progression semantics.app-schema: detected -> tested
 summary 2 progression(s), 0 regression(s), 0 added, 0 removed, 0 context change(s)
