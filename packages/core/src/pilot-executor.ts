@@ -134,7 +134,7 @@ export function demoBuildOverrides(pilot = "iina"): Readonly<Record<string, stri
     PRODUCT_BUNDLE_IDENTIFIER: demoBundleId(pilot),
     CODE_SIGN_IDENTITY: "-",
     CODE_SIGN_STYLE: "Manual",
-    CODE_SIGNING_REQUIRED: "NO",
-    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "YES",
+    CODE_SIGNING_ALLOWED: "YES"
   };
 }

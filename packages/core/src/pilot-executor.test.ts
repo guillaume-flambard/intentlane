@@ -62,6 +62,14 @@ describe("the signing policy", () => {
   it("does not claim a distribution identity, so a demo build asks for no certificate", () => {
     expect(demoBuildOverrides().CODE_SIGN_IDENTITY).toBe("-");
   });
+
+  it("signs the build rather than skipping signing, because a build with no signature carries the target's own identifier", () => {
+    expect(demoBuildOverrides().CODE_SIGNING_ALLOWED).toBe("YES");
+  });
+
+  it("requires a signature, so the demo identifier reaches the signature and not IINA's name", () => {
+    expect(demoBuildOverrides().CODE_SIGNING_REQUIRED).toBe("YES");
+  });
 });
 
 describe("reading a build outcome", () => {

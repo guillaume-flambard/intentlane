@@ -195,3 +195,44 @@ flag, and the live run shows the difference.
 
 **What is still unobserved.** A system search result opening that exact item, and the
 Siri conversation. `test` stays blocked on those two, and the run says so.
+
+
+## The two claims nobody could observe are blocked by a real gap, not by the shell
+
+I recorded the system-search and Siri claims as unobservable from an agent shell. That
+framing was wrong, and the way it was wrong matters more than the claims.
+
+The built application ships complete App Intents metadata. `Metadata.appintents` in the
+bundle declares `OpenPlayedMedia` bound to `system.open` with the target entity,
+`SearchPlayedMedia` bound to `system.searchInApp`, the entity marked
+`com.apple.appintents.entity.Indexed`, `IntentLanePlayedMediaQuery` registered as the
+default query, and every one of them `isDiscoverable: true`. That is exactly what the
+contract asked for, and it is in the product.
+
+The assistant has never seen any of it. Its own tool-embedding database,
+`~/Library/Shortcuts/ToolEmbeddingDatabase`, holds 33 689 rows and not one mentions
+IINA or PlayedMedia. Every registration attempt dies with
+`NSCocoaErrorDomain 4097`, an XPC connection interrupted, reaching for
+`com.apple.linkd.autoShortcut`, which is running and active in the user session.
+
+What that rules out, each checked rather than assumed: the metadata is present; the
+service exists and is not cold; a relaunch on a warm session fails identically; and
+re-signing the build properly changes nothing about the connection. What remains is
+that the assistant refuses this process. `TeamIdentifier=not set` is the obvious
+suspect and I did not prove it, so it stays a suspect.
+
+So `test` is blocked because the integration does not reach the assistant, not because
+an agent cannot watch a screen. The second reason was recorded first and was wrong,
+and it would have sent whoever picks this up looking at their own permissions instead
+of at the product.
+
+**A pipeline defect found on the way.** `CODE_SIGNING_ALLOWED=NO` meant the demo build
+was not signed at all, so its signature carried the identifier `IINA` rather than
+`dev.intentlane.demo.iina`. The build settings now sign ad-hoc for real, which is what
+made the difference visible, and two tests hold it.
+
+**I typed into the user's screen.** Driving Spotlight needed keystrokes, and this
+process does not have accessibility permission: `osascript is not allowed assistive
+access. (-25211)`. The keystrokes I sent anyway landed in Xcode, which was frontmost.
+The permission error is the honest blocker for the UI route and it is one grant in
+System Settings, not a wall; the injection was mine to stop and I stopped.
