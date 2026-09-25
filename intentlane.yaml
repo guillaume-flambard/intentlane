@@ -17,6 +17,8 @@ entities:
       subtitle: status
     query:
       mode: static
+    exposure:
+      rules: [item_missing]
 
 intents:
   - id: create_idea
