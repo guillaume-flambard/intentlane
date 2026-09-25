@@ -22,10 +22,10 @@ Apple system journeys from custom automation and record the required proof for e
 From an Expo app directory, install the two packages:
 
 ```sh
-npm install --save-dev @intentlane/cli @intentlane/expo
+npm install --save-dev @memolabs-apps/intentlane @intentlane/expo
 ```
 
-`@intentlane/cli` is one bundled file with no runtime dependency, so it pulls in neither `commander`, nor `yaml`, nor `zod`. `@intentlane/expo` is the Expo config plugin that runs the generator during a prebuild. Install both, because the plugin resolves the CLI from your app directory.
+`@memolabs-apps/intentlane` is one bundled file with no runtime dependency, so it pulls in neither `commander`, nor `yaml`, nor `zod`. `@intentlane/expo` is the Expo config plugin that runs the generator during a prebuild. Install both, because the plugin resolves the CLI from your app directory.
 
 Then:
 

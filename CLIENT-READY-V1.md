@@ -56,7 +56,7 @@ endpoint queries, exécution `http`, enum schemas, packages avancés
 
 ## Bloqueurs réels vers une v1 commercialisable
 
-1. **Publication npm** : `@intentlane/cli` et `@intentlane/expo` sont prêts
+1. **Publication npm** : `@memolabs-apps/intentlane` et `@intentlane/expo` sont prêts
    (`npm pack` vérifié) mais non publiés — `npm whoami` répond 401 Unauthorized
    sur cette machine. Bloquant livraison, pas produit.
 2. **Gate humain Quickstart** (R1) : personne externe < 30 min non mesuré.
