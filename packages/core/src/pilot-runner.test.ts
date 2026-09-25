@@ -3,6 +3,11 @@ import {
   analyseDiscovery,
   applyAnalyse,
   applyPrepare,
+  applyTest,
+  evaluateTest,
+  retargetJournal,
+  applyImplement,
+  evaluateImplement,
   planRun,
   startRunJournal,
   type PrepareResult
@@ -255,5 +260,162 @@ describe("recording the analysis", () => {
   it("leaves prepare as it was, because analysing does not rebuild the application", () => {
     const journal = applyAnalyse(applyPrepare(startRunJournal(facts), succeeded), analyseDiscovery(backed));
     expect(journal.steps.find((entry) => entry.id === "prepare")?.status).toBe("pass");
+  });
+});
+
+const readableDiscovery = {
+  repository: "/tmp/iina",
+  objects: [
+    {
+      name: "HistoryWindowController",
+      proof: { path: "iina/HistoryWindowController.swift", line: 29, excerpt: "final class HistoryWindowController" },
+      recordTypes: ["PlaybackHistory"],
+      identifiers: [
+        { property: "mpvMd5", proof: { path: "iina/PlaybackHistory.swift", line: 35, excerpt: "var mpvMd5: String" } }
+      ],
+      openers: [
+        { symbol: "doubleAction", proof: { path: "iina/HistoryWindowController.swift", line: 277, excerpt: "func doubleAction()" } }
+      ]
+    }
+  ],
+  access: []
+};
+
+describe("recording the test step", () => {
+  const suitesPass = { suitesPassed: true, checks: 91, commands: 3, unobserved: [] as readonly string[] };
+  const appUnobserved = {
+    suitesPassed: true,
+    checks: 91,
+    commands: 3,
+    unobserved: ["a media item played in the built app reaches the index", "a system search result opens that exact item"]
+  };
+
+  it("passes when the suites pass and nothing is left unobserved", () => {
+    expect(evaluateTest(suitesPass).status).toBe("pass");
+  });
+
+  it("is blocked when the suites pass but the app itself was not observed", () => {
+    expect(evaluateTest(appUnobserved).status).toBe("blocked");
+  });
+
+  it("names what was not observed, because a blocked step has to say what is missing", () => {
+    expect(evaluateTest(appUnobserved).reason).toContain("media item");
+  });
+
+  it("fails when a suite fails, and says so without pretending an observation is the problem", () => {
+    const result = evaluateTest({ ...appUnobserved, suitesPassed: false });
+    expect(result.status).toBe("fail");
+    expect(result.reason).toContain("suite");
+  });
+
+  it("counts the checks it ran, because a number is the evidence a reader wants", () => {
+    expect(evaluateTest(suitesPass).checks).toBe(91);
+  });
+
+  it("marks test blocked with a diagnostic when the app was not observed", () => {
+    const journal = applyTest(startRunJournal(facts), evaluateTest(appUnobserved));
+    const step = journal.steps.find((entry) => entry.id === "test");
+    expect(step?.status).toBe("blocked");
+    expect(step?.diagnostic).toBeTruthy();
+  });
+
+  it("carries the check count as evidence on a pass, so the journal is not just a status", () => {
+    const journal = applyTest(startRunJournal(facts), evaluateTest(suitesPass));
+    const step = journal.steps.find((entry) => entry.id === "test");
+    expect(step?.status).toBe("pass");
+    expect(step?.evidence[0]?.note).toContain("91");
+  });
+
+  it("keeps the journal valid either way, because a blocked step is a state the run carries", () => {
+    expect(pilotRunJournalSchema.safeParse(applyTest(startRunJournal(facts), evaluateTest(appUnobserved))).success).toBe(true);
+    expect(pilotRunJournalSchema.safeParse(applyTest(startRunJournal(facts), evaluateTest(suitesPass))).success).toBe(true);
+  });
+
+  it("leaves analyse as it was, because running the suites does not re-analyse", () => {
+    const analysed = applyAnalyse(startRunJournal(facts), analyseDiscovery(readableDiscovery));
+    const journal = applyTest(analysed, evaluateTest(appUnobserved));
+    expect(journal.steps.find((entry) => entry.id === "analyse")?.status).toBe("pass");
+  });
+});
+
+describe("a commit that moved under the run", () => {
+  const done = () => {
+    const base = startRunJournal(facts);
+    const analysed = applyAnalyse(applyPrepare(base, succeeded), analyseDiscovery(readableDiscovery));
+    return applyTest(analysed, evaluateTest({ suitesPassed: true, checks: 91, commands: 3, unobserved: [] }));
+  };
+
+  it("re-runs the first step when the code moved, because the earlier passes were about code that no longer exists", () => {
+    expect(planRun(retargetJournal(done(), "9999999")).steps[0]).toBe("prepare");
+  });
+
+  it("re-runs everything when the code moved, not only the step that follows", () => {
+    expect(planRun(retargetJournal(done(), "9999999")).steps).toHaveLength(7);
+  });
+
+  it("does not re-run a passed step when the commit did not move", () => {
+    expect(planRun(retargetJournal(done(), facts.commit)).steps[0]).toBe("implement");
+  });
+
+  it("leaves the unpassed steps where they were, because a moved commit is not a reason to invent a pass", () => {
+    expect(planRun(retargetJournal(done(), "9999999")).steps).toContain("implement");
+  });
+
+  it("keeps the recorded commit of each step, because that is what the pass was about", () => {
+    const journal = retargetJournal(done(), "9999999");
+    expect(journal.commit).toBe("9999999");
+    expect(journal.steps.find((entry) => entry.id === "prepare")?.commit).toBe(facts.commit);
+  });
+
+  it("changes nothing else, so a retarget is not an excuse to rewrite history", () => {
+    const before = done();
+    const after = retargetJournal(before, "9999999");
+    expect(after.steps).toEqual(before.steps);
+  });
+});
+
+describe("recording the implement step", () => {
+  const wired = { generatedPresent: true, adapterPresent: true, blockingTodos: 0, compiles: true };
+
+  it("passes when the generated declarations and the adapter are both in the target and it compiles", () => {
+    expect(evaluateImplement(wired).status).toBe("pass");
+  });
+
+  it("fails when the generated declarations are missing, because the contract produced nothing in the app", () => {
+    expect(evaluateImplement({ ...wired, generatedPresent: false }).status).toBe("fail");
+  });
+
+  it("names what is missing when the generated declarations are absent", () => {
+    expect(evaluateImplement({ ...wired, generatedPresent: false }).reason).toContain("generated");
+  });
+
+  it("fails when the adapter is missing, because the seams are what the integration is", () => {
+    expect(evaluateImplement({ ...wired, adapterPresent: false }).status).toBe("fail");
+  });
+
+  it("fails on a blocking TODO, because a step that leaves the next one undone is not implemented", () => {
+    expect(evaluateImplement({ ...wired, blockingTodos: 1 }).status).toBe("fail");
+  });
+
+  it("fails when the target does not compile", () => {
+    expect(evaluateImplement({ ...wired, compiles: false }).status).toBe("fail");
+  });
+
+  it("says a target that does not compile is not implemented, because the words matter more than the state", () => {
+    expect(evaluateImplement({ ...wired, compiles: false }).reason).toContain("compile");
+  });
+
+  it("marks implement passed with evidence, so the journal is not a row of statuses", () => {
+    const journal = applyImplement(startRunJournal(facts), evaluateImplement(wired));
+    const step = journal.steps.find((entry) => entry.id === "implement");
+    expect(step?.status).toBe("pass");
+    expect(step?.evidence.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the journal valid on a pass and on a fail", () => {
+    expect(pilotRunJournalSchema.safeParse(applyImplement(startRunJournal(facts), evaluateImplement(wired))).success).toBe(true);
+    expect(
+      pilotRunJournalSchema.safeParse(applyImplement(startRunJournal(facts), evaluateImplement({ ...wired, compiles: false }))).success
+    ).toBe(true);
   });
 });

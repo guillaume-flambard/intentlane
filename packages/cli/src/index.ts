@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { analyseDiscovery, applyAnalyse, applyPrepare, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -551,6 +551,12 @@ program.command("verify")
 
 const pilot = program.command("pilot").description("Run a transformation end to end, with its state on disk");
 
+const UNOBSERVED_BY_DEFAULT = [
+  "a media item played in the built application reaches the named index",
+  "a system search result opens that exact item",
+  "the Siri conversation itself"
+] as const;
+
 pilot.command("run")
   .requiredOption("--pilot <id>", "Identifier of the pilot being run")
   .requiredOption("--repository <path>", "Path to the application repository")
@@ -591,7 +597,7 @@ pilot.command("run")
         process.exitCode = 1;
         return;
       }
-      journal = parsed.journal;
+      journal = retargetJournal(parsed.journal, commit);
       resuming = true;
     } else {
       journal = startRunJournal(facts);
@@ -645,6 +651,57 @@ pilot.command("run")
       process.stdout.write(`${analysis.status} analyse: ${analysis.reason}\n`);
       process.stdout.write(`findings written to ${join(runDirectory, "discovery.json")}\n`);
       if (analysis.status === "fail") process.exitCode = 1;
+      return;
+    }
+
+    if (plan.steps[0] === "implement") {
+      const adapterDirectory = join(repository, "iina", "IntentLane");
+      const generated = join(adapterDirectory, "IntentLaneGenerated.swift");
+      const files = existsSync(adapterDirectory) ? await readdir(adapterDirectory) : [];
+      const blockingTodos = (await Promise.all(files.map(async (name) => {
+        if (!name.endsWith(".swift")) return 0;
+        const source = await readFile(join(adapterDirectory, name), "utf8");
+        return (source.match(/\bTODO\b/g) ?? []).length;
+      }))).reduce((total, count) => total + count, 0);
+      const built = existsSync(join(repository, ".intentlane", "derived", "Build", "Products", "Debug", "IINA.app"));
+      const result = evaluateImplement({
+        generatedPresent: existsSync(generated),
+        adapterPresent: files.some((name) => name.endsWith(".swift")),
+        blockingTodos,
+        compiles: built
+      });
+      await atomicWrite(journalFile, `${JSON.stringify(applyImplement(journal, result), null, 2)}\n`);
+      process.stdout.write(`generated declarations: ${existsSync(generated) ? "present" : "absent"}\n`);
+      process.stdout.write(`adapter swift files: ${files.filter((name) => name.endsWith(".swift")).length}\n`);
+      process.stdout.write(`blocking TODOs: ${blockingTodos}\n`);
+      process.stdout.write(`${result.status} implement: ${result.reason}\n`);
+      if (result.status === "fail") process.exitCode = 1;
+      return;
+    }
+
+    if (plan.steps[0] === "test") {
+      const productRoot = resolve(import.meta.dirname, "..", "..", "..");
+      const suites = join(productRoot, "pilots", options.pilot, "tests", "run-all-tests.sh");
+      if (!existsSync(suites)) {
+        process.stderr.write(`FAIL there is no application-owned test command for the pilot: ${suites}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const started = Date.now();
+      const run = spawnSync("bash", [suites], { encoding: "utf8" });
+      const output = `${run.stdout ?? ""}\n${run.stderr ?? ""}`;
+      const checks = (output.match(/^ok /gm) ?? []).length;
+      const commands = (output.match(/^== /gm) ?? []).length;
+      const result = evaluateTest({
+        suitesPassed: run.status === 0,
+        checks,
+        commands,
+        unobserved: UNOBSERVED_BY_DEFAULT
+      });
+      await atomicWrite(journalFile, `${JSON.stringify(applyTest(journal, result), null, 2)}\n`);
+      process.stdout.write(`${checks} check(s) across ${commands} suite(s) in ${((Date.now() - started) / 1000).toFixed(1)}s\n`);
+      process.stdout.write(`${result.status} test: ${result.reason}\n`);
+      if (result.status === "fail") process.exitCode = 1;
       return;
     }
 

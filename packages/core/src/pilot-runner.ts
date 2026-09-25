@@ -132,6 +132,118 @@ export function applyAnalyse(journal: PilotRunJournal, result: AnalysisResult): 
   return pilotRunJournalSchema.parse({ ...journal, steps });
 }
 
+export type TestFacts = Readonly<{
+  suitesPassed: boolean;
+  checks: number;
+  commands: number;
+  unobserved: readonly string[];
+}>;
+
+export type TestResult = Readonly<{
+  status: "pass" | "fail" | "blocked";
+  reason: string;
+  checks: number;
+}>;
+
+export type ImplementFacts = Readonly<{
+  generatedPresent: boolean;
+  adapterPresent: boolean;
+  blockingTodos: number;
+  compiles: boolean;
+}>;
+
+export type ImplementResult = Readonly<{
+  status: "pass" | "fail";
+  reason: string;
+}>;
+
+export function evaluateImplement(facts: ImplementFacts): ImplementResult {
+  if (!facts.generatedPresent) {
+    return { status: "fail", reason: "The generated Apple declarations are not in the application target, so the contract produced nothing there." };
+  }
+  if (!facts.adapterPresent) {
+    return { status: "fail", reason: "The business adapter is not in the application target, so there is no integration to compile." };
+  }
+  if (facts.blockingTodos > 0) {
+    return { status: "fail", reason: `${facts.blockingTodos} blocking TODO(s) remain, so the step is not implemented.` };
+  }
+  if (!facts.compiles) {
+    return { status: "fail", reason: "The target does not compile, so the integration is not implemented." };
+  }
+  return {
+    status: "pass",
+    reason: "The generated declarations and the adapter are both in the target, no blocking TODO remains, and the target compiles."
+  };
+}
+
+export function applyImplement(journal: PilotRunJournal, result: ImplementResult): PilotRunJournal {
+  const previous = journal.steps.find((entry) => entry.id === "implement");
+  const attempts = previous === undefined || previous.status === "pending" ? 1 : previous.attempts + 1;
+  const steps = journal.steps.map((entry) =>
+    entry.id === "implement"
+      ? {
+          id: entry.id,
+          status: result.status,
+          commit: journal.commit,
+          attempts,
+          evidence:
+            result.status === "pass"
+              ? [{ kind: "command" as const, command: "check the application target", note: result.reason }]
+              : [],
+          ...(result.status === "pass" ? {} : { diagnostic: result.reason })
+        }
+      : entry
+  );
+  return pilotRunJournalSchema.parse({ ...journal, steps });
+}
+
+export function retargetJournal(journal: PilotRunJournal, commit: string): PilotRunJournal {
+  return journal.commit === commit ? journal : { ...journal, commit };
+}
+
+export function evaluateTest(facts: TestFacts): TestResult {
+  if (!facts.suitesPassed) {
+    return {
+      status: "fail",
+      reason: `An application-owned suite failed. ${facts.checks} check(s) ran across ${facts.commands} command(s), and one of them did not pass.`,
+      checks: facts.checks
+    };
+  }
+  if (facts.unobserved.length > 0) {
+    return {
+      status: "blocked",
+      reason: `The suites passed with ${facts.checks} check(s), and none of them observed the application: ${facts.unobserved.join("; ")}. A suite that exercises the adapter against a double is not an effect observed on the app.`,
+      checks: facts.checks
+    };
+  }
+  return {
+    status: "pass",
+    reason: `${facts.checks} check(s) across ${facts.commands} command(s), and nothing was left unobserved.`,
+    checks: facts.checks
+  };
+}
+
+export function applyTest(journal: PilotRunJournal, result: TestResult): PilotRunJournal {
+  const previous = journal.steps.find((entry) => entry.id === "test");
+  const attempts = previous === undefined || previous.status === "pending" ? 1 : previous.attempts + 1;
+  const steps = journal.steps.map((entry) =>
+    entry.id === "test"
+      ? {
+          id: entry.id,
+          status: result.status,
+          commit: journal.commit,
+          attempts,
+          evidence:
+            result.status === "pass"
+              ? [{ kind: "command" as const, command: "run-all-tests.sh", note: result.reason }]
+              : [],
+          ...(result.status === "pass" ? {} : { diagnostic: result.reason })
+        }
+      : entry
+  );
+  return pilotRunJournalSchema.parse({ ...journal, steps });
+}
+
 export function applyPrepare(journal: PilotRunJournal, result: PrepareResult): PilotRunJournal {
   const evidence: PilotRunEvidenceEntry = {
     kind: "build",
