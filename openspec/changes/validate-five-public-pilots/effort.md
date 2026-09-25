@@ -25,6 +25,7 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | 7 | Metadata |
 | 8 | Certification |
 | W | Wiring the application's own mutation events to the index, added by `chain-the-remaining-pilots` after the first two pilots certified `indexSync` without it |
+| P | The launch probe, the one stage that runs the built application |
 
 ## Sheet
 
@@ -52,6 +53,8 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | HandBrake `1255087` | 8 | under 1 s plus the gate suites | `/usr/bin/time -p` | certified on the first run |
 | FSNotes `450619b` | W | 137.9 s to compile 233 app files and link, then 13 checks | `/usr/bin/time -p` on the deletion suite | this is the only suite that compiles the application. It reads the file list from the project file, links the SwiftPM objects Xcode already built, and runs under an isolated `HOME` because `Storage` writes a trash directory into the developer's `Documents` on first use. Most of the 138 s is Swift type-checking 233 files, not the test |
 | HandBrake `e9398f3` | W | 9.7 s to compile six Objective-C files, link against libhandbrake, then 13 checks | `/usr/bin/time -p` on the deletion suite | 14 times cheaper than the Swift one, and the difference is the language, not the method: this suite drives the same kind of real object FSNotes does |
+| HandBrake `e9398f3` | P | 0.6 s to the launch probe's decision, 12 checks on the probe itself, all under 1 s | `/usr/bin/time -p`, shell | the probe decides in under a second because it refuses early, and the 12 checks are what stand in for a launch this machine will not perform. The end-to-end launch is **not instrumented and not run**, because the agent process may not spawn into the Aqua session; the effort sheet says so rather than quoting a number from a run that did not happen |
+| FSNotes `450619b` | P | 12 checks on the probe, all under 1 s | shell | same shape as HandBrake's, plus one check that the two probes carry the same three disclaimers, which is the test that makes this one probe reused rather than two |
 | LuLu `7d2669e` | Q | not instrumented | manual | done before this sheet existed |
 | LuLu `7d2669e` | 0 | not started | | |
 | LuLu `7d2669e` | 1 | not started | | |

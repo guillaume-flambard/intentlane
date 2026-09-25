@@ -232,11 +232,38 @@ resolved by name and can never be selected, so the test failed and the rule grew
   is the only way in; making that method internal is the cleaner upstream change
   and is written down for the pull request rather than done here.
 
-### What is deliberately not done
+### The launch probe, and what this pilot had to change to make one
 
-No write intent, no note body, no note count. FSNotes has no macOS test target,
-so the ancestor-expansion branch is proven by the build and by reading, not by a
-test, and the pilot says so instead of implying otherwise.
+`python3 pilots/fsnotes/tests/launch-probe.py --app <FSNotes.app>` launches the built
+application, reads one line from its standard output, and reports the registration
+state and the named index. It carries the three statements it is not entitled to make
+silently, because it does not prove the Siri conversation, does not prove anything
+appears in Spotlight, and does not prove the open path selects a notebook.
+
+Three things this pilot forced, which is what the recipe asks a pilot to record:
+
+- **The log is `print`, not a named facility.** FSNotes has no logger the Swift file
+  can call, so the line goes to standard output. The HandBrake half reads standard
+  error instead, because HandBrake writes through `HBUtilities`. The probe reads
+  whichever stream its application writes, and collects both so it can still see why
+  a launch produced nothing.
+- **Registration happens in `applicationDidFinishLaunching`,** behind
+  `if #available(macOS 27.0, *)`. So the probe waits for the line rather than for a
+  window, because on an older system the line will never come and a window would
+  still appear.
+- **The defaults domain is `co.fluder.FSNotes`,** taken from the built app's
+  `Info.plist` rather than from the project file, which also holds two iOS bundle
+  identifiers and would have sent the probe reading the wrong one.
+
+**The end-to-end launch was not performed on this machine** and is not claimed. The
+agent process may not spawn into the Aqua session, and the probe says so and skips
+rather than reporting a failure against an adapter it never observed. What is proved
+is the part that actually breaks: `tests/probe/test-launch-probe.py` holds the
+probe's regular expression against the registration literal read out of the built
+`FSNotes.debug.dylib`, so the two sides cannot drift apart silently. That test was
+seen failing against a binary built before the adapter logged, and passing after.
+
+Twelve checks. The probe's own decision takes 0.6 s because it refuses early.
 
 **Index removal is wired, and the test that proves it launches FSNotes.**
 `bash pilots/fsnotes/tests/run-deletion-tests.sh` compiles the 233 files Xcode
@@ -280,7 +307,14 @@ twice. Hand-editing a 304K project file would have been the alternative.
 
 ## Not yet done
 
-Nothing is pending inside this pilot except the two deviations that need a
-decision rather than work: whether an upstream pull request should also make
-`search()` internal, and whether incremental reindexing belongs in a later pilot.
-The campaign has not yet produced an observed claim, and that is on purpose.
+Two things, and neither is work:
+
+- **The end-to-end launch probe has not been run against a live application.** The
+  agent process on this machine may not spawn into the Aqua session, so the probe
+  reports what it could observe and skips the rest rather than putting a red mark
+  against an adapter it never saw run. The probe's own logic is covered, and the
+  contract between the probe and the application is covered against the built binary,
+  so the remaining run needs a desktop and nothing else.
+- **The campaign has not produced an observed claim,** and that is on purpose. No
+  public API sends a phrase to Siri, so a person with a screen is the only way to
+  make that claim, and a claim nobody can reproduce is not a claim.

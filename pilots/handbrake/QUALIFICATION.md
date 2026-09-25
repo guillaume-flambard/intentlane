@@ -133,9 +133,39 @@ one intent, and 90 of 167 lines differ in the generated output, every one of the
 vocabulary: the entity name, the intent name, the subtitle field, the index name.
 Same protocols, same availability annotation, same resolver shape.
 
-## What is deliberately not claimed
+## The launch probe, and what this pilot had to change to make one
 
-No Siri conversation, no Spotlight result, and no `system.searchInApp`.
+`python3 pilots/handbrake/tests/launch-probe.py --app <HandBrake.app>` launches the
+built application, reads one line from its standard error, and reports the
+registration state and the named index. It carries the three statements it is not
+entitled to make silently, because it does not prove the Siri conversation, does not
+prove anything appears in Spotlight, and does not prove the open path selects a
+preset.
+
+Three things this pilot forced, which is what the recipe asks a pilot to record:
+
+- **The log is HandBrake's own facility, on standard error.**
+  `HBUtilities.writeToActivityLogWithNoHeader:` is the variant Swift can call, since
+  `writeToActivityLog:` is a C variadic and Swift cannot import one at all. The
+  FSNotes half has no equivalent and uses `print`, so the probe reads whichever
+  stream its application writes and collects both, because the reason a launch
+  produced nothing arrives on the stream the marker is not on.
+- **The adapter's log line had to be added, not found.** IINA and this pilot both
+  needed it, IINA's came first, and the shape came from there. What came from this
+  pilot is the decision to log the index name verbatim, because a probe that reports
+  the name in the source file reports the source file, not the system.
+- **Registration is called from `HBAppDelegate`,** at
+  `applicationDidFinishLaunching` on line 98, so the probe waits for the line rather
+  than for the presets window, which a first launch may open behind a licence
+  dialog.
+
+**The end-to-end launch was not performed on this machine** and is not claimed. The
+agent process may not spawn into the Aqua session, and the probe says so and skips
+rather than reporting a failure against an adapter it never observed. What is proved
+is the part that actually breaks: `tests/probe/test-launch-probe.py` holds the
+probe's regular expression against the registration literal read out of the built
+binary, so the two sides cannot drift apart silently. That test was seen failing
+against the binary built before the adapter logged, and passing after.
 
 **Index removal is wired, through the event HandBrake already had.**
 `bash pilots/handbrake/tests/run-deletion-tests.sh` compiles the real
@@ -161,9 +191,17 @@ The tree mapping and the observer moved out of `PresetIntegration.swift` into
 application, while the mapping decides the identifier and the observer is the
 wiring. `PresetIndex.swift` speaks no HandBrake symbol again.
 
-## Not measured
+## What is deliberately not claimed
 
-Whether the registration actually runs at launch. That needs a graphical session
-and a launch probe, which is the one gate IINA has and this pilot does not. The
-build proves the code compiles and the call is wired; it does not prove the process
-registers.
+No Siri conversation, no Spotlight result, and no `system.searchInApp`.
+
+**Whether the registration runs at launch is still not claimed, and now the reason is
+narrower than it was.** The launch probe exists and it runs, and on this machine it
+decides in 0.6 s that the agent process may not spawn into the Aqua session, so it
+skips and says so. What it has not done is observe the running process. On a desktop,
+the remaining work is one command against the built bundle, and the probe's contract
+with the application is already covered against the built binary.
+
+The build proves the code compiles and the call is wired. It does not prove the
+process registers, and the probe exists so that something other than the build is the
+thing that will.

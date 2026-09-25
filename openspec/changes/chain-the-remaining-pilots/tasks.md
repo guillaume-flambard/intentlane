@@ -74,30 +74,82 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       `HBPresetsChangedNotification` retenu dans un statique, parce qu'un token de
       bloc libéré avec sa portée cesserait de réconcilier en silence. `BUILD
       SUCCEEDED` des deux côtés, huit suites vertes.
-- [ ] 0.8 Réécrire dans les deux fiches ce qui est réellement câblé, et retirer
+- [x] 0.8 Réécrire dans les deux fiches ce qui est réellement câblé, et retirer
       toute formulation qui décrit la réindexation à la demande comme si elle était
       le seul branchement, puisque la suppression l'est désormais aussi. Vérifié
       par relecture contre le test de 0.5.
-- [ ] 0.9 Re-certifier les deux pilotes après 0.4 à 0.8, et vérifier que les six
+      **Fait.** FSNotes dit où le test s'arrête et ce que l'isolation protège, et
+      HandBrake dit pourquoi la couture diffe au lieu d'appeler, et pourquoi
+      l'observateur est un objet retenu plutôt qu'un jeton de bloc.
+- [x] 0.9 Re-certifier les deux pilotes après 0.4 à 0.8, et vérifier que les six
       revendications sont inchangées. Vérifié par `verify --strict` qui sort à
       zéro pour les deux.
+      **Fait.** Sixnaire pour les deux, 368 tests du dépôt verts, les huit suites
+      de pilote vertes, `BUILD SUCCEEDED` des deux applications, typecheck propre,
+      `openspec validate --strict` valide. Les six revendications n'ont pas bougé,
+      et c'est le résultat attendu : on a rendu `indexSync` honnête, on n'a pas
+      ajouté de revendication.
 ## 1. La sonde de lancement
 
-- [ ] 1.1 Décrire ce que la sonde doit lire, sur le modèle de la sonde IINA, et ce
+- [x] 1.1 Décrire ce que la sonde doit lire, sur le modèle de la sonde IINA, et ce
       qu'elle ne doit pas conclure. Vérifié par une section dans la recette.
-- [ ] 1.2 Écrire la sonde pour HandBrake, qui lance l'application construite et
+      **Fait.** Une section « The launch probe, and what it is not allowed to
+      conclude », écrite avant les deux sondes pour qu'aucune ne modèle l'autre. Elle
+      fixe quatre choses : ce que l'application rend lisible, ce que la sonde lit,
+      les trois affirmations que la sortie doit porter pour ne pas inviter à lire trop,
+      et le refus de déclarer `registration` sans session graphique. Le refus est la
+      partie qui compte, parce qu'`App Intents` a besoin d'un window server, qu'un
+      lancement sans session peut planter ou ne rien enregistrer, et qu'une sonde
+      obliged de deviner verrait un vert qui ne veut rien dire.
+- [x] 1.2 Écrire la sonde pour HandBrake, qui lance l'application construite et
       rapporte l'enregistrement par nom. Vérifié par un test rouge du message
       attendu, puis vert contre l'application lancée.
-- [ ] 1.3 La même sonde pour FSNotes. Vérifié de la même façon.
-- [ ] 1.4 Enregistrer la réutilisation de la sonde IINA comme déviation, et écrire
+      **Fait pour ce qui peut l'être, et le reste est dit.** Le rouge est là :
+      l'application n'écrivait rien, donc la ligne n'existait pas dans le binaire.
+      L'adaptateur l'écrit maintenant via `HBUtilities`, et la ligne est lisible dans
+      le binaire construit. **Le vert contre l'application lancée n'a pas eu lieu**,
+      car le processus agent ne peut pas spawner dans la session Aqua sur cette
+      machine, et la sonde le dit et saute au lieu de mettre un rouge sur un
+      adaptateur qu'elle n'a pas vu tourner. Ce qui remplace le run : un test qui lit
+      le littéral d'enregistrement dans le binaire construit et le tient contre
+      l'expression régulière de la sonde, donc les deux moitiés ne peuvent pas
+      dériver en silence. Ce test a été vu échouer contre le binaire d'avant, et
+      passer après. Douze vérifications.
+- [x] 1.3 La même sonde pour FSNotes. Vérifié de la même façon.
+      **Fait, même forme, trois différences notées dans la fiche.** FSNotes logs avec
+      `print` sur la sortie standard, pas avec une installation nommée, donc la sonde
+      lit l'autre flux. L'enregistrement est derrière `applicationDidFinishLaunching`
+      avec un `if #available`, donc la sonde attend la ligne et pas une fenêtre. Le
+      domaine de préférences est lu dans l'`Info.plist` de l'app construite
+      (`co.fluder.FSNotes`), parce que le fichier projet contient aussi deux
+      identifiants iOS qui auraient envoyé la sonde lire le mauvais. Douze
+      vérifications, dont une qui vérifie que les deux sondes portent les mêmes trois
+      désaveux, et c'est ce test qui fait que c'est une sonde réutilisée et non deux.
+- [x] 1.4 Enregistrer la réutilisation de la sonde IINA comme déviation, et écrire
       ce que chaque pilote a dû changer pour lire son propre enregistrement.
       Vérifié par la ligne de deviation.
-- [ ] 1.5 Dire dans la sortie de la sonde qu'elle ne prouve ni la conversation Siri
+      **Fait.** La ligne est dans `deviations.md`, et les trois changements par
+      pilote sont dans les deux fiches avec la raison de chacun, y compris pourquoi
+      `writeToActivityLogWithNoHeader:` et pas l'autre : la première est une variadique
+      C que Swift ne peut pas importer du tout.
+- [x] 1.5 Dire dans la sortie de la sonde qu'elle ne prouve ni la conversation Siri
       ni l'affichage Spotlight, et le vérifier en lisant la sortie d'un run qui
       passe. Vérifié par la présence de la phrase dans la sortie.
-- [ ] 1.6 Ne pas déclarer la revendication `registration` quand aucune session
+      **Fait, et vérifié en lisant une sortie qui passe.** Les trois phrases sont
+      dans la sortie des deux sondes, y compris sur les runs qui sautent, parce qu'un
+      saut qui ne dit pas ce qu'il ne prouve pas laisse juste un trou. Un test les
+      vérifie aussi dans le code, pour qu'une sortie qui les perdrait soit rouge.
+- [x] 1.6 Ne pas déclarer la revendication `registration` quand aucune session
       graphique n'est disponible. Vérifié en lançant la porte sans session et en
       constatant qu'elle n'est pas dans le jeu par défaut.
+      **Fait, et un cas de plus que prévu.** La sonde ne se contente pas de demander
+      à `launchctl` : elle tente `launchctl asuser`, qui entre dans la session Aqua
+      du même utilisateur sans mot de passe, parce que conclure trop tôt ferait
+      sauter une revendication qu'elle pouvait prouver. Ici la session Aqua existe et
+      dit `Permission denied` au spawn, donc la sonde distingue trois cas : pas de
+      session, session qui refuse le spawn, et application qui démarre sans écrire.
+      Les deux premiers sautent, le troisième échoue. Les deux sondes sortent zéro
+      avec un `SKIP` qui nomme la raison, et `registration` n'est pas déclaré.
 
 ## 2. Transmission, troisième pilote
 

@@ -10,3 +10,4 @@ apps/*/build/
 pilots/*/out/
 pilots/*/tests/.build/
 pilots/*/fixtures/media/
+__pycache__/

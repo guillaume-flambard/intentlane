@@ -329,6 +329,77 @@ sends a phrase to Siri, and Core Spotlight offers no read-back of a named index,
 so those two claims cannot be certified by a command and are never part of a
 default claim set.
 
+## The launch probe, and what it is not allowed to conclude
+
+The probe is the only stage that runs the built application. Everything before it
+proves the code compiles and the claims are shaped right; the probe proves the
+adapter is live inside a real process. It is also the stage most able to lie, because
+a launched app is a black box and a green exit code says very little on its own.
+
+### What the application must make readable
+
+The adapter writes a registration key to `UserDefaults.standard`, and writes it only
+when every registry the contract declares is genuinely populated. The flag is not
+set by a partial launch, so a probe reading it cannot be fooled by a process that
+started and then failed halfway. The application also logs one line carrying:
+
+- the adapter name,
+- the state of each registry the contract declares,
+- the named index, verbatim, so the probe reports the name the system actually holds
+  rather than the name the pilot wishes it held.
+
+One line, at registration, with the index name in it. A probe that has to grep six
+log lines and infer which belong together is a probe that will pass on an unrelated
+line.
+
+### What the probe reads, and what it must not conclude
+
+The probe launches the built application, waits for that line, and reports the
+registration state and the index name. That is all it reads. In return its own output
+has to carry three statements it is not entitled to make silently:
+
+- **It does not prove the Siri conversation.** No public API sends a phrase to Siri.
+  A registered intent is a prerequisite for it, not a demonstration of it.
+- **It does not prove the Spotlight display.** Core Spotlight offers no read-back for
+  a named index, so nothing a command runs can show a result surfacing. A successful
+  `indexAppEntities` call means the system accepted the entity.
+- **It does not prove the open path works end to end.** It proves a handler is
+  registered. Whether that handler finds the object and selects it is what the
+  integration suite covers, with a recording double, and a launch probe cannot see
+  either one.
+
+A probe that omits those three lines is a probe whose green result invites a reader to
+claim more than was measured, which is the failure this campaign exists to remove.
+
+### A probe without a graphical session proves nothing about registration
+
+App Intents registration needs a window server. A launch run with no graphical
+session can start a process, and that process can crash, hang or silently decline to
+register, and the probe would still find a line or find nothing and have to guess.
+
+So the probe checks for a graphical session first. Without one it does not report
+`registration` at all: it says the session was unavailable and the claim stays out of
+the default set for that run. `registration` joins the six claims only when a real
+session launched the application and the line was found.
+
+This is why the six claims are six and not seven. The seventh is real, it is what a
+client would ask about first, and it is exactly the kind of claim that is cheap to
+claim and impossible to prove, so it waits for a person with a screen.
+
+### What has to change per pilot
+
+Reuse is the point and the trap. The shape above is identical for every pilot, and
+the parts that are not identical are the ones that will rot if they are left implicit:
+
+- how the adapter is woken at launch, which differs by app's own start-up path,
+- where the adapter's log line lands, which differs by the app's logging facility,
+- how the built application is launched and how the process is stopped.
+
+Each pilot records what it had to change, and the deviation log says which parts of
+the probe came from IINA and which parts each app forced. A probe that is rewritten
+from scratch each time is three probes, not one, and the campaign learns nothing from
+the second.
+
 ## After stage 8
 
 ```sh

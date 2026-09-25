@@ -90,3 +90,25 @@ ambiguous. It is not recorded for a stage that simply took longer.
   behaviour belongs to the application, not to the pilot, and upstream will not want
   a test-only `HOME`. A pilot on a Swift app that keeps user state in a singleton has
   to budget for this, and the recipe now asks.
+- **The launch probe is reused from IINA, and each app forced three different
+  things.** The shape is identical: read one line, report the registration state and
+  the index name, say out loud the three things the probe does not prove, and refuse
+  to claim `registration` without a graphical session. What each app changed is the
+  stream the line arrives on, the start-up path that has to have run, and how the
+  process is stopped. FSNotes logs with `print` to standard output, HandBrake logs
+  through `HBUtilities` to standard error and through the
+  `writeToActivityLogWithNoHeader:` variant, because the other one is a C variadic
+  and Swift cannot import one. Both register from `applicationDidFinishLaunching`,
+  which is why the probe waits for the line rather than for a window: on a system
+  below the adapter's floor the line will never come and a window would still appear.
+
+  Two parts of this are deviations worth naming. The probe reuses IINA's shape, which
+  means this is one probe used twice rather than two probes, and a test asserts the
+  two carry the same three disclaimers, because the day they differ is the day a
+  reader starts trusting one of them. And the probe could not be run end to end on
+  this machine: the agent process may not spawn into the Aqua session. That is
+  recorded as not run rather than as a pass, and the effort sheet says so instead of
+  quoting a number from a run that did not happen. What stands in its place is a test
+  that reads the registration literal out of the built binary and holds it against
+  the probe's regular expression, so the two halves cannot drift apart silently. That
+  test was seen failing against a binary built before the adapter logged.
