@@ -26,6 +26,7 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | 8 | Certification |
 | W | Wiring the application's own mutation events to the index, added by `chain-the-remaining-pilots` after the first two pilots certified `indexSync` without it |
 | P | The launch probe, the one stage that runs the built application |
+| R | Carrying a runtime refusal into the contract, added by `carry-access-to-the-contract`: one schema field, three pilot contracts, and the migration of every inline fixture the field invalidated |
 
 ## Sheet
 

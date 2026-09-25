@@ -65,6 +65,7 @@ describe("parseConfig", () => {
           identifier: "id",
           display: { title: "title", subtitle: "providerName" },
           query: { mode: "static" },
+          exposure: { rules: ["source_disabled"] },
           schema: "audio.liveRadioStation"
         }
       ],
@@ -202,7 +203,8 @@ describe("entities", () => {
     title: { en: "Idea", fr: "Idée" },
     identifier: "id",
     display: { title: "title", subtitle: "status" },
-    query: { mode: "static" }
+    query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] }
   };
 
   const withEntities = (entities: unknown, parameters: unknown = []): unknown => ({
@@ -318,7 +320,8 @@ const nativeEntity = {
   title: { en: "Note", fr: "Note" },
   identifier: "id",
   display: { title: "title" },
-  query: { mode: "static" }
+  query: { mode: "static" },
+  exposure: { rules: ["source_disabled"] }
 };
 
 const withNative = (overrides: Record<string, unknown> = {}) => ({
@@ -440,7 +443,8 @@ describe("app schemas", () => {
     title: { en: "Ambient sound", fr: "Son d'ambiance" },
     identifier: "id",
     display: { title: "title" },
-    query: { mode: "static" }
+    query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] }
   };
 
   const withSchema = (entitySchema: string | undefined, intentSchema: string | undefined, minIos = "27.0"): unknown => ({
@@ -579,6 +583,7 @@ describe("schema protocols", () => {
     identifier: "id",
     display: { title: "label" },
     query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] },
     schema: "reader.page"
   };
 
@@ -710,6 +715,7 @@ describe("schema parameters", () => {
     identifier: "id",
     display: { title: "label" },
     query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] },
     schema: "reader.page"
   };
 

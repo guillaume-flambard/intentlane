@@ -41,6 +41,38 @@ const riskSchema = z.object({
   confirmation_prompt: localizedSchema.optional()
 }).strict();
 
+export const PILOT_EXPOSURE_RULES = ["source_disabled", "item_missing", "item_not_usable"] as const;
+
+const exposureSchema = z
+  .object({ rules: z.array(z.enum(PILOT_EXPOSURE_RULES)).min(1) })
+  .strict()
+  .refine((value) => new Set(value.rules).size === value.rules.length, {
+    message: "An exposure condition names each rule once. A repeated rule reads as a conjunction that means something stronger."
+  });
+
+const requiredExposureSchema = exposureSchema.optional().superRefine((value, ctx) => {
+  if (value === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [],
+      message:
+        "An entity must declare an exposure condition. A conditional entity and an always-exposed entity are two different offers, and the contract is the document a client reads."
+    });
+  }
+});
+
+const entitySchema = z
+  .object({
+    id: identifierSchema,
+    title: localizedSchema,
+    identifier: identifierSchema,
+    display: z.object({ title: z.string(), subtitle: z.string().optional() }).strict(),
+    query: z.object({ mode: z.enum(["static", "endpoint"]), endpoint: z.string().optional() }).strict(),
+    exposure: requiredExposureSchema,
+    schema: schemaReferenceSchema.optional()
+  })
+  .strict();
+
 export const intentLaneConfigSchema = z.object({
   schema: z.literal("0.1"),
   app: z.object({
@@ -55,14 +87,7 @@ export const intentLaneConfigSchema = z.object({
     .refine((app) => app.min_ios !== undefined || app.min_macos !== undefined, {
       message: "An app must declare min_ios or min_macos."
     }),
-  entities: z.array(z.object({
-    id: identifierSchema,
-    title: localizedSchema,
-    identifier: identifierSchema,
-    display: z.object({ title: z.string(), subtitle: z.string().optional() }).strict(),
-    query: z.object({ mode: z.enum(["static", "endpoint"]), endpoint: z.string().optional() }).strict(),
-    schema: schemaReferenceSchema.optional()
-  }).strict()).default([]),
+  entities: z.array(entitySchema).default([]),
   intents: z.array(z.object({
     id: identifierSchema,
     title: localizedSchema,

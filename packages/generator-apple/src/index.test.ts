@@ -193,7 +193,8 @@ describe("generateAdapterTemplate", () => {
         title: { en: "Article", fr: "Article" },
         identifier: "id",
         display: { title: "title" },
-        query: { mode: "static" }
+        query: { mode: "static" },
+        exposure: { rules: ["source_disabled"] }
       }],
       intents: [{
         id: "open_article",
@@ -242,7 +243,8 @@ describe("Spotlight entity properties", () => {
         title: { en: "Article" },
         identifier: "id",
         display: { title: "title" },
-        query: { mode: "static" }
+        query: { mode: "static" },
+        exposure: { rules: ["source_disabled"] }
       }],
       intents: [{
         id: "open_article",
@@ -378,14 +380,16 @@ const entityConfig = {
       title: { en: "Idea", fr: "Idée" },
       identifier: "id",
       display: { title: "title", subtitle: "status" },
-      query: { mode: "static" }
+      query: { mode: "static" },
+      exposure: { rules: ["source_disabled"] }
     },
     {
       id: "tag",
       title: { en: "Tag", fr: "Étiquette" },
       identifier: "id",
       display: { title: "name" },
-      query: { mode: "static" }
+      query: { mode: "static" },
+      exposure: { rules: ["source_disabled"] }
     }
   ],
   intents: [{
@@ -683,7 +687,8 @@ describe("results and snippets", () => {
           title: { en: "Notebook" },
           identifier: "id",
           display: { title: "title" },
-          query: { mode: "static" }
+          query: { mode: "static" },
+          exposure: { rules: ["source_disabled"] }
         }
       ],
       intents: [
@@ -765,7 +770,8 @@ const nativeConfig = {
       title: { en: "Note", fr: "Note" },
       identifier: "id",
       display: { title: "title", subtitle: "status" },
-      query: { mode: "static" }
+      query: { mode: "static" },
+      exposure: { rules: ["source_disabled"] }
     }
   ],
   intents: [
@@ -850,6 +856,7 @@ const schemaConfig = {
     identifier: "id",
     display: { title: "title" },
     query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] },
     schema: "audio.ambientSound"
   }],
   intents: [{
@@ -930,6 +937,7 @@ const protocolConfig = {
     identifier: "id",
     display: { title: "label" },
     query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] },
     schema: "reader.page"
   }],
   intents: [
@@ -1005,6 +1013,7 @@ const parameterConfig = {
       identifier: "id",
       display: { title: "label" },
       query: { mode: "static" },
+      exposure: { rules: ["source_disabled"] },
       schema: "reader.page"
     }
   ],
@@ -1054,7 +1063,8 @@ const entityListConfig = {
       title: { en: "Idea" },
       identifier: "id",
       display: { title: "title" },
-      query: { mode: "static" }
+      query: { mode: "static" },
+      exposure: { rules: ["source_disabled"] }
     }
   ],
   intents: [{

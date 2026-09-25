@@ -112,3 +112,26 @@ ambiguous. It is not recorded for a stage that simply took longer.
   that reads the registration literal out of the built binary and holds it against
   the probe's regular expression, so the two halves cannot drift apart silently. That
   test was seen failing against a binary built before the adapter logged.
+
+
+## The rule lived in the adapter while the contract did not mention it
+
+`verifierAcces` was missing from the contract, not from the code. The IINA adapter
+refused on two conditions, and did so correctly, and `pilots/iina/contract.yaml` said
+nothing about either. The same silence was in the FSNotes and HandBrake contracts,
+each of which withholds items under a rule of its own.
+
+The silence is the defect, not the absence of the feature. The contract is the document
+a client reads, and a contract that does not say when an entity may be exposed
+describes an unconditional offer. "Expose one media item" and "expose every media item"
+are two different things to sell, and the difference was undocumented.
+
+Writing the condition down forced the schema to name the refusals, and the three pilots
+then disagreed with the first draft of that schema. It allowed one rule. IINA enforces
+two at once, FSNotes enforces a refusal no rule described, and HandBrake enforces FSNotes'
+shape. The schema now carries three named rules and allows a conjunction, and the spec
+was corrected before the change was archived rather than after.
+
+The generated Swift deliberately gained nothing. App Intents has nowhere to put an
+exposure condition, and a generated property asserting one could not be checked. A test
+now holds that silence, so the day someone adds a fake one the suite fails.

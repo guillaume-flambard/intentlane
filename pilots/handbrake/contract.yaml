@@ -35,6 +35,8 @@ entities:
     title:
       en: Preset
     identifier: id
+    exposure:
+      rules: [item_not_usable]
     display:
       title: title
       subtitle: category
