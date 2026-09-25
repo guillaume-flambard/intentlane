@@ -148,12 +148,14 @@ export type TestFacts = Readonly<{
   checks: number;
   commands: number;
   unobserved: readonly string[];
+  unblock?: string;
 }>;
 
 export type TestResult = Readonly<{
   status: "pass" | "fail" | "blocked";
   reason: string;
   checks: number;
+  unblock?: string;
 }>;
 
 export type ImplementFacts = Readonly<{
@@ -216,15 +218,16 @@ export function evaluateTest(facts: TestFacts): TestResult {
   if (!facts.suitesPassed) {
     return {
       status: "fail",
-      reason: `An application-owned suite failed. ${facts.checks} check(s) ran across ${facts.commands} command(s), and one of them did not pass.`,
+      reason: `An application-owned suite failed. ${facts.checks} check(s) ran across ${facts.commands} command(s), and one of them did not pass.${exitOf(facts)}`,
       checks: facts.checks
     };
   }
   if (facts.unobserved.length > 0) {
     return {
       status: "blocked",
-      reason: `The suites passed with ${facts.checks} check(s), and none of them observed the application: ${facts.unobserved.join("; ")}. A suite that exercises the adapter against a double is not an effect observed on the app.`,
-      checks: facts.checks
+      reason: `The suites passed with ${facts.checks} check(s), and none of them observed the application: ${facts.unobserved.join("; ")}. A suite that exercises the adapter against a double is not an effect observed on the app.${exitOf(facts)}`,
+      checks: facts.checks,
+      ...(facts.unblock === undefined ? {} : { unblock: facts.unblock })
     };
   }
   return {
@@ -232,6 +235,10 @@ export function evaluateTest(facts: TestFacts): TestResult {
     reason: `${facts.checks} check(s) across ${facts.commands} command(s), and nothing was left unobserved.`,
     checks: facts.checks
   };
+}
+
+function exitOf(facts: TestFacts): string {
+  return facts.unblock === undefined ? "" : ` To continue: ${facts.unblock}`;
 }
 
 export function applyTest(journal: PilotRunJournal, result: TestResult): PilotRunJournal {

@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -617,7 +617,14 @@ pilot.command("run")
         process.exitCode = 1;
         return;
       }
-      const invocation = buildInvocation(repository, demoBuildOverrides(options.pilot), target);
+      const identities = spawnSync("security", ["find-identity", "-v", "-p", "codesigning"], { encoding: "utf8" });
+      const signing = resolveSigning((identities.stdout ?? "").split("\n"));
+      const { assistantWillRefuse, warning, ...signingSettings } = signing;
+      void assistantWillRefuse;
+      process.stdout.write(`signing with: ${signingSettings.CODE_SIGN_IDENTITY}${signingSettings.DEVELOPMENT_TEAM === undefined ? "" : ` (team ${signingSettings.DEVELOPMENT_TEAM})`}\n`);
+      if (warning !== undefined) process.stdout.write(`warning: ${warning}\n`);
+      const overrides = { ...demoBuildOverrides(options.pilot), ...signingSettings };
+      const invocation = buildInvocation(repository, overrides, target);
       const started = Date.now();
       process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
       const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
@@ -708,7 +715,8 @@ pilot.command("run")
         suitesPassed: run.status === 0,
         checks,
         commands,
-        unobserved: UNOBSERVED_BY_DEFAULT
+        unobserved: UNOBSERVED_BY_DEFAULT,
+        unblock: "open the built application by hand and play one of the pilot fixtures; the agent shell has no accessibility permission to drive the search UI"
       });
       await atomicWrite(journalFile, `${JSON.stringify(applyTest(journal, result), null, 2)}\n`);
       process.stdout.write(`${checks} check(s) across ${commands} suite(s) in ${((Date.now() - started) / 1000).toFixed(1)}s\n`);

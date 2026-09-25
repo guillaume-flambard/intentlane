@@ -458,3 +458,28 @@ describe("a discovery that cannot act", () => {
     expect(pilotRunJournalSchema.safeParse(journal).success).toBe(true);
   });
 });
+
+describe("a blocked step says what would unblock it", () => {
+  const unobserved = ["a system search result opens that exact item"];
+
+  it("carries what is missing and what would be needed, because a block with no exit is a dead end", () => {
+    const result = evaluateTest({ suitesPassed: true, checks: 91, commands: 3, unobserved, unblock: "open the built application by hand" });
+    expect(result.unblock).toBe("open the built application by hand");
+  });
+
+  it("carries nothing to unblock on a pass, because there is nothing blocking", () => {
+    const result = evaluateTest({ suitesPassed: true, checks: 91, commands: 3, unobserved: [] });
+    expect(result.unblock).toBeUndefined();
+  });
+
+  it("writes the exit into the journal's diagnostic, so the file alone tells an operator what to do", () => {
+    const result = evaluateTest({ suitesPassed: true, checks: 91, commands: 3, unobserved, unblock: "sign the build with a real team" });
+    const journal = applyTest(startRunJournal(facts), result);
+    expect(journal.steps.find((entry) => entry.id === "test")?.diagnostic).toContain("sign the build with a real team");
+  });
+
+  it("keeps the journal valid with an exit attached", () => {
+    const result = evaluateTest({ suitesPassed: true, checks: 91, commands: 3, unobserved, unblock: "x" });
+    expect(pilotRunJournalSchema.safeParse(applyTest(startRunJournal(facts), result)).success).toBe(true);
+  });
+});

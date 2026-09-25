@@ -5,6 +5,7 @@ import {
   buildInvocation,
   demoBundleId,
   demoBuildOverrides,
+  resolveSigning,
   PILOT_BUILD_TARGETS,
   parseBuildOutcome,
   sandboxProfile
@@ -185,3 +186,55 @@ describe("the demo identity of a pilot", () => {
     expect(demoBuildOverrides().PRODUCT_BUNDLE_IDENTIFIER).toBe(DEMO_BUNDLE_ID);
   });
 });
+
+describe("choosing a signing identity", () => {
+  const listing = [
+    '  1) C1D1 "Apple Development: Guillaume Flambard (MB4Z3WNGFF)"',
+    '  2) C49C "Developer ID Application: Guillaume Flambard (Q52VN4UT34)"',
+    "     2 valid identities found."
+  ];
+  const none = ["     0 valid identities found."];
+  const macOnly = ['  1) C1D1 "Mac Development: Someone (ABCDE12345)"', "  1 valid identities found."];
+  const iosOnly = ['  1) C1D1 "Apple Development: Someone (MB4Z3WNGFF)"', "  1 valid identities found."];
+
+  it("prefers a Developer ID identity, because that is the one the assistant accepts", () => {
+    expect(resolveSigning(listing).CODE_SIGN_IDENTITY).toBe("Developer ID Application");
+  });
+
+  it("carries the team of the identity it chose, because a bundle with no team is refused", () => {
+    expect(resolveSigning(listing).DEVELOPMENT_TEAM).toBe("Q52VN4UT34");
+  });
+
+  it("falls back to a Mac Development identity when there is no Developer ID", () => {
+    expect(resolveSigning(macOnly).DEVELOPMENT_TEAM).toBe("ABCDE12345");
+  });
+
+  it("falls back to ad-hoc when the machine has no identity, so a run still produces an application", () => {
+    expect(resolveSigning(none).CODE_SIGN_IDENTITY).toBe("-");
+  });
+
+  it("says the assistant will refuse an ad-hoc build, so a run does not discover it the hard way", () => {
+    expect(resolveSigning(none).warning).toContain("ad-hoc");
+  });
+
+  it("warns about nothing when a real identity was found", () => {
+    expect(resolveSigning(listing).warning).toBeUndefined();
+  });
+
+  it("does not use an iOS-only development certificate for a macOS build, because it cannot sign one", () => {
+    expect(resolveSigning(iosOnly).CODE_SIGN_IDENTITY).toBe("-");
+  });
+
+  it("still signs ad-hoc in the fallback, because an unsigned build is worse than an unvalidated one", () => {
+    expect(resolveSigning(none).CODE_SIGNING_ALLOWED).toBe("YES");
+  });
+
+  it("tells the operator the assistant will refuse the ad-hoc build, because a demo of the voice surface is the point", () => {
+    expect(resolveSigning(none).assistantWillRefuse).toBe(true);
+  });
+
+  it("does not claim the assistant will refuse a team-signed build", () => {
+    expect(resolveSigning(listing).assistantWillRefuse).toBe(false);
+  });
+});
+

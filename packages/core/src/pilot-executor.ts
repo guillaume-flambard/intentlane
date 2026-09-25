@@ -125,6 +125,59 @@ export function sandboxProfile(runDirectory: string): SandboxProfile {
   };
 }
 
+export type SigningChoice = Readonly<{
+  CODE_SIGN_IDENTITY: string;
+  DEVELOPMENT_TEAM?: string;
+  CODE_SIGN_STYLE: string;
+  CODE_SIGNING_REQUIRED: string;
+  CODE_SIGNING_ALLOWED: string;
+  assistantWillRefuse: boolean;
+  warning?: string;
+}>;
+
+const TEAM = /\(([A-Z0-9]{10})\)/;
+
+/**
+ * The identity a build is signed with, chosen from what this machine actually has.
+ *
+ * The assistant's App Intents service rejects a client whose bundle it cannot validate,
+ * and an ad-hoc signature is not a validated bundle: the service says
+ * `Rejecting invalid client due to requiresValidatedBundle` and `Unable to get teamId`.
+ * So a build that is going to be shown to a client has to carry a real team, and the
+ * choice is made here rather than by whoever typed the build settings.
+ */
+export function resolveSigning(listing: readonly string[]): SigningChoice {
+  const base = {
+    CODE_SIGN_STYLE: "Manual",
+    CODE_SIGNING_REQUIRED: "YES",
+    CODE_SIGNING_ALLOWED: "YES"
+  } as const;
+
+  const macIdentities = listing.filter(
+    (line) => /Developer ID Application|Mac Development/.test(line) && TEAM.test(line)
+  );
+  const developerId = macIdentities.find((line) => line.includes("Developer ID Application"));
+  const chosen = developerId ?? macIdentities[0];
+
+  if (chosen === undefined) {
+    return {
+      ...base,
+      CODE_SIGN_IDENTITY: "-",
+      assistantWillRefuse: true,
+      warning:
+        "No macOS signing identity was found on this machine, so the build is ad-hoc. The assistant will reject it and no App Intent will reach Siri, Spotlight or Shortcuts."
+    };
+  }
+
+  const team = TEAM.exec(chosen)?.[1];
+  return {
+    ...base,
+    CODE_SIGN_IDENTITY: developerId === undefined ? "Mac Development" : "Developer ID Application",
+    ...(team === undefined ? {} : { DEVELOPMENT_TEAM: team }),
+    assistantWillRefuse: false
+  };
+}
+
 export function demoBundleId(pilot: string): string {
   return `dev.intentlane.demo.${pilot.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 }

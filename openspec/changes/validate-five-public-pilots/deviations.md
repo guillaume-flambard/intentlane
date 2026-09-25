@@ -236,3 +236,77 @@ process does not have accessibility permission: `osascript is not allowed assist
 access. (-25211)`. The keystrokes I sent anyway landed in Xcode, which was frontmost.
 The permission error is the honest blocker for the UI route and it is one grant in
 System Settings, not a wall; the injection was mine to stop and I stopped.
+
+
+## The assistant refused the client, and it named the reason: an unsigned bundle
+
+Pulling the *server's* log rather than the app's is what settled this. Every attempt
+from the app's side said only that a connection to `com.apple.linkd.autoShortcut` was
+interrupted. The service side said, in order:
+
+    linkd: Starting task: Audit: Bundles: dev.intentlane.demo.iina
+    siriactionsd: Unable to get teamId from dev.intentlane.demo.iina PID [1511]
+    linkd: Rejecting invalid client due to requiresValidatedBundle
+
+The rule applied is `requiresValidatedBundle`, and the one thing the system said it could
+not establish about our application is its team. An ad-hoc signature is not a validated
+bundle, so the assistant never accepted the client, and no amount of correct metadata
+could help.
+
+The machine had two signing identities all along: an Apple Development certificate and a
+`Developer ID Application` certificate. The development one is iOS-only and the build
+refused it, asking for a "Mac Development" certificate. Re-signing with the Developer ID
+identity and its team, `Q52VN4UT34`:
+
+    Rejecting invalid client   2 occurrences before, 0 after
+    linkd: Registered process with identifier 4688-1724522
+    linkd: Auditing bundles: dev.intentlane.demo.iina
+    linkd: Finished task: Audit: Bundles: dev.intentlane.demo.iina
+
+**So the cause was the build, not the machine and not the shell.** This is a commercial
+fact and it should be said plainly: an App Intents integration cannot reach Siri, Spotlight
+or Shortcuts from an ad-hoc build, on any machine. A demonstration of the voice surface
+requires a build signed with a real team, and the pipeline has to be able to produce one.
+
+Two things follow that are not yet done. The `pilot run` build settings still sign
+ad-hoc, and the signature-policy decision in the plan says an integration does not
+rewrite the host's distribution chain, which is about the host's own chain, not about
+whether a demo can be validated. Those two need reconciling explicitly rather than by
+accident. And the assistant accepted the client and audited the bundle, but no
+command-line instrument on this machine reports what it published, so the remaining
+unobserved claims are now blocked on an observation, not on a refusal.
+
+
+## The signing decision is reconciled, and the run now makes it itself
+
+The plan's signature policy says an integration does not rewrite the host's distribution
+chain. That is about the host's chain, and it was never in tension with what was found:
+the refusal came from an ad-hoc signature, which is a demo's own chain. The tension was
+that the policy was written as a constant, `CODE_SIGN_IDENTITY = "-"`, in the build
+settings, so a run had no way to do better even on a machine that holds a real identity.
+
+`resolveSigning` reads what the machine actually has and picks from it: a Developer ID
+identity first, a Mac Development identity second, and ad-hoc only when there is
+nothing else. It ignores an iOS-only Apple Development certificate, which cannot sign a
+macOS build and which this machine does hold. When it falls back to ad-hoc it says the
+assistant will reject the application and that no App Intent will reach Siri, Spotlight
+or Shortcuts, so a run cannot discover it by failing a demonstration later.
+
+A full run now signs by itself and the result is accepted:
+
+    signing with: Developer ID Application (team Q52VN4UT34)
+    Identifier=dev.intentlane.demo.iina
+    TeamIdentifier=Q52VN4UT34
+    linkd: Finished task: Audit: Bundles: dev.intentlane.demo.iina
+    linkd: Audit complete
+
+**A blocked step now carries its exit.** The plan asks a blocked step for what would be
+needed to continue, and the step carried only what was missing. The `test` step now ends
+with the line that says what to do: open the built application by hand and play one of the
+pilot fixtures, because the agent shell has no accessibility permission to drive the
+search UI. That is one grant in System Settings, and it is named as a grant rather than
+as a wall.
+
+The two unobserved claims are now blocked on an observation and not on a refusal. The
+assistant accepts the bundle and has completed its audit. What is missing is an
+instrument that reports what it published, and no such instrument ships on this machine.
