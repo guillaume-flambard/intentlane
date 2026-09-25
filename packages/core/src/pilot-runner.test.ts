@@ -287,7 +287,7 @@ describe("recording the test step", () => {
     suitesPassed: true,
     checks: 91,
     commands: 3,
-    unobserved: ["a media item played in the built app reaches the index", "a system search result opens that exact item"]
+    unobserved: ["a system search result opens that exact item"]
   };
 
   it("passes when the suites pass and nothing is left unobserved", () => {
@@ -299,7 +299,7 @@ describe("recording the test step", () => {
   });
 
   it("names what was not observed, because a blocked step has to say what is missing", () => {
-    expect(evaluateTest(appUnobserved).reason).toContain("media item");
+    expect(evaluateTest(appUnobserved).reason).toContain("system search result");
   });
 
   it("fails when a suite fails, and says so without pretending an observation is the problem", () => {

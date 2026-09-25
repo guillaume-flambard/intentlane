@@ -165,3 +165,33 @@ build a video player. The demo identity was hardcoded to `dev.intentlane.demo.ii
 so an FSNotes demo carried a video player's bundle identifier. Both are now declared
 per pilot, and both were found by running the command on something it was not written
 for, which is the only way they could have been found.
+
+
+## The reconciliation was observed live, and the claim that it could not be was wrong
+
+I wrote that observing the index reconciliation needed a person, because a sandboxed
+headless launch could not make IINA play a fixture. That was wrong, and it was wrong
+for a reason I could have checked: the fixtures live in `fixtures/media/`, not in
+`fixtures/`, so every attempt handed the application a path that did not exist and
+then I attributed the silence to the environment.
+
+Opening a document the way a person does works, and the built application records it:
+
+    IntentLane: rewrote 0 item(s)            launch, before any playback
+    IntentLane: indexed 1 item(s), deleted 0, left 0    the document was played
+    IntentLane: indexed 0 item(s), deleted 0, left 1    the second document
+
+Deleting the history file underneath a running-then-restarted application took the
+index to zero, so a removal propagates and the index does not keep offering what is
+gone. That was the `indexSync` defect this repository has already paid for twice, and
+on IINA it is observed rather than argued.
+
+**A real defect, found by looking.** The sentinel for "this launch has not synced yet"
+was `published.isEmpty`. An empty history is a legitimate state, so a first sync of
+zero records left the sentinel false and the next event rewrote the whole index
+instead of reconciling. The end state was still correct, which is why no test caught
+it: the log said `rewrote` where a reconciliation had happened. It is now an explicit
+flag, and the live run shows the difference.
+
+**What is still unobserved.** A system search result opening that exact item, and the
+Siri conversation. `test` stays blocked on those two, and the run says so.

@@ -552,7 +552,6 @@ program.command("verify")
 const pilot = program.command("pilot").description("Run a transformation end to end, with its state on disk");
 
 const UNOBSERVED_BY_DEFAULT = [
-  "a media item played in the built application reaches the named index",
   "a system search result opens that exact item",
   "the Siri conversation itself"
 ] as const;
