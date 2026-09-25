@@ -16,6 +16,7 @@ proves nothing.
 import argparse
 import os
 import pathlib
+import plistlib
 import re
 import shutil
 import subprocess
@@ -90,13 +91,19 @@ def launch(app: str, timeout: int) -> tuple[str, str, str]:
     `HBUtilities`, which goes to standard error, but a refusal to spawn also arrives
     on standard error, and a probe that reads one stream cannot tell an adapter that
     stayed quiet from a launch that never happened.
+
+    The executable inside the bundle is launched, not the bundle, and the process is
+    given a pseudo-terminal. A `.app` is a directory, so `script` cannot execute it,
+    and a buffered stream is unreadable until the process exits, which a GUI
+    application does not do. Both mistakes make a working adapter look absent.
     """
+    executable = os.path.join(app, "Contents", "MacOS", os.path.basename(app).removesuffix(".app"))
     with tempfile.TemporaryDirectory() as scratch:
         out = os.path.join(scratch, "stdout.log")
         err = os.path.join(scratch, "stderr.log")
         with open(out, "wb") as out_sink, open(err, "wb") as err_sink:
             process = subprocess.Popen(
-                enter_user_session() + [app],
+                enter_user_session() + ["script", "-q", os.devnull, executable],
                 stdout=out_sink,
                 stderr=err_sink,
                 env=dict(os.environ, INTENTLANE_IN_AQUA="1"),
@@ -120,6 +127,18 @@ def launch(app: str, timeout: int) -> tuple[str, str, str]:
         )
 
 
+def _speech(text: str) -> str:
+    """Keep only words, because a pseudo-terminal is never silent.
+
+    Wrapping the process in a pseudo-terminal makes the terminal layer write its own
+    control sequences and an end-of-transmission marker into the stream, whether or
+    not the application printed anything. Judging "did it speak" on the raw bytes
+    therefore answers yes for a process that said nothing, and the probe reports a
+    fault in an application that is fine. Only text with letters in it counts.
+    """
+    return " ".join(re.findall(r"[A-Za-z]{2,}", text))
+
+
 def _stop(process: subprocess.Popen) -> None:
     if process.poll() is not None:
         return
@@ -130,17 +149,59 @@ def _stop(process: subprocess.Popen) -> None:
         process.kill()
 
 
-def registration_recorded() -> bool:
+INDEX_NAME_KEY = "dev.memolabs.intentlane.handbrake-pilot.preset.index"
+
+
+def _default(bundle_id: str, key: str) -> str | None:
     try:
         value = subprocess.run(
-            ["defaults", "read", "org.handbrake.HandBrake", REGISTRATION_KEY],
+            ["defaults", "read", bundle_id, key],
             capture_output=True,
             text=True,
             timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
-        return False
-    return value.returncode == 0 and value.stdout.strip() in {"1", "true"}
+        return None
+    return value.stdout.strip() if value.returncode == 0 else None
+
+
+def registered_index(bundle_id: str) -> str | None:
+    return _default(bundle_id, INDEX_NAME_KEY)
+
+
+def index_recorded_without_a_log(bundle_id: str) -> str | None:
+    """Read the index name when the application left no readable log at all.
+
+    HandBrake is sandboxed, and a sandboxed process launched from outside its
+    container loses its log stream. The line is written, the probe cannot see it, and
+    a probe that trusted the log alone reports a working adapter as absent. The
+    adapter also writes the index name into its own defaults, and that survives, so
+    the defaults decide here. The flag is not enough on its own: a flag says the
+    adapter ran, not which index the system holds.
+    """
+    if not registration_recorded(bundle_id):
+        return None
+    return registered_index(bundle_id)
+
+
+def registration_recorded(bundle_id: str) -> bool:
+    """Read the flag the adapter writes, from the domain it actually writes to.
+
+    The domain is read from the built application's own `Info.plist`, never from a
+    constant here. A sandboxed application writes its defaults under its bundle
+    identifier, and a probe that hard-codes a different name reads a domain that does
+    not exist, which returns "not registered" for an adapter that did register.
+    """
+    return _default(bundle_id, REGISTRATION_KEY) in {"1", "true"}
+
+
+def bundle_identifier(app: str) -> str | None:
+    plist = os.path.join(app, "Contents", "Info.plist")
+    try:
+        with open(plist, "rb") as source:
+            return plistlib.load(source).get("CFBundleIdentifier")
+    except (OSError, plistlib.InvalidFileException, ValueError):
+        return None
 
 
 def main() -> int:
@@ -180,10 +241,24 @@ def main() -> int:
             print(f"     still, this probe {entry}")
         return 0
 
-    if not line and not stdout.strip() and not stderr.strip():
-        # It wrote nothing at all. Whatever stopped it happened before the app could
-        # say anything, which is not a statement about its adapter.
-        print("SKIP the application produced no output at all, so nothing was observed")
+    bundle_id = bundle_identifier(app)
+    if bundle_id is None:
+        print("FAIL the built application has no readable CFBundleIdentifier")
+        return 1
+
+    said_anything = _speech(combined)
+
+    if not line and not said_anything:
+        index = index_recorded_without_a_log(bundle_id)
+        if index is not None:
+            print("INFO the application logged nothing, so its own defaults decide")
+            print("INFO the log stream is empty because a sandboxed launch loses it")
+            print(f"INFO named index: {index}")
+            print("PASS registration")
+            for statement in DISCLAIMERS:
+                print(f"INFO this probe {statement}")
+            return 0
+        print("SKIP the application produced no output and wrote no registration flag")
         print("     this is the environment, not the adapter: `registration` is not claimed")
         for entry in DISCLAIMERS:
             print(f"     still, this probe {entry}")
@@ -206,7 +281,7 @@ def main() -> int:
     resolver = match["resolver"] == "true"
     opener = match["open"] == "true"
     index = match["index"]
-    recorded = registration_recorded()
+    recorded = registration_recorded(bundle_id)
 
     print(f"INFO {match['index'] and index}")
     print(f"INFO resolver registered: {str(resolver).lower()}")

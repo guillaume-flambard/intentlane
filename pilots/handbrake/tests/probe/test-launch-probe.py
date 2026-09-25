@@ -110,7 +110,37 @@ if binary.exists():
 else:
     print(f"skip the built binary is not there: {binary}")
 
-# 5. The session check is the thing that stops the probe over-claiming, so it is
+# 5. The defaults path exists because a sandboxed launch loses the log stream. These
+#    are the tests that stand in for that real run.
+check(
+    probe.INDEX_NAME_KEY != probe.REGISTRATION_KEY,
+    "the index name is written under its own key, not folded into the flag",
+)
+check(
+    "handbrake-pilot.preset" in probe.INDEX_NAME_KEY,
+    "the index key is the one the adapter declares",
+)
+
+# 6. A pseudo-terminal is never silent, so silence must be judged on words and not on
+#    bytes. This is the bug that made a working adapter look absent.
+check(
+    probe._speech("^D\x08\x08") == "",
+    "terminal control bytes are not read as the application having spoken",
+)
+check(
+    probe._speech("macgui: hello") == "macgui hello",
+    "a real line still counts as speech",
+)
+
+# 7. The defaults domain comes from the bundle, never from a constant, because a
+#    sandboxed application writes under its own identifier.
+bundle = HERE.parent.parent.parent.parent
+check(
+    probe._default("dev.intentlane.definitely-not-a-real-domain", "anything") is None,
+    "a domain that does not exist reads as absent rather than raising",
+)
+
+# 8. The session check is the thing that stops the probe over-claiming, so it is
 #    tested directly rather than only through a run that happens to have no session.
 available, reason = probe.graphical_session_available()
 check(

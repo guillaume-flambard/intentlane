@@ -93,17 +93,28 @@ def enter_user_session() -> list[str]:
 def launch(app: str, timeout: int) -> tuple[str, str, str]:
     """Start the application, collect its output, and stop it again.
 
-    Both streams are collected and kept apart. FSNotes writes its log with `print`,
-    so its registration line is on standard output, but a refusal to spawn arrives on
-    standard error, and a probe that discards the stream carrying the reason for its
-    own failure reports a fault it did not observe.
+    The executable inside the bundle is launched, not the bundle. `script` executes
+    its argument directly, and a `.app` is a directory, so handing it one produces a
+    permission error rather than a launch.
+
+    The process is given a pseudo-terminal. A C `print` to a pipe is block-buffered
+    and a GUI application does not exit, so the buffer is never flushed and the probe
+    reads nothing at all. That is not a missing registration, it is a line the
+    application did write and the harness made unreadable. A pty is line-buffered, the
+    same as a terminal, which is what the application would have if a person launched
+    it.
+
+    Both streams are collected and kept apart, because a refusal to spawn arrives on
+    standard error and a probe that discards the stream carrying the reason for its
+    own failure reports a fault it never observed.
     """
+    executable = os.path.join(app, "Contents", "MacOS", os.path.basename(app).removesuffix(".app"))
     with tempfile.TemporaryDirectory() as scratch:
         out = os.path.join(scratch, "stdout.log")
         err = os.path.join(scratch, "stderr.log")
         with open(out, "wb") as out_sink, open(err, "wb") as err_sink:
             process = subprocess.Popen(
-                enter_user_session() + [app],
+                enter_user_session() + ["script", "-q", os.devnull, executable],
                 stdout=out_sink,
                 stderr=err_sink,
                 env=dict(os.environ, INTENTLANE_IN_AQUA="1"),
