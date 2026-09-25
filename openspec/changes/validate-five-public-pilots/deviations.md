@@ -310,3 +310,38 @@ as a wall.
 The two unobserved claims are now blocked on an observation and not on a refusal. The
 assistant accepts the bundle and has completed its audit. What is missing is an
 instrument that reports what it published, and no such instrument ships on this machine.
+
+
+## The first version of the live probe passed on a run where nothing was observed
+
+The probe that observes a system search opening the exact item was written, run, and
+reported `PASS the system search opened the exact fixture` while the search UI had never
+been reached. Two defects, both of which make a check incapable of failing.
+
+A refusal to reach the search UI was returned as the string `NO_SPOTLIGHT_PROCESS`,
+which is a non-empty list of "rows", so the branch that refuses on "no rows" never ran.
+A failure and a refusal now travel as a marker that is filtered out, and a test holds
+that a marker is not a row.
+
+Worse, the probe seeded the history by handing the fixture to the application, so the
+file was already named in the log before the search ran, and the exactness check read
+that same log. The check could not have failed. It now reads only the bytes written
+after the search was submitted, and a test proves that the same file named before the
+marker does not count.
+
+A third, smaller one: the log is filtered down to runs of letters before the
+registration line is looked for, which drops the colon, so a live run reported the
+adapter as unregistered when it was registered. The filter answers "did it say anything"
+and the raw log answers "what did it say".
+
+What the probe does now, run on this machine: it seeds the history, confirms the
+adapter registered, and then refuses with a named reason. Two things stop it, both
+checked rather than assumed. This process has no assistive access, which is one grant in
+System Settings. And the search UI on this version of macOS is not a process named
+`Spotlight`, so the rows cannot be read even with that grant; the process list carries a
+`Siri AI` entry and no window for it to answer from. A row reader written against a
+process name that does not exist would have been a gate that cannot pass and cannot
+fail, which is what the first version was.
+
+So the last claim is one human grant away and one OS-version question away, and both are
+written down rather than worked around.
