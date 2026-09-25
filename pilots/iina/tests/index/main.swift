@@ -62,6 +62,25 @@ func run() async throws {
     _ = await attempt { try await IntentLanePlayedMediaIntegration.index([entity, secondEntity], name: testIndexName) }
   }
   check(refreshed == nil, "a full refresh cycle of remove then index succeeds")
+
+  // The reconciliation path deletes by identifier rather than emptying the type, so
+  // that the records which did not change keep their place in the index. A named
+  // index cannot be read back, so what can be asserted is that the call is accepted
+  // and is idempotent on identifiers that were never there.
+  let byIdentifier = await attempt {
+    try await IntentLanePlayedMediaIntegration.remove(identifiers: ["md5-aurora", "md5-borealis"], name: testIndexName)
+  }
+  check(byIdentifier == nil, "deleting by identifier succeeds against a real named index")
+
+  let byIdentifierAgain = await attempt {
+    try await IntentLanePlayedMediaIntegration.remove(identifiers: ["md5-never-indexed"], name: testIndexName)
+  }
+  check(byIdentifierAgain == nil, "deleting an identifier that was never indexed still succeeds")
+
+  let byEmptyList = await attempt {
+    try await IntentLanePlayedMediaIntegration.remove(identifiers: [], name: testIndexName)
+  }
+  check(byEmptyList == nil, "deleting nothing is a no-op rather than a call")
 }
 
 try await run()

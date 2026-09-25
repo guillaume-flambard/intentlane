@@ -221,3 +221,34 @@ check(PlayedMediaCore.records(from: openInputs, access: accessOn).count == openI
       "an allowed set is returned whole")
 check(PlayedMediaCore.records(from: openInputs, access: accessOff).isEmpty,
       "nothing is exposed while recording is off")
+
+// 9. Reconciliation. Core Spotlight offers no read-back of a named index, so the
+// adapter cannot ask what is in there. It can only remember what it published. The
+// diff is therefore computed against that memory, and a record that did not change
+// is not written again, because rewriting the whole index on every history event
+// costs a full reindex for nothing.
+let unchangedSet = [aurora, borealis]
+let sameDiff = PlayedMediaIndexReconcile.diff(previous: unchangedSet, current: unchangedSet)
+check(sameDiff.added.isEmpty, "nothing is re-indexed when the history did not change")
+check(sameDiff.removed.isEmpty, "nothing is deleted when the history did not change")
+check(sameDiff.unchanged.count == 2, "both records are recognised as unchanged")
+
+let removalDiff = PlayedMediaIndexReconcile.diff(previous: unchangedSet, current: [aurora])
+check(removalDiff.removed == ["md5-borealis"], "a record that left the history is deleted by identifier")
+check(removalDiff.added.isEmpty, "removing one record adds nothing")
+check(removalDiff.unchanged.map(\.id) == ["md5-aurora"], "the record that stayed is not rewritten")
+
+let addDiff = PlayedMediaIndexReconcile.diff(previous: unchangedSet, current: [aurora, borealis, cygnus])
+check(addDiff.added.map(\.id) == ["md5-cygnus"], "a new record is indexed")
+check(addDiff.removed.isEmpty, "adding a record deletes nothing")
+check(addDiff.unchanged.count == 2, "the records that stayed are not rewritten")
+
+let retitledAurora = PlayedMediaCore.record(from: input("Aurora", title: "Aurora remastered", md5: "md5-aurora", ext: "mp4"))
+let retitleDiff = PlayedMediaIndexReconcile.diff(previous: unchangedSet, current: [retitledAurora, borealis])
+check(retitleDiff.added.map(\.id) == ["md5-aurora"], "a record whose title changed is written again, under the same identifier")
+check(retitleDiff.removed.isEmpty, "a title change is not a deletion")
+check(retitleDiff.unchanged.map(\.id) == ["md5-borealis"], "only the record that changed is rewritten")
+
+let clearedDiff = PlayedMediaIndexReconcile.diff(previous: unchangedSet, current: [])
+check(clearedDiff.removed.count == 2, "clearing the history deletes every published identifier")
+check(clearedDiff.added.isEmpty, "clearing the history indexes nothing")
