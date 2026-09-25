@@ -21,7 +21,10 @@ export const DEMO_BUNDLE_ID = "dev.intentlane.demo.iina";
 
 export const SIGNING_POLICY = "host" as const;
 
-export function buildInvocation(repository: string): BuildInvocation {
+export function buildInvocation(
+  repository: string,
+  overrides: Readonly<Record<string, string>> = {}
+): BuildInvocation {
   return {
     command: "xcodebuild",
     args: [
@@ -33,7 +36,8 @@ export function buildInvocation(repository: string): BuildInvocation {
       "-configuration",
       "Debug",
       "-derivedDataPath",
-      `${repository}/.intentlane/derived`
+      `${repository}/.intentlane/derived`,
+      ...Object.entries(overrides).map(([key, value]) => `${key}=${value}`)
     ]
   };
 }
@@ -55,13 +59,15 @@ function signatureOf(diagnostic: string): string {
 export function parseBuildOutcome(exitCode: number, log: string): BuildOutcome {
   const lines = log.split("\n");
   const firstError = lines.find((entry) => ERROR_LINE.test(entry.trim()));
-  const diagnostic = firstError?.trim() ?? lines.filter((entry) => entry.trim()).slice(-1)[0]?.trim() ?? `xcodebuild exited ${exitCode}`;
   const succeeded = exitCode === 0 && /BUILD SUCCEEDED/.test(log) && !/BUILD FAILED/.test(log);
+  const diagnostic = succeeded
+    ? "** BUILD SUCCEEDED **"
+    : firstError?.trim() ?? lines.filter((entry) => entry.trim()).slice(-1)[0]?.trim() ?? `xcodebuild exited ${exitCode}`;
   return {
     status: succeeded ? "pass" : "fail",
     exitCode,
     diagnostic,
-    signature: signatureOf(diagnostic)
+    signature: succeeded ? "" : signatureOf(diagnostic)
   };
 }
 

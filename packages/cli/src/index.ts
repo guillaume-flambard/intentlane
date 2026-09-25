@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
+import { applyPrepare, buildInvocation, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -546,6 +547,89 @@ program.command("verify")
     if (result.pending.length > 0) process.stdout.write(`claims waiting on a person: ${result.pending.join(", ")}\n`);
     if (options.strict && result.status !== "certified") process.exitCode = 1;
     if (!options.strict && result.status === "blocked") process.exitCode = 1;
+  });
+
+const pilot = program.command("pilot").description("Run a transformation end to end, with its state on disk");
+
+pilot.command("run")
+  .requiredOption("--pilot <id>", "Identifier of the pilot being run")
+  .requiredOption("--repository <path>", "Path to the application repository")
+  .option("--run-dir <path>", "Directory holding the journal and its evidence", ".intentlane/run")
+  .option("--plan", "Print the steps this run would take and stop")
+  .action(async (options: { pilot: string; repository: string; runDir: string; plan?: boolean }) => {
+    const repository = resolve(options.repository);
+    const runDirectory = resolve(options.runDir);
+    const journalFile = join(runDirectory, "journal.json");
+
+    if (!existsSync(repository)) {
+      process.stderr.write(`ILA179 root: the repository is not there: ${repository}\n`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const git = (...gitArgs: string[]): string =>
+      spawnSync("git", ["-C", repository, ...gitArgs], { encoding: "utf8" }).stdout.trim();
+
+    const commit = git("rev-parse", "--short=12", "HEAD");
+    const branch = git("rev-parse", "--abbrev-ref", "HEAD");
+    if (!/^[0-9a-f]{7,40}$/.test(commit) || branch === "") {
+      process.stderr.write(`ILA179 root: ${repository} is not a git repository with a commit.\n`);
+      process.exitCode = 1;
+      return;
+    }
+
+    const facts = { pilot: options.pilot, branch, commit };
+    let journal: PilotRunJournal;
+    let resuming = false;
+
+    if (existsSync(journalFile)) {
+      const parsed = parsePilotRunJournal(await readFile(journalFile, "utf8"));
+      if (parsed.journal === undefined) {
+        for (const diagnostic of parsed.diagnostics) {
+          process.stderr.write(`${diagnostic.code} ${diagnostic.path}: ${diagnostic.message}\n`);
+        }
+        process.exitCode = 1;
+        return;
+      }
+      journal = parsed.journal;
+      resuming = true;
+    } else {
+      journal = startRunJournal(facts);
+    }
+
+    const plan = planRun(journal);
+    process.stdout.write(`pilot ${options.pilot} on ${branch} at ${commit}\n`);
+    process.stdout.write(`journal: ${journalFile}\n`);
+    process.stdout.write(`state: ${resuming ? "resumed" : "new"}\n`);
+    process.stdout.write(`steps: ${plan.steps.length === 0 ? "none, every step passed at this commit" : plan.steps.join(" -> ")}\n`);
+
+    if (options.plan === true || plan.steps.length === 0) return;
+    if (plan.steps[0] !== "prepare") {
+      process.stdout.write("the first step this run owes has no implementation yet, so nothing was claimed\n");
+      return;
+    }
+
+    const invocation = buildInvocation(repository, demoBuildOverrides());
+    const started = Date.now();
+    process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
+    const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
+    const outcome = parseBuildOutcome(run.status ?? 1, `${run.stdout ?? ""}\n${run.stderr ?? ""}`);
+    const result: PrepareResult = {
+      status: outcome.status,
+      exitCode: outcome.exitCode,
+      signature: outcome.signature,
+      diagnostic: outcome.diagnostic,
+      durationMs: Date.now() - started,
+      command: `${invocation.command} ${invocation.args.join(" ")}`,
+      artifact: "IINA.app"
+    };
+
+    await atomicWrite(journalFile, `${JSON.stringify(applyPrepare(journal, result), null, 2)}\n`);
+
+    process.stdout.write(`${outcome.status} prepare in ${(result.durationMs / 1000).toFixed(1)}s\n`);
+    process.stdout.write(`diagnostic: ${outcome.diagnostic}\n`);
+    process.stdout.write(`failure signature: ${outcome.signature || "none"}\n`);
+    if (outcome.status === "fail") process.exitCode = 1;
   });
 
 program.parseAsync().catch((reason: unknown) => {

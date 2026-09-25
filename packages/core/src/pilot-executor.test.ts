@@ -29,6 +29,23 @@ describe("the reference build invocation", () => {
   it("builds for the host architecture rather than a pinned one, because a run on another machine should not fail on a slice that is not there", () => {
     expect(buildInvocation("/tmp/iina").args.join(" ")).not.toMatch(/ARCHS|arm64|x86_64/);
   });
+
+  it("applies a build setting override, because the demo build has to carry its own identity", () => {
+    expect(buildInvocation("/tmp/iina", { PRODUCT_BUNDLE_IDENTIFIER: "dev.intentlane.demo.iina" }).args).toContain(
+      "PRODUCT_BUNDLE_IDENTIFIER=dev.intentlane.demo.iina"
+    );
+  });
+
+  it("applies the whole demo override set, so a demo build is not a half-measure", () => {
+    const applied = buildInvocation("/tmp/iina", demoBuildOverrides()).args.join(" ");
+    for (const [key, value] of Object.entries(demoBuildOverrides())) {
+      expect(applied).toContain(`${key}=${value}`);
+    }
+  });
+
+  it("adds no override when none is given, so the reference build stays the project's own", () => {
+    expect(buildInvocation("/tmp/iina").args.join(" ")).not.toMatch(/PRODUCT_BUNDLE_IDENTIFIER/);
+  });
 });
 
 describe("the signing policy", () => {
@@ -48,6 +65,15 @@ describe("the signing policy", () => {
 describe("reading a build outcome", () => {
   it("is a pass when xcodebuild exits zero and says BUILD SUCCEEDED", () => {
     expect(parseBuildOutcome(0, "** BUILD SUCCEEDED **").status).toBe("pass");
+  });
+
+  it("reports the success marker as its diagnostic, because the last line of a passing build is noise", () => {
+    const log = "** BUILD SUCCEEDED **\n{ platform:macOS, name:Any Mac }";
+    expect(parseBuildOutcome(0, log).diagnostic).toBe("** BUILD SUCCEEDED **");
+  });
+
+  it("has no failure signature when it passed, because there is no failure to compare", () => {
+    expect(parseBuildOutcome(0, "** BUILD SUCCEEDED **").signature).toBe("");
   });
 
   it("is a fail when xcodebuild exits zero but the log says FAILED, because the two can disagree", () => {
