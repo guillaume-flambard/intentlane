@@ -54,15 +54,15 @@ let historyInputs = [
   input("Borealis", title: nil, md5: "md5-borealis", ext: "mkv"),
   input("Cygnus", title: "Cygne etoile", md5: "md5-cygnus", ext: "mp4"),
 ]
-let allPresent = PlayedMediaCore.records(from: historyInputs, fileExists: { _ in true })
+let allPresent = PlayedMediaCore.records(from: historyInputs, access: PlayedMediaAccess(recordingEnabled: true, fileExists: { _ in true }))
 check(allPresent.map(\.id) == ["md5-aurora", "md5-borealis", "md5-cygnus"],
       "shared mapping keeps history order and every identifier")
 check(allPresent == historyInputs.map { PlayedMediaCore.record(from: $0) },
       "shared mapping is exactly record(from:) per entry, with no second rule")
-check(PlayedMediaCore.records(from: historyInputs, fileExists: { $0.lastPathComponent != "Cygnus.mp4" }).map(\.id)
+check(PlayedMediaCore.records(from: historyInputs, access: PlayedMediaAccess(recordingEnabled: true, fileExists: { $0.lastPathComponent != "Cygnus.mp4" })).map(\.id)
       == ["md5-aurora", "md5-borealis"],
       "a record whose file disappeared is not offered")
-check(PlayedMediaCore.records(from: [], fileExists: { _ in true }).isEmpty,
+check(PlayedMediaCore.records(from: [], access: PlayedMediaAccess(recordingEnabled: true, fileExists: { _ in true })).isEmpty,
       "cleared history maps to zero records")
 
 // 5. Open path: the seam is called once with the exact record URL, and never
@@ -77,8 +77,9 @@ func openAttempt(identifier: String, inputs: [PlayedMediaInput], recordingEnable
                  player: RecordingPlayer) -> Result<URL, Error> {
   do {
     return .success(try PlayedMediaOpen.perform(identifier: identifier, inputs: inputs,
-                                                recordingEnabled: recordingEnabled,
-                                                fileExists: fileExists, player: player))
+                                                access: PlayedMediaAccess(recordingEnabled: recordingEnabled,
+                                                                          fileExists: fileExists),
+                                                player: player))
   } catch {
     return .failure(error)
   }
@@ -178,3 +179,45 @@ if failures == 0 {
   print("FAILURES: \(failures)")
   exit(1)
 }
+
+// 8. verifierAcces, as a named operation rather than a rule inlined in two places.
+// Exposing one media item and exposing every media item are two different offers,
+// so the exclusion is one decision with a name, and a test has to be able to ask
+// for a refusal instead of inferring one from an empty result.
+let accessOn = PlayedMediaAccess(recordingEnabled: true, fileExists: { _ in true })
+let accessOff = PlayedMediaAccess(recordingEnabled: false, fileExists: { _ in true })
+let accessDeleted = PlayedMediaAccess(recordingEnabled: true, fileExists: { _ in false })
+
+check(accessOn.allows(aurora), "a recorded item with its file present is allowed")
+check(!accessOff.allows(aurora), "an item is refused while history recording is off")
+check(!accessDeleted.allows(aurora), "an item whose file disappeared is refused")
+if case .refused = accessOff.decision(for: aurora) {
+  check(true, "a refusal is a refusal, not an empty result")
+} else {
+  check(false, "a refusal is a refusal, not an empty result")
+}
+
+if case .granted = accessOn.decision(for: aurora) {
+  check(true, "the decision reports a grant when access is allowed")
+} else {
+  check(false, "the decision reports a grant when access is allowed")
+}
+
+if case .refused(let refusal) = accessOff.decision(for: aurora) {
+  check(refusal.reason.lowercased().contains("recording"), "the refusal says which rule refused")
+} else {
+  check(false, "the decision reports a refusal when recording is off")
+}
+
+if case .refused(let refusal) = accessDeleted.decision(for: aurora) {
+  check(refusal.reason.lowercased().contains("file"), "a missing file is named as the reason")
+} else {
+  check(false, "the decision reports a refusal when the file is gone")
+}
+
+check(PlayedMediaCore.records(from: openInputs, access: accessDeleted).isEmpty,
+      "the shared mapping uses the same access decision, so it cannot disagree with open")
+check(PlayedMediaCore.records(from: openInputs, access: accessOn).count == openInputs.count,
+      "an allowed set is returned whole")
+check(PlayedMediaCore.records(from: openInputs, access: accessOff).isEmpty,
+      "nothing is exposed while recording is off")
