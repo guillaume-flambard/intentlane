@@ -539,7 +539,14 @@ program.command("verify")
 
     const result = evaluateReleaseVerification({ claims: declaredClaims, gates, observed });
     for (const outcome of result.claims) {
-      const mark = outcome.status === "verified" ? "pass" : outcome.status === "pending" ? "pending" : "fail";
+      const mark =
+        outcome.status === "verified"
+          ? "pass"
+          : outcome.status === "pending"
+            ? "pending"
+            : outcome.status === "contested"
+              ? "contested"
+              : "fail";
       process.stdout.write(`${mark}  ${outcome.id} [${outcome.evidence}]: ${outcome.status}\n`);
     }
     process.stdout.write(`${result.status}: ${result.nextAction}\n`);

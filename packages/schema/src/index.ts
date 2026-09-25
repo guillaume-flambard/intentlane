@@ -171,3 +171,19 @@ export type PilotRunStepStatus = (typeof PILOT_RUN_STEP_STATUSES)[number];
 export type PilotRunEvidenceKind = (typeof PILOT_RUN_EVIDENCE_KINDS)[number];
 export type PilotRunEvidenceEntry = z.infer<typeof evidenceEntrySchema>;
 export type PilotRunStep = z.infer<typeof runStepSchema>;
+
+const claimConfidenceDistributionSchema = z
+  .record(z.number().min(0).max(1))
+  .refine((distribution) => Object.keys(distribution).length > 0, {
+    message:
+      "A confidence must carry the distribution that produced it. A confidence a reader cannot inspect is indistinguishable from an invented one."
+  });
+
+export const claimConfidenceSchema = z
+  .object({
+    confidence: z.number().min(0).max(1),
+    distribution: claimConfidenceDistributionSchema
+  })
+  .strict();
+
+export type ClaimConfidence = z.infer<typeof claimConfidenceSchema>;

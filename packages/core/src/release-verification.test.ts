@@ -101,3 +101,61 @@ describe("release verification", () => {
     expect(result.failures).toEqual(["metadata"]);
   });
 });
+
+describe("contested claims", () => {
+  const measured = { confidence: 0.26, distribution: { block_entirely: 0.5, warn_and_mask: 0.5 } };
+
+  it("refuses to certify a claim whose command passed but whose confidence is below the threshold", () => {
+    const result = verify({ confidence: { contract: measured } });
+    expect(result.status).toBe("blocked");
+    expect(result.failures).toEqual(["contract"]);
+    expect(result.claims.find((outcome) => outcome.id === "contract")?.status).toBe("contested");
+  });
+
+  it("carries the distribution into the outcome so a reader can see the doubt", () => {
+    const outcome = verify({ confidence: { contract: measured } }).claims.find((entry) => entry.id === "contract");
+    expect(outcome?.confidence).toEqual(measured);
+    expect(outcome?.reason).toContain("0.26");
+  });
+
+  it("names the contested claims in the next action rather than calling them failures", () => {
+    const result = verify({ confidence: { contract: measured, metadata: measured } });
+    expect(result.nextAction).toMatch(/contested/i);
+    expect(result.nextAction).toContain("contract");
+    expect(result.nextAction).toContain("metadata");
+  });
+
+  it("does not let a contest hide a hard failure, and names both kinds apart", () => {
+    const result = verify({ gates: { ...passingGates, metadata: "fail" }, confidence: { contract: measured } });
+    expect(result.status).toBe("blocked");
+    expect(result.claims.find((outcome) => outcome.id === "contract")?.status).toBe("contested");
+    expect(result.claims.find((outcome) => outcome.id === "metadata")?.status).toBe("failed");
+    expect(result.nextAction).toMatch(/contested/i);
+  });
+
+  it("certifies the same claim once its confidence clears the threshold", () => {
+    const result = verify({ confidence: { contract: { confidence: 0.97, distribution: { verified: 0.97, contested: 0.03 } } } });
+    expect(result.status).toBe("certified");
+    expect(result.failures).toEqual([]);
+  });
+
+  it("treats a source that supplied no value as a contest rather than as a pass", () => {
+    const result = verify({ confidence: { contract: undefined } });
+    expect(result.status).toBe("blocked");
+    expect(result.claims.find((outcome) => outcome.id === "contract")?.status).toBe("contested");
+    expect(result.claims.find((outcome) => outcome.id === "contract")?.confidence).toBeUndefined();
+  });
+
+  it("leaves an observed claim to a person, with no confidence attached", () => {
+    const result = verify({ claims: [...defaultClaimSet(), "siri-conversation"], observed: { "siri-conversation": "verified" } });
+    const outcome = result.claims.find((entry) => entry.id === "siri-conversation");
+    expect(outcome?.status).toBe("verified");
+    expect(outcome?.confidence).toBeUndefined();
+  });
+
+  it("stays certified by default without any confidence declared, which is what keeps the gate offline", () => {
+    const result = verify();
+    expect(result.status).toBe("certified");
+    expect(result.claims.every((outcome) => outcome.confidence !== undefined)).toBe(true);
+  });
+});

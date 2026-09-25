@@ -74,6 +74,40 @@ intentlane verify --pilot pilots/iina/pilot.yaml --claim siri-conversation
 # pending-evidence: ... until then they are simply not certified.
 ```
 
+## Une revendication contestée, et ce que `contested` veut dire
+
+Une revendication déterministe ne devient `verified` que si **deux** choses
+tiennent à la fois : la commande a rendu `pass`, et une confiance a atteint le
+seuil de `0,8`. Le verdict est **dérivé**, jamais fourni : une source ne peut
+pas écrire `verified` dans le résultat, parce que la fonction de dérivation ne
+lit aucun verdict en entrée, seulement des preuves.
+
+Quand la commande passe mais que la confiance est sous le seuil, la
+revendication sort `contested`, et elle porte la distribution qui l'a produit.
+`contested` ne veut donc pas dire « la commande a échoué » : une commande qui
+échoue ou qui ne dit rien donne `failed` ou `missing`. `contested` veut dire
+**la commande a dit oui et la preuve ne tient pas debout**.
+
+```sh
+# contested  contract [deterministic]: contested
+# blocked: Contested claim(s), whose evidence cleared no threshold ...
+```
+
+C'est le cas mesuré le plus parlant. Demandé quoi faire du mot de passe
+bancaire d'un utilisateur, écrit par lui dans son propre gestionnaire, un
+classifieur contraint répond à 0,26 avec une distribution 0,5 / 0,5 entre « tout
+bloquer » et « prévenir puis masquer ». L'argmax seul aurait dit « tout
+bloquer », avec une assurance fausse. Le seuil existe pour que ce cas sorte
+`contested` et remonte à une personne, et c'est pourquoi l'argmax seul est
+interdit : une préférence forte n'est pas une certitude.
+
+Par défaut, la confiance vient de la source locale `local-deterministic`, qui ne
+fait aucun appel réseau et rend une confiance de `1` dans les deux sens, donc le
+`certified` ci-dessus reste reproductible hors ligne. Une source qui ne produit
+**aucune** valeur ne se replie pas sur la source locale : la revendication sort
+`contested` et le dit, parce qu'une repli silencieux vers une porte plus faible
+serait exactement le mensonge que ce mécanisme existe pour empêcher.
+
 **Rupture de sens assumée.** Avant, `--strict` exigeait la preuve humaine. Cette
 garantie existe toujours, à la demande :
 `--claim siri-conversation --claim spotlight-ui-result`. Un projet qui ne
