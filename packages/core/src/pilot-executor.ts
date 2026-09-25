@@ -21,20 +21,62 @@ export const DEMO_BUNDLE_ID = "dev.intentlane.demo.iina";
 
 export const SIGNING_POLICY = "host" as const;
 
+export type BuildTarget = Readonly<{
+  project: string;
+  scheme: string;
+  projectDirectory: string;
+  configuration: string;
+  artifact: string;
+}>;
+
+export const IINA_BUILD_TARGET: BuildTarget = {
+  project: "iina.xcodeproj",
+  scheme: "iina",
+  projectDirectory: ".",
+  configuration: "Debug",
+  artifact: "IINA.app"
+};
+
+export const PILOT_BUILD_TARGETS: Readonly<Record<string, BuildTarget>> = {
+  iina: IINA_BUILD_TARGET,
+  fsnotes: {
+    project: "FSNotes.xcodeproj",
+    scheme: "FSNotes",
+    projectDirectory: ".",
+    configuration: "Debug",
+    artifact: "FSNotes.app"
+  },
+  handbrake: {
+    project: "HandBrake.xcodeproj",
+    scheme: "HandBrake-Release-Sandbox",
+    projectDirectory: "macosx",
+    configuration: "release-sandbox",
+    artifact: "HandBrake.app"
+  }
+};
+
+export const PILOT_ADAPTER_DIRECTORIES: Readonly<Record<string, string>> = {
+  iina: "iina/IntentLane",
+  fsnotes: "FSNotes/IntentLane",
+  handbrake: "macosx/IntentLane"
+};
+
 export function buildInvocation(
   repository: string,
-  overrides: Readonly<Record<string, string>> = {}
+  overrides: Readonly<Record<string, string>> = {},
+  target: BuildTarget = IINA_BUILD_TARGET
 ): BuildInvocation {
+  const prefix = target.projectDirectory === "." ? "" : `${target.projectDirectory}/`;
   return {
     command: "xcodebuild",
     args: [
       "build",
       "-project",
-      `${repository}/iina.xcodeproj`,
+      `${repository}/${prefix}${target.project}`,
       "-scheme",
-      "iina",
+      target.scheme,
       "-configuration",
-      "Debug",
+      target.configuration,
       "-derivedDataPath",
       `${repository}/.intentlane/derived`,
       ...Object.entries(overrides).map(([key, value]) => `${key}=${value}`)
@@ -83,9 +125,13 @@ export function sandboxProfile(runDirectory: string): SandboxProfile {
   };
 }
 
-export function demoBuildOverrides(): Readonly<Record<string, string>> {
+export function demoBundleId(pilot: string): string {
+  return `dev.intentlane.demo.${pilot.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+}
+
+export function demoBuildOverrides(pilot = "iina"): Readonly<Record<string, string>> {
   return {
-    PRODUCT_BUNDLE_IDENTIFIER: DEMO_BUNDLE_ID,
+    PRODUCT_BUNDLE_IDENTIFIER: demoBundleId(pilot),
     CODE_SIGN_IDENTITY: "-",
     CODE_SIGN_STYLE: "Manual",
     CODE_SIGNING_REQUIRED: "NO",

@@ -3,7 +3,9 @@ import {
   DEMO_BUNDLE_ID,
   SIGNING_POLICY,
   buildInvocation,
+  demoBundleId,
   demoBuildOverrides,
+  PILOT_BUILD_TARGETS,
   parseBuildOutcome,
   sandboxProfile
 } from "./pilot-executor.js";
@@ -129,5 +131,49 @@ describe("the sandbox profile", () => {
 
   it("derives a distinct bundle identifier, so the demo build does not replace the developer's app", () => {
     expect(sandboxProfile("/tmp/run").bundleId).not.toBe("com.colliderli.iina");
+  });
+});
+
+describe("choosing the build target of a pilot", () => {
+  it("names IINA's project and scheme, because those are IINA's", () => {
+    expect(buildInvocation("/tmp/iina", {}, PILOT_BUILD_TARGETS.iina).args).toContain("/tmp/iina/iina.xcodeproj");
+  });
+
+  it("names FSNotes' own project, because a run must not build IINA for a notebook pilot", () => {
+    expect(buildInvocation("/tmp/fs", {}, PILOT_BUILD_TARGETS.fsnotes).args).toContain("/tmp/fs/FSNotes.xcodeproj");
+  });
+
+  it("looks inside the macosx directory for HandBrake, because that is where its project lives", () => {
+    expect(buildInvocation("/tmp/hb", {}, PILOT_BUILD_TARGETS.handbrake).args).toContain("/tmp/hb/macosx/HandBrake.xcodeproj");
+  });
+
+  it("gives every pilot a target, so the command never silently builds the wrong application", () => {
+    expect(Object.keys(PILOT_BUILD_TARGETS).sort()).toEqual(["fsnotes", "handbrake", "iina"]);
+  });
+
+  it("defaults to IINA when no target is named, so the reference invocation stays the one already proven", () => {
+    expect(buildInvocation("/tmp/iina").args).toContain("/tmp/iina/iina.xcodeproj");
+  });
+});
+
+describe("the demo identity of a pilot", () => {
+  it("is derived from the pilot, because a notebook demo must not carry a video player's identity", () => {
+    expect(demoBundleId("fsnotes")).toBe("dev.intentlane.demo.fsnotes");
+  });
+
+  it("is IINA's for IINA, which is the one already proven against a real build", () => {
+    expect(demoBundleId("iina")).toBe(DEMO_BUNDLE_ID);
+  });
+
+  it("collapses a name to something an identifier accepts", () => {
+    expect(demoBundleId("HandBrake")).toBe("dev.intentlane.demo.handbrake");
+  });
+
+  it("is what the build override applies, not a constant beside it", () => {
+    expect(demoBuildOverrides("fsnotes").PRODUCT_BUNDLE_IDENTIFIER).toBe("dev.intentlane.demo.fsnotes");
+  });
+
+  it("defaults to IINA when no pilot is named", () => {
+    expect(demoBuildOverrides().PRODUCT_BUNDLE_IDENTIFIER).toBe(DEMO_BUNDLE_ID);
   });
 });

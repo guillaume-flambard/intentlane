@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -612,7 +612,13 @@ pilot.command("run")
     if (options.plan === true || plan.steps.length === 0) return;
 
     if (plan.steps[0] === "prepare") {
-      const invocation = buildInvocation(repository, demoBuildOverrides());
+      const target = PILOT_BUILD_TARGETS[options.pilot];
+      if (target === undefined) {
+        process.stderr.write(`FAIL no build target is declared for the pilot: ${options.pilot}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const invocation = buildInvocation(repository, demoBuildOverrides(options.pilot), target);
       const started = Date.now();
       process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
       const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
@@ -624,7 +630,7 @@ pilot.command("run")
         diagnostic: outcome.diagnostic,
         durationMs: Date.now() - started,
         command: `${invocation.command} ${invocation.args.join(" ")}`,
-        artifact: "IINA.app"
+        artifact: target.artifact
       };
       await atomicWrite(journalFile, `${JSON.stringify(applyPrepare(journal, result), null, 2)}\n`);
       process.stdout.write(`${outcome.status} prepare in ${(result.durationMs / 1000).toFixed(1)}s\n`);
@@ -655,24 +661,31 @@ pilot.command("run")
     }
 
     if (plan.steps[0] === "implement") {
-      const adapterDirectory = join(repository, "iina", "IntentLane");
+      const target = PILOT_BUILD_TARGETS[options.pilot];
+      const adapter = PILOT_ADAPTER_DIRECTORIES[options.pilot];
+      if (target === undefined || adapter === undefined) {
+        process.stderr.write(`FAIL the pilot declares neither a build target nor an adapter directory: ${options.pilot}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const adapterDirectory = join(repository, adapter);
       const generated = join(adapterDirectory, "IntentLaneGenerated.swift");
-      const files = existsSync(adapterDirectory) ? await readdir(adapterDirectory) : [];
-      const blockingTodos = (await Promise.all(files.map(async (name) => {
-        if (!name.endsWith(".swift")) return 0;
+      const swiftFiles = existsSync(adapterDirectory) ? (await readdir(adapterDirectory)).filter((name) => name.endsWith(".swift")) : [];
+      let blockingTodos = 0;
+      for (const name of swiftFiles) {
         const source = await readFile(join(adapterDirectory, name), "utf8");
-        return (source.match(/\bTODO\b/g) ?? []).length;
-      }))).reduce((total, count) => total + count, 0);
-      const built = existsSync(join(repository, ".intentlane", "derived", "Build", "Products", "Debug", "IINA.app"));
+        blockingTodos += (source.match(/\bTODO\b/g) ?? []).length;
+      }
+      const built = existsSync(join(repository, ".intentlane", "derived", "Build", "Products", target.configuration, target.artifact));
       const result = evaluateImplement({
         generatedPresent: existsSync(generated),
-        adapterPresent: files.some((name) => name.endsWith(".swift")),
+        adapterPresent: swiftFiles.length > 0,
         blockingTodos,
         compiles: built
       });
       await atomicWrite(journalFile, `${JSON.stringify(applyImplement(journal, result), null, 2)}\n`);
       process.stdout.write(`generated declarations: ${existsSync(generated) ? "present" : "absent"}\n`);
-      process.stdout.write(`adapter swift files: ${files.filter((name) => name.endsWith(".swift")).length}\n`);
+      process.stdout.write(`adapter swift files: ${swiftFiles.length}\n`);
       process.stdout.write(`blocking TODOs: ${blockingTodos}\n`);
       process.stdout.write(`${result.status} implement: ${result.reason}\n`);
       if (result.status === "fail") process.exitCode = 1;

@@ -267,3 +267,43 @@ describe("what the discovery returns", () => {
     expect(found.repository).toContain("intentlane-discovery-");
   });
 });
+
+describe("a declaration that continues on the next line", () => {
+  const continued = {
+    "Sources/ViewController.swift": [
+      "import AppKit",
+      "",
+      "class ViewController: EditorViewController,",
+      "    NSSplitViewDelegate,",
+      "    NSOutlineViewDelegate,",
+      "    NSOutlineViewDataSource {",
+      "  var records: [PlaybackRecord] = []",
+      "  func openRecord(_ record: PlaybackRecord) {",
+      "    PlayerCore.activeOrNew.openURL(record.url)",
+      "  }",
+      "}"
+    ].join("\n"),
+    "Sources/PlaybackRecord.swift": "struct PlaybackRecord {\n  let key: String\n}"
+  };
+
+  it("finds the type whose conformance is on a continuation line, because that is the list in FSNotes", async () => {
+    const found = await discover(await index(continued));
+    expect(found.objects.map((entry) => entry.name)).toEqual(["ViewController"]);
+  });
+
+  it("points the proof at the line that introduces the type, so a reader is sent to the declaration", async () => {
+    const found = await discover(await index(continued));
+    expect(found.objects[0]?.proof.line).toBe(3);
+  });
+
+  it("still finds the identifier and the opener of that type", async () => {
+    const found = await discover(await index(continued));
+    expect(found.objects[0]?.identifiers.map((entry) => entry.property)).toEqual(["key"]);
+    expect(found.objects[0]?.openers.map((entry) => entry.symbol)).toEqual(["openRecord"]);
+  });
+
+  it("emits no object when the file ends mid-declaration, because an unterminated declaration supports no claim", async () => {
+    const found = await discover(await index({ "Sources/Cut.swift": "class Cut: NSOutlineViewDataSource,\n    NSOutlineViewDelegate" }));
+    expect(found.objects).toEqual([]);
+  });
+});

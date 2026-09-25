@@ -419,3 +419,42 @@ describe("recording the implement step", () => {
     ).toBe(true);
   });
 });
+
+describe("a discovery that cannot act", () => {
+  const nothingActionable = {
+    repository: "/tmp/fsnotes",
+    objects: [
+      {
+        name: "SidebarOutlineView",
+        proof: { path: "FSNotes/View/SidebarOutlineView.swift", line: 13, excerpt: "class SidebarOutlineView: NSOutlineView" },
+        recordTypes: [],
+        identifiers: [],
+        openers: []
+      }
+    ],
+    access: []
+  };
+
+  it("is blocked rather than passed, because a discovery that can integrate nothing has integrated nothing", () => {
+    expect(analyseDiscovery(nothingActionable).status).toBe("blocked");
+  });
+
+  it("names the class it did find, so a reader is not left with a zero and no explanation", () => {
+    expect(analyseDiscovery(nothingActionable).reason).toContain("SidebarOutlineView");
+  });
+
+  it("says the count of actionable classes, so a zero is visible rather than implied", () => {
+    expect(analyseDiscovery(nothingActionable).reason).toContain("0");
+  });
+
+  it("still passes when one class is actionable, so the fix does not break the case that worked", () => {
+    expect(analyseDiscovery(readableDiscovery).status).toBe("pass");
+  });
+
+  it("marks the step blocked in the journal, and keeps the journal valid", () => {
+    const result = analyseDiscovery(nothingActionable);
+    const journal = applyAnalyse(startRunJournal(facts), result);
+    expect(journal.steps.find((entry) => entry.id === "analyse")?.status).toBe("blocked");
+    expect(pilotRunJournalSchema.safeParse(journal).success).toBe(true);
+  });
+});

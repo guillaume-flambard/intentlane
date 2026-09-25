@@ -56,7 +56,7 @@ export function planRun(journal: PilotRunJournal): PilotRunPlan {
 }
 
 export type AnalysisResult = Readonly<{
-  status: "pass" | "fail" | "refused";
+  status: "pass" | "fail" | "refused" | "blocked";
   reason: string;
   objects: number;
   actionable: number;
@@ -98,13 +98,23 @@ export function analyseDiscovery(discovery: Discovery): AnalysisResult {
 
   const actionable = discovery.objects.filter(
     (object) => object.identifiers.length > 0 && object.openers.length > 0
-  ).length;
+  );
+
+  if (actionable.length === 0) {
+    return {
+      status: "blocked",
+      reason: `${discovery.objects.length} object class(es) found and 0 of them carry both an identifier and an opening path: ${discovery.objects.map((object) => object.name).join(", ")}. A discovery that can integrate nothing has integrated nothing.`,
+      objects: discovery.objects.length,
+      actionable: 0,
+      findings: findings.length
+    };
+  }
 
   return {
     status: "pass",
-    reason: `${actionable} of ${discovery.objects.length} object classes carry both an identifier and an opening path, every one of them backed by a file and a line.`,
+    reason: `${actionable.length} of ${discovery.objects.length} object classes carry both an identifier and an opening path, every one of them backed by a file and a line.`,
     objects: discovery.objects.length,
-    actionable,
+    actionable: actionable.length,
     findings: findings.length
   };
 }
@@ -113,7 +123,8 @@ export function applyAnalyse(journal: PilotRunJournal, result: AnalysisResult): 
   const previous = journal.steps.find((entry) => entry.id === "analyse");
   const attempts =
     previous === undefined || previous.status === "pending" ? 1 : previous.attempts + 1;
-  const status = result.status === "pass" ? "pass" : result.status === "refused" ? "blocked" : "fail";
+  const status =
+    result.status === "pass" ? "pass" : result.status === "fail" ? "fail" : "blocked";
   const steps = journal.steps.map((entry) =>
     entry.id === "analyse"
       ? {

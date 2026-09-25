@@ -135,3 +135,33 @@ was corrected before the change was archived rather than after.
 The generated Swift deliberately gained nothing. App Intents has nowhere to put an
 exposure condition, and a generated property asserting one could not be checked. A test
 now holds that silence, so the day someone adds a fake one the suite fails.
+
+
+## The object motif was proved on one repository and then trusted
+
+`analyse` was built, run and accepted on IINA. Running the same discovery on the
+other two pilots found two faults, and neither was visible from IINA.
+
+FSNotes' notebook list declares its conformance across four lines, so a motif reading
+one line at a time never saw it and reported `AboutViewController` instead. A motif
+that names the wrong object is worse than one that names none, because it looks like
+it worked. A declaration is now read until the line carrying its opening brace, and a
+file that ends before that yields nothing rather than a half-claim.
+
+A discovery that found classes but could act on none was reported as a pass with a
+zero in its own reason. Zero actionable is not a partial success. It is the discovery
+finding nothing it can integrate, and the step is now blocked with the classes it did
+find named.
+
+HandBrake finds nothing at all. Its list layer is Objective-C, six `.m` and `.mm`
+files against three Swift, and the motifs read Swift. That is a scope limit and not a
+defect, but it means `analyse` does not reach HandBrake today, and that was not known
+until the motif was run on a second repository. An Objective-C motif is its own change
+with its own evidence.
+
+Two more IINA shapes leaked while the command was run on a second pilot. The build
+invocation hardcoded `iina.xcodeproj` and the `iina` scheme, so a notebook run tried to
+build a video player. The demo identity was hardcoded to `dev.intentlane.demo.iina`,
+so an FSNotes demo carried a video player's bundle identifier. Both are now declared
+per pilot, and both were found by running the command on something it was not written
+for, which is the only way they could have been found.

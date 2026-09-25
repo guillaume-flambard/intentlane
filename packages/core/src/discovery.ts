@@ -131,6 +131,46 @@ function code(text: string): string {
   return text.trimStart().startsWith("//") ? "" : text;
 }
 
+type Declaration = Readonly<{ text: string; line: number; head: string }>;
+
+/**
+ * A type declaration read as a whole.
+ *
+ * Swift lets a protocol list wrap, and a real application wraps it. Reading one line at
+ * a time therefore misses exactly the declarations a person would point at. A
+ * declaration ends on the line carrying its opening brace; a file that ends before that
+ * yields nothing, because an unterminated declaration supports no claim.
+ */
+function declarationsIn(file: IndexedFile): readonly Declaration[] {
+  const found: Declaration[] = [];
+  let start = -1;
+  let head = "";
+  let accumulated = "";
+  for (const [position, raw] of file.lines.entries()) {
+    const text = code(raw);
+    if (text === "") continue;
+    if (start < 0) {
+      if (!TYPE_DECLARATION.test(text)) continue;
+      start = position;
+      head = text.trim();
+      accumulated = text;
+      if (text.includes("{")) {
+        found.push({ text: accumulated, line: start + 1, head });
+        start = -1;
+        accumulated = "";
+      }
+      continue;
+    }
+    accumulated = `${accumulated} ${text.trim()}`;
+    if (text.includes("{")) {
+      found.push({ text: accumulated, line: start + 1, head });
+      start = -1;
+      accumulated = "";
+    }
+  }
+  return found;
+}
+
 function declaredTypes(index: RepositoryIndex): ReadonlySet<string> {
   const names = new Set<string>();
   eachLine(index, (_file, _line, text) => {
@@ -142,12 +182,17 @@ function declaredTypes(index: RepositoryIndex): ReadonlySet<string> {
 
 function objectMotif(index: RepositoryIndex): readonly Readonly<{ name: string; proof: Proof }>[] {
   const found: { name: string; proof: Proof }[] = [];
-  eachLine(index, (file, line, text) => {
-    if (!LIST_DATA_SOURCE.test(text)) return;
-    const name = TYPE_DECLARATION.exec(text)?.[1];
-    if (name === undefined) return;
-    found.push({ name, proof: { path: file.path, line, excerpt: text.trim() } });
-  });
+  for (const file of index.files) {
+    for (const declaration of declarationsIn(file)) {
+      if (!LIST_DATA_SOURCE.test(declaration.text)) continue;
+      const name = TYPE_DECLARATION.exec(declaration.text)?.[1];
+      if (name === undefined) continue;
+      found.push({
+        name,
+        proof: { path: file.path, line: declaration.line, excerpt: declaration.head }
+      });
+    }
+  }
   return found.sort((left, right) => left.name.localeCompare(right.name));
 }
 
