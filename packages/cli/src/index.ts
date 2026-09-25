@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { applyPrepare, buildInvocation, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { analyseDiscovery, applyAnalyse, applyPrepare, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -604,32 +604,51 @@ pilot.command("run")
     process.stdout.write(`steps: ${plan.steps.length === 0 ? "none, every step passed at this commit" : plan.steps.join(" -> ")}\n`);
 
     if (options.plan === true || plan.steps.length === 0) return;
-    if (plan.steps[0] !== "prepare") {
-      process.stdout.write("the first step this run owes has no implementation yet, so nothing was claimed\n");
+
+    if (plan.steps[0] === "prepare") {
+      const invocation = buildInvocation(repository, demoBuildOverrides());
+      const started = Date.now();
+      process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
+      const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
+      const outcome = parseBuildOutcome(run.status ?? 1, `${run.stdout ?? ""}\n${run.stderr ?? ""}`);
+      const result: PrepareResult = {
+        status: outcome.status,
+        exitCode: outcome.exitCode,
+        signature: outcome.signature,
+        diagnostic: outcome.diagnostic,
+        durationMs: Date.now() - started,
+        command: `${invocation.command} ${invocation.args.join(" ")}`,
+        artifact: "IINA.app"
+      };
+      await atomicWrite(journalFile, `${JSON.stringify(applyPrepare(journal, result), null, 2)}\n`);
+      process.stdout.write(`${outcome.status} prepare in ${(result.durationMs / 1000).toFixed(1)}s\n`);
+      process.stdout.write(`diagnostic: ${outcome.diagnostic}\n`);
+      process.stdout.write(`failure signature: ${outcome.signature || "none"}\n`);
+      if (outcome.status === "fail") process.exitCode = 1;
       return;
     }
 
-    const invocation = buildInvocation(repository, demoBuildOverrides());
-    const started = Date.now();
-    process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
-    const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
-    const outcome = parseBuildOutcome(run.status ?? 1, `${run.stdout ?? ""}\n${run.stderr ?? ""}`);
-    const result: PrepareResult = {
-      status: outcome.status,
-      exitCode: outcome.exitCode,
-      signature: outcome.signature,
-      diagnostic: outcome.diagnostic,
-      durationMs: Date.now() - started,
-      command: `${invocation.command} ${invocation.args.join(" ")}`,
-      artifact: "IINA.app"
-    };
+    if (plan.steps[0] === "analyse") {
+      const discovery = await discover(await indexRepository(repository));
+      const analysis = analyseDiscovery(discovery);
+      await atomicWrite(join(runDirectory, "discovery.json"), `${JSON.stringify(discovery, null, 2)}\n`);
+      await atomicWrite(journalFile, `${JSON.stringify(applyAnalyse(journal, analysis), null, 2)}\n`);
+      for (const object of discovery.objects) {
+        const seams = [
+          ...object.identifiers.map((entry) => `identifier ${entry.property}`),
+          ...object.openers.map((entry) => `opener ${entry.symbol}`)
+        ];
+        process.stdout.write(
+          `${object.name}  ${object.proof.path}:${object.proof.line}  [${seams.join(", ") || "no seam found"}]\n`
+        );
+      }
+      process.stdout.write(`${analysis.status} analyse: ${analysis.reason}\n`);
+      process.stdout.write(`findings written to ${join(runDirectory, "discovery.json")}\n`);
+      if (analysis.status === "fail") process.exitCode = 1;
+      return;
+    }
 
-    await atomicWrite(journalFile, `${JSON.stringify(applyPrepare(journal, result), null, 2)}\n`);
-
-    process.stdout.write(`${outcome.status} prepare in ${(result.durationMs / 1000).toFixed(1)}s\n`);
-    process.stdout.write(`diagnostic: ${outcome.diagnostic}\n`);
-    process.stdout.write(`failure signature: ${outcome.signature || "none"}\n`);
-    if (outcome.status === "fail") process.exitCode = 1;
+    process.stdout.write("the first step this run owes has no implementation yet, so nothing was claimed\n");
   });
 
 program.parseAsync().catch((reason: unknown) => {

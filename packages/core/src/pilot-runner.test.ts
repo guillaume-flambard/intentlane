@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyseDiscovery,
+  applyAnalyse,
   applyPrepare,
   planRun,
   startRunJournal,
@@ -160,5 +162,98 @@ describe("recording the build", () => {
   it("leaves the later steps pending, because a passing build proves nothing about them", () => {
     const journal = applyPrepare(startRunJournal(facts), succeeded);
     expect(journal.steps.filter((entry) => entry.status === "pending")).toHaveLength(6);
+  });
+});
+
+describe("recording the analysis", () => {
+  const backed = {
+    repository: "/tmp/iina",
+    objects: [
+      {
+        name: "HistoryWindowController",
+        proof: { path: "iina/HistoryWindowController.swift", line: 29, excerpt: "final class HistoryWindowController" },
+        recordTypes: ["PlaybackHistory"],
+        identifiers: [
+          { property: "mpvMd5", proof: { path: "iina/PlaybackHistory.swift", line: 35, excerpt: "var mpvMd5: String" } }
+        ],
+        openers: [
+          { symbol: "doubleAction", proof: { path: "iina/HistoryWindowController.swift", line: 277, excerpt: "func doubleAction()" } }
+        ]
+      }
+    ],
+    access: []
+  };
+
+  it("passes when an object was found, because that is the thing the run is for", () => {
+    expect(analyseDiscovery(backed).status).toBe("pass");
+  });
+
+  it("is a refusal rather than a pass when nothing was found, because no candidate is not a result", () => {
+    expect(analyseDiscovery({ ...backed, objects: [] }).status).toBe("refused");
+  });
+
+  it("names the reason it refused, so the reader is not left guessing", () => {
+    expect(analyseDiscovery({ ...backed, objects: [] }).reason).toMatch(/no object/i);
+  });
+
+  it("fails when a finding carries no line, because the exit criterion of this step is a file and a line", () => {
+    const unbacked = {
+      ...backed,
+      objects: [{ ...backed.objects[0]!, proof: { path: "iina/HistoryWindowController.swift", line: 0, excerpt: "x" } }]
+    };
+    expect(analyseDiscovery(unbacked).status).toBe("fail");
+  });
+
+  it("fails when an identifier is offered with no proof, rather than reporting it as found", () => {
+    const unbacked = {
+      ...backed,
+      objects: [
+        {
+          ...backed.objects[0]!,
+          identifiers: [{ property: "mpvMd5", proof: { path: "", line: 0, excerpt: "" } }]
+        }
+      ]
+    };
+    expect(analyseDiscovery(unbacked).status).toBe("fail");
+  });
+
+  it("counts only the objects that have an identifier and an opening path, because a candidate missing one is not actionable", () => {
+    const partial = {
+      ...backed,
+      objects: [
+        backed.objects[0]!,
+        {
+          name: "InspectorWindowController",
+          proof: { path: "iina/InspectorWindowController.swift", line: 14, excerpt: "final class InspectorWindowController" },
+          recordTypes: [],
+          identifiers: [],
+          openers: []
+        }
+      ]
+    };
+    expect(analyseDiscovery(partial).actionable).toBe(1);
+  });
+
+  it("marks analyse passed with the actionable count as its evidence", () => {
+    const journal = applyAnalyse(startRunJournal(facts), analyseDiscovery(backed));
+    const analyse = journal.steps.find((entry) => entry.id === "analyse");
+    expect(analyse?.status).toBe("pass");
+    expect(analyse?.evidence[0]?.note).toMatch(/1 of 1 object classes/);
+  });
+
+  it("keeps the journal valid after a pass, because the next step resumes from this file", () => {
+    expect(pilotRunJournalSchema.safeParse(applyAnalyse(startRunJournal(facts), analyseDiscovery(backed))).success).toBe(true);
+  });
+
+  it("marks analyse refused with a diagnostic, because a refusal is a state the run can carry", () => {
+    const journal = applyAnalyse(startRunJournal(facts), analyseDiscovery({ ...backed, objects: [] }));
+    const analyse = journal.steps.find((entry) => entry.id === "analyse");
+    expect(analyse?.status).toBe("blocked");
+    expect(analyse?.diagnostic).toBeTruthy();
+  });
+
+  it("leaves prepare as it was, because analysing does not rebuild the application", () => {
+    const journal = applyAnalyse(applyPrepare(startRunJournal(facts), succeeded), analyseDiscovery(backed));
+    expect(journal.steps.find((entry) => entry.id === "prepare")?.status).toBe("pass");
   });
 });

@@ -25,6 +25,7 @@ export * from "./pilot-manifest.js";
 export * from "./pilot-run.js";
 export * from "./pilot-runner.js";
 export * from "./pilot-executor.js";
+export * from "./discovery.js";
 export * from "./metadata-contract.js";
 export * from "./claims.js";
 export * from "./release-verification.js";
