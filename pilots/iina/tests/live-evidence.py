@@ -97,8 +97,16 @@ def stop(process, sink) -> None:
     sink.close()
 
 
-def ask_search_ui(query: str) -> list[str]:
+SEARCH_PROCESS = os.environ.get("INTENTLANE_SEARCH_PROCESS", "Siri AI")
+
+
+def ask_search_ui(query: str, process_name: str = SEARCH_PROCESS) -> list[str]:
     """Type a query into the system search and read the rows it offers.
+
+    The search UI is not a process named `Spotlight` on macOS 27. Measured on this
+    machine: there is no such process at all, and the window belongs to `Siri AI`,
+    which is what the default names. Its window is not addressable as `window 1`, so
+    this path returns the refusal marker rather than a guess.
 
     A failure to reach the search UI is a marker in the list, not an empty list, because
     an empty list and a refusal look the same and one of them means the probe could not
@@ -112,7 +120,7 @@ def ask_search_ui(query: str) -> list[str]:
         delay 2.5
         set captured to ""
         try
-            tell process "Spotlight"
+            tell process "{process_name}"
                 set captured to captured & "|" & (name of row 1 of list 1 of scroll area 1 of window 1)
             end tell
         on error
@@ -208,8 +216,8 @@ def main() -> int:
         rows = ask_search_ui(arguments.title)
         if not readable_rows(rows):
             return refuse(
-                "the search UI offered no readable row, so nothing was observed",
-                "run this from a session where the search UI can be read, and confirm the app is registered as the search provider"
+                f"the search UI offered no readable row, so nothing was observed; the search UI is hosted by {SEARCH_PROCESS} on this version of macOS, not by a process named Spotlight",
+                "grant Accessibility to this process in System Settings, then re-run; the row model of that window still has to be read on a machine where the grant exists"
             )
 
         print(f"INFO the search offered: {' | '.join(readable_rows(rows))}")

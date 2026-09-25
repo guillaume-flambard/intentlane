@@ -345,3 +345,33 @@ fail, which is what the first version was.
 
 So the last claim is one human grant away and one OS-version question away, and both are
 written down rather than worked around.
+
+
+## The search UI is not where I assumed it was
+
+I wrote the probe against a process named `Spotlight`, and then said the search UI was
+not reachable. Both were assumptions. Measured on this machine:
+
+There is no process named `Spotlight` at all. The full process list carries `Siri AI`
+and `Siri`, and `Siri AI` is the one with a window: one window, against zero for `Siri`,
+`loginwindow` and `WindowManager`. So the probe now names `Siri AI`, which is measured
+rather than recalled, and the refusal it prints says so.
+
+That window is not addressable as `window 1`: System Events returns
+`Invalid index. (-1719)` while the count says one. It is either not a standard
+accessibility window or it is transient, and I could not read its rows from here.
+
+Keystrokes sent through System Events go to the frontmost application, and the search UI
+never becomes frontmost from this shell: the frontmost process stayed the terminal, and
+then Xcode. So the query was typed into whatever the user was working in, twice, before
+I stopped. The accessibility permission is the reason, and it is the same
+`-25211` refusal the deeper queries return.
+
+I stopped injecting keystrokes rather than continuing. A probe that types into the
+operator's editor to collect evidence about somebody else's application is not a probe.
+
+The remaining distance on this last claim is therefore two things, both named and neither
+guessed: the accessibility grant, and the row model of a window that is not
+`window 1`. The first is one checkbox. The second needs a machine where the grant
+exists, and writing it blind against a window model I cannot read would produce the
+third version of a gate that can neither pass nor fail.
