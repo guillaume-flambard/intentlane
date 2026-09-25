@@ -87,3 +87,62 @@ export const intentLaneJsonSchema = {
   type: "object",
   required: ["schema", "app", "intents"]
 } as const;
+
+export const PILOT_RUN_STEPS = ["prepare", "analyse", "implement", "test", "repair", "demonstrate", "deliver"] as const;
+
+export const PILOT_RUN_STEP_STATUSES = ["pending", "pass", "fail", "blocked", "skipped"] as const;
+
+export const PILOT_RUN_EVIDENCE_KINDS = ["command", "build", "capture", "app-event"] as const;
+
+export const PILOT_RUN_REPAIR_BUDGET = 3;
+
+const revisionSchema = z.string().regex(/^[0-9a-f]{7,40}$/);
+
+const evidenceEntrySchema = z.object({
+  kind: z.enum(PILOT_RUN_EVIDENCE_KINDS),
+  command: z.string().min(1).optional(),
+  exitCode: z.number().int().optional(),
+  artifact: z.string().min(1).optional(),
+  note: z.string().min(1).optional()
+}).strict();
+
+const runStepSchema = z.object({
+  id: z.enum(PILOT_RUN_STEPS),
+  status: z.enum(PILOT_RUN_STEP_STATUSES),
+  commit: revisionSchema,
+  attempts: z.number().int().min(1).max(PILOT_RUN_REPAIR_BUDGET),
+  evidence: z.array(evidenceEntrySchema),
+  diagnostic: z.string().min(1).optional(),
+  diff: z.string().min(1).optional(),
+  durationMs: z.number().int().min(0).optional()
+}).strict().superRefine((value, ctx) => {
+  if (value.status === "pass" && value.evidence.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["evidence"], message: "A passed step must carry evidence." });
+  }
+  if (value.status === "blocked" && value.diagnostic === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["diagnostic"], message: "A blocked step must carry a diagnostic." });
+  }
+});
+
+export const pilotRunJournalSchema = z.object({
+  schema: z.literal("pilot-run/1.0"),
+  pilot: identifierSchema,
+  branch: z.string().min(1),
+  commit: revisionSchema,
+  steps: z.array(runStepSchema).max(PILOT_RUN_STEPS.length).superRefine((steps, ctx) => {
+    const seen = new Set<string>();
+    steps.forEach((entry, index) => {
+      if (seen.has(entry.id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["steps", index, "id"], message: `Step '${entry.id}' appears twice.` });
+      }
+      seen.add(entry.id);
+    });
+  })
+}).strict();
+
+export type PilotRunJournal = z.infer<typeof pilotRunJournalSchema>;
+export type PilotRunStepId = (typeof PILOT_RUN_STEPS)[number];
+export type PilotRunStepStatus = (typeof PILOT_RUN_STEP_STATUSES)[number];
+export type PilotRunEvidenceKind = (typeof PILOT_RUN_EVIDENCE_KINDS)[number];
+export type PilotRunEvidenceEntry = z.infer<typeof evidenceEntrySchema>;
+export type PilotRunStep = z.infer<typeof runStepSchema>;

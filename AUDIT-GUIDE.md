@@ -104,6 +104,8 @@ work).
 | `ILA176` | A pilot manifest is malformed: a missing path, an empty claim set, or a gate that is not an object. | Yes, `verify` refuses to run. |
 | `ILA177` | A pilot manifest declares a claim that is not in the registry. | Yes, certification refuses to run on a claim it cannot resolve. |
 | `ILA178` | A declared claim has no command, so nothing can settle it. | Yes, `verify` refuses to certify it. |
+| `ILA179` | A run journal is not a JSON document, or a step claims `pass` with no evidence, or a `blocked` step carries no diagnostic. | Yes, `pilot run` refuses to resume on it. |
+| `ILA180` | A run journal has the wrong type where the schema expects one, for example a commit that is not a revision or an attempt count above the repair budget. | Yes, `pilot run` refuses to resume on it. |
 
 `ILA120` is reserved and not emitted yet.
 
@@ -112,6 +114,10 @@ itself: the evidence and ledger codes by `intentlane evidence validate`, and the
 manifest codes by `intentlane verify --pilot`. They live in the same registry
 because they block the same commands under `--strict`, and the registry is
 exported as `AUDIT_DIAGNOSTIC_CODES` from `@intentlane/core`.
+
+`ILA179` and `ILA180` come from the run journal, which `intentlane pilot run`
+reads to decide where to resume. A journal is refused rather than repaired, because
+a run that trusts a malformed record will skip a step it never did.
 
 ## Baseline a pilot candidate
 
