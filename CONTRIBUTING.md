@@ -70,3 +70,32 @@ still need an owner decision before a policy is written.
 ## Working with an agent
 
 This repository is largely written with coding agents, and [AGENT-GUIDE.md](AGENT-GUIDE.md) is the instruction file they read. Using one is welcome. The rules above still apply to the result, and you are responsible for what you submit.
+
+## Verification
+
+`pnpm verify` runs the whole chain the CI `checks` job runs, in the same order:
+typecheck and bundle, the test suite, the reference contract, then the generated Swift
+twice with a diff between the two runs. It is one command because the failure this
+repository has already paid for twice was a check that looked green because nobody ran
+the steps after a change.
+
+The command is not a decoration. It was proved to fail by breaking the reference config
+and running it, which is the only way to know a gate can fail.
+
+### Why the CI jobs are red on the private mirror
+
+The private mirror `guillaume-flambard/intentlane-private` shows every job failing in
+under ten seconds. That is not a code failure and not a workflow failure. The jobs never
+obtain a runner: the API reports `runner_name` empty and zero steps, and the identical
+workflow passed in six minutes on the public repository. The difference is that private
+repositories have no included Actions minutes on this plan, so the jobs queue and then
+fail.
+
+Until that changes, a red run on the private mirror says nothing about the code, and
+`pnpm verify` is the gate that does. A runner on a maintainer machine would make the CI
+real and free for private repositories, at the cost of running workflow code on that
+machine.
+
+The three pilot mirrors have Actions disabled entirely. They inherit the upstream
+releases' workflows, which expect the upstream release environment and cannot pass on a
+private mirror, and a mirror is not a place to run someone else's release pipeline.

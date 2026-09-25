@@ -4,13 +4,16 @@
   "license": "MIT",
   "private": true,
   "packageManager": "pnpm@11.27.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc --noEmit && pnpm bundle",
     "bundle": "esbuild packages/cli/src/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=packages/cli/dist/index.cjs",
     "test": "vitest run",
     "validate": "tsx packages/cli/src/index.ts validate",
-    "generate": "tsx packages/cli/src/index.ts generate"
+    "generate": "tsx packages/cli/src/index.ts generate",
+    "verify": "rm -rf .intentlane/generated /tmp/intentlane-second && pnpm build && pnpm test && pnpm validate && pnpm generate --output .intentlane/generated && pnpm generate --output .intentlane/generated --check && pnpm generate --output /tmp/intentlane-second && diff -r .intentlane/generated /tmp/intentlane-second"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
