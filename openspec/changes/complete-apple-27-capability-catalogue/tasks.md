@@ -60,9 +60,16 @@
       pas qu'ils sont absents du module public. Mesuré : aucun des deux
       n'apparaît dans le module public `FoundationModels`, et
       `SpotlightSearchTool` n'est déclaré que par les deux interfaces arm64e.
-- [ ] 4.3 Vérifier qu'une application s'abstrait derrière `LanguageModel` est
+- [x] 4.3 Vérifier qu'une application s'abstrait derrière `LanguageModel` est
       distinguée d'une application liée à `SystemLanguageModel`, et qu'une
-      escalade cloud est distinguée d'un appel local.
+      escalade cloud est distinguée d'un appel local. `describeModelBinding`
+      rapporte deux axes séparément, `protocol` et le modèle Apple nommé, parce
+      qu'une app peut s'abstraire *et* nommer `SystemLanguageModel` par défaut :
+      appeler cela « mixed » jetterait le seul fait qu'un client veut savoir. Les
+      cinq formes sont `absent`, `bound-apple-local`, `bound-apple-cloud`,
+      `abstracted-third-party`, `abstracted-over-apple`. Le rapport ne porte pas
+      encore cette forme : l'y exposer demande une décision de schéma, donc
+      c'est le change suivant, pas celui-ci.
 
 ## 5. Overlay de consommation
 

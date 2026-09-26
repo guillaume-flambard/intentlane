@@ -1,5 +1,89 @@
 import { describe, expect, it } from "vitest";
 import {
+  MODEL_BINDING_SHAPES,
+  describeModelBinding,
+  type AuditSourceFile
+} from "./audit-detect.js";
+
+function source(...lines: readonly string[]): AuditSourceFile {
+  return { path: "Sources/App/Model.swift", contents: lines.join("\n") };
+}
+
+describe("model binding", () => {
+  it("does not read a concrete Apple model as a mention of the protocol", () => {
+    // `SystemLanguageModel` ends with `LanguageModel`. Without a leading word
+    // boundary the protocol would look present in a plainly bound app, and the
+    // audit would tell a client it is abstracted when it is not.
+    const binding = describeModelBinding([source("let model = SystemLanguageModel.default")]);
+
+    expect(binding).toEqual({ shape: "bound-apple-local", protocol: false, appleLocal: true, appleCloud: false });
+  });
+
+  it("separates a cloud escalation from a local call", () => {
+    expect(describeModelBinding([source("let model = PrivateCloudComputeLanguageModel()")]).shape).toBe("bound-apple-cloud");
+    expect(describeModelBinding([source("let model = SystemLanguageModel.default")]).shape).toBe("bound-apple-local");
+  });
+
+  it("calls an app that abstracts behind the protocol over a third-party model abstracted", () => {
+    const binding = describeModelBinding([
+      source("struct Remote: LanguageModel { }", "let session = LanguageModelSession(model: Remote())")
+    ]);
+
+    expect(binding).toEqual({ shape: "abstracted-third-party", protocol: true, appleLocal: false, appleCloud: false });
+  });
+
+  it("keeps local-first with a seam distinct from a plainly bound app", () => {
+    // The architecture Apple sanctioned in WWDC26 session 339: abstract over the
+    // protocol, default to the Apple model. Calling this "mixed" would discard
+    // the only fact a client wants, which is that the app is not locked.
+    const binding = describeModelBinding([
+      source("struct Remote: LanguageModel { }", "let model: any LanguageModel = SystemLanguageModel.default")
+    ]);
+
+    expect(binding.shape).toBe("abstracted-over-apple");
+    expect(binding).toEqual({ shape: "abstracted-over-apple", protocol: true, appleLocal: true, appleCloud: false });
+  });
+
+  it("reports an app that names no model at all as absent rather than guessing", () => {
+    expect(describeModelBinding([source("struct CreateNote: AppIntent { }")]).shape).toBe("absent");
+  });
+
+  it("names its shapes once, and none of them is an audit state", () => {
+    expect([...MODEL_BINDING_SHAPES]).toEqual([
+      "absent",
+      "bound-apple-local",
+      "bound-apple-cloud",
+      "abstracted-third-party",
+      "abstracted-over-apple"
+    ]);
+  });
+});
+
+describe("the models signatures", () => {
+  it("detects a models capability only on the symbol that names it", () => {
+    const detected = detectSources([
+      source("let model = SystemLanguageModel.default", "let tool = OCRTool()", "let options = GenerationOptions()")
+    ]).map((detection) => detection.capability);
+
+    expect(new Set(detected)).toEqual(
+      new Set(["models.system-language-model", "models.ocr-tool", "models.generation-options"])
+    );
+    // A bound app does not thereby claim the protocol, nor the bridge tool of
+    // the other framework.
+    expect(detected).not.toContain("models.language-model");
+    expect(detected).not.toContain("models.spotlight-search-tool");
+  });
+
+  it("detects the bridge tools in the framework that actually declares them", () => {
+    const detected = detectSources([source("let ocr = OCRTool()", "let search = SpotlightSearchTool()")]).map(
+      (detection) => detection.capability
+    );
+
+    expect(detected).toContain("models.ocr-tool");
+    expect(detected).toContain("models.spotlight-search-tool");
+  });
+});
+import {
   completeSchemaDomains,
   detectSchemaDomains,
   detectSources,

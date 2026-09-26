@@ -22,8 +22,71 @@ const SIGNATURES: readonly Signature[] = [
   { capability: "discovery.entity-query", pattern: /:\s*EntityQuery\b/, kind: "swift" },
   { capability: "discovery.indexed-entity", pattern: /\bIndexedEntity\b/, kind: "swift" },
   { capability: "cross-app.transferable", pattern: /:\s*Transferable\b/, kind: "swift" },
-  { capability: "proof.app-intents-testing", pattern: /\bAppIntentsTesting\b/, kind: "test" }
+  { capability: "proof.app-intents-testing", pattern: /\bAppIntentsTesting\b/, kind: "test" },
+  // `\b` is load-bearing on all three. `SystemLanguageModel` ends with
+  // `LanguageModel`, and a pattern without a leading boundary would read the
+  // concrete Apple class as a mention of the protocol, which is the difference
+  // between "bound to Apple's model" and "abstracted behind the protocol".
+  { capability: "models.system-language-model", pattern: /\bSystemLanguageModel\b/, kind: "swift" },
+  { capability: "models.private-cloud-compute", pattern: /\bPrivateCloudComputeLanguageModel\b/, kind: "swift" },
+  { capability: "models.language-model", pattern: /\bLanguageModel\b/, kind: "swift" },
+  { capability: "models.image-input", pattern: /\bImageAttachmentContent\b/, kind: "swift" },
+  { capability: "models.generation-options", pattern: /\bGenerationOptions\b/, kind: "swift" },
+  { capability: "models.dynamic-profile", pattern: /\bDynamicProfile\b/, kind: "swift" },
+  { capability: "models.ocr-tool", pattern: /\bOCRTool\b/, kind: "swift" },
+  { capability: "models.spotlight-search-tool", pattern: /\bSpotlightSearchTool\b/, kind: "swift" }
 ];
+
+/**
+ * How an application reaches a model. This is a shape, not a score: it says which
+ * door the code goes through, and it is derived only from which symbols the
+ * source names.
+ */
+export const MODEL_BINDING_SHAPES = [
+  "absent",
+  "bound-apple-local",
+  "bound-apple-cloud",
+  "abstracted-third-party",
+  "abstracted-over-apple"
+] as const;
+export type ModelBindingShape = (typeof MODEL_BINDING_SHAPES)[number];
+
+export type ModelBinding = Readonly<{
+  shape: ModelBindingShape;
+  /** The app names `LanguageModel` as a type, so it can hold any conformer. */
+  protocol: boolean;
+  appleLocal: boolean;
+  appleCloud: boolean;
+}>;
+
+/**
+ * Distinguishes an app that abstracts behind the `LanguageModel` protocol from
+ * one bound to a concrete Apple model, and a cloud escalation from a local call.
+ *
+ * The two are separate axes on purpose. An app can abstract behind the protocol
+ * *and* name `SystemLanguageModel` as its default, which is local-first with a
+ * seam for another provider, and calling that "mixed" would throw away the most
+ * interesting thing about it. So the axes are reported as they are, and the
+ * shape is derived from them: abstracted over a non-Apple model is the only shape
+ * that says the app is not locked to Apple's, and it is the one an audit client
+ * pays to be told.
+ */
+export function describeModelBinding(sources: readonly AuditSourceFile[]): ModelBinding {
+  const text = sources.map((source) => source.contents).join("\n");
+  const appleLocal = /\bSystemLanguageModel\b/.test(text);
+  const appleCloud = /\bPrivateCloudComputeLanguageModel\b/.test(text);
+  const protocol = /\bLanguageModel\b/.test(text);
+  const shape: ModelBindingShape = !protocol && !appleLocal && !appleCloud
+    ? "absent"
+    : protocol && !appleLocal && !appleCloud
+      ? "abstracted-third-party"
+      : protocol
+        ? "abstracted-over-apple"
+        : appleCloud
+          ? "bound-apple-cloud"
+          : "bound-apple-local";
+  return { shape, protocol, appleLocal, appleCloud };
+}
 
 export function detectSources(sources: readonly AuditSourceFile[]): readonly AuditDetection[] {
   const detections: AuditDetection[] = [];
