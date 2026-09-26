@@ -70,6 +70,26 @@ checkout, with the tools a normal developer already has?
 - Expect the toolchain itself to be a prerequisite. HandBrake's core compiles
   Metal shaders, and Xcode 27 no longer includes the Metal compiler, so the Metal
   Toolchain has to be downloaded before the project builds at all.
+- Expect the deployment target to be below the range Xcode 27 supports, on most
+  projects and not on the careful ones. Measured on four candidates: HandBrake,
+  Transmission at 11.0 and LuLu at 10.15 all fail with
+  `MACOSX_DEPLOYMENT_TARGET is set to X, but the range of supported deployment
+  target versions is 12.0 to 27.0.x`, while Cyberduck already builds at 27.0. So
+  read the declared target before the first build, and if it is below 12.0 expect
+  to override it, record the override, and say in the fiche that the checkout was
+  not modified to achieve it.
+- Expect a checkout not to contain everything it needs to build. LuLu's `LuLu`
+  target copies a prebuilt, signed `Netiquette.app` into its Resources through a
+  `PBXFileReference` with `lastKnownFileType = wrapper.application`, and that
+  bundle is not in version control, so a fresh clone cannot link. No build setting
+  produces it. Check whether a referenced application bundle or framework is
+  actually present before spending a build on finding out.
+- Expect a checkout to need its own build tool before the IDE build, and expect
+  that tool to be missing. Cyberduck does not link until `mvn` has run, the CI
+  asks for JDK 21, and the Developer ID certificate and the two Sparkle signing
+  keys live in the maintainers' secrets. Read the project's CI workflow before
+  building: it is the build recipe that actually runs, and it names the
+  prerequisites the README does not.
 - If the build is interrupted, clean its own state before retrying. An interrupted
   autotools run leaves directories behind that the project's clean step does not
   remove, and the next run fails on a directory that already exists.
