@@ -29,6 +29,9 @@
 
 ## 2. Entités et paramètres
 
+> Bloqué par `score-across-catalogue-growth` : ces tâches ajoutent des records, donc
+> du dénominateur. Voir la dépendance déclarée dans `proposal.md`.
+
 - [ ] 2.1 Ajouter le groupe `entity` et les records `FileEntity`,
       `TransientAppEntity`, `UniqueAppEntity`, `URLRepresentableEntity`,
       `OwnershipProvidingEntity`, `EntityCollection`.
@@ -43,6 +46,8 @@
       `EntityQuery`.
 
 ## 3. Exécution et découverte
+
+> Bloqué par `score-across-catalogue-growth`, pour la même raison.
 
 - [ ] 3.1 Ajouter le record `IntentExecutionTargets` avec les cibles que le SDK
       déclare, et vérifier qu'un intent restreint à une extension est signalé

@@ -56,3 +56,14 @@ sortie existant, aucun changement de la suite `audit-catalogue` en dehors de
 l'ajout du groupe `models`. Le code généré n'est pas affecté : ce change ne
 touche que ce que l'auditeur sait voir. Public OSS, donc pas de référence à une
 application tierce dans le code.
+
+## Dépendance bloquante sur `score-across-catalogue-growth`
+
+Les tâches 2.x et 3.x de ce change ajoutent des records au catalogue, et chaque
+record ajoute trois points au dénominateur du score. La tâche 6.2 a mesuré le
+résultat : neuf records ont fait passer une application inchangée de 7 à 5.
+
+Tant que le traitement de `unknown` n'est pas décidé dans
+`score-across-catalogue-growth`, écrire les tâches 2.x et 3.x revient à figer le
+problème dans deux cents records de plus. Ces tâches sont donc dépendantes, et
+leur rédaction attend ce change.
