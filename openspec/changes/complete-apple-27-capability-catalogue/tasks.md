@@ -1,12 +1,15 @@
 ## 1. Preuve et dérive
 
-- [ ] 1.1 Ajouter `sdk: { framework, symbol }` à `CapabilityRecord` et le peupler
-      pour les 29 records existants, sans changer leur `claim`.
-- [ ] 1.2 Écrire le test de dérive : lire les `.swiftinterface` du SDK installé,
+- [x] 1.1 Ajouter `sdk: readonly { framework, symbol }[]` à `CapabilityRecord` et le
+      peupler pour les 29 records existants, sans changer leur `claim`. Les 15
+      records qui nomment un symbole en portent un ; les 14 records de
+      comportement portent le symbole qui les établit, vérifié dans le SDK
+      installé.
+- [x] 1.2 Écrire le test de dérive : lire les `.swiftinterface` du SDK installé,
       lister les symboles publics App Intents et Foundation Models, et vérifier
       que chaque symbole du catalogue est résolvable dans le framework qu'il
       déclare. Vérifier qu'un symbole dupliqué dans deux frameworks échoue.
-- [ ] 1.3 Vérifier que la dérive est un manque de catalogue : ajouter un symbole
+- [x] 1.3 Vérifier que la dérive est un manque de catalogue : ajouter un symbole
       hors catalogue dans une fixture et vérifier qu'il est rapporté comme tel,
       et non comme une capacité manquante du projet audité.
 - [ ] 1.4 Vérifier qu'un chemin de SDK absent laisse l'état `unknown` et ne fait

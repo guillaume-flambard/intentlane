@@ -41,6 +41,16 @@ de périmètre.
   public. L'auditeur doit connaître le framework pour le détecter, donc le
   record le porte.
 
+- **La preuve est une liste, et aucun record n'en est privé.** Sur les 29 records
+  existants, 15 nomment un symbole du SDK et 14 décrivent un comportement
+  (« App Schema conformance », « Siri and Apple Intelligence surface »). Un champ
+  unique ne rend pas les deux, et un champ obligatoire forcerait d'attribuer un
+  symbole inventé à un comportement, ce que la décision ci-dessus interdit. Le
+  champ est donc une liste, et les 14 comportements reçoivent le symbole qui les
+  établit réellement, par exemple `CSSearchableIndex` pour le cycle de vie
+  Spotlight. Le test de dérive devient l'arbitre de cette attribution : un symbole
+  mal attribué échoue au lieu de mentir dans un rapport client.
+
 - **Le catalogue ne nomme aucune application.** La consommation et la priorité
   vivent dans un overlay séparé, joint au rapport. Le catalogue reste un fait
   Apple et reste valide quand l'overlay est absent. C'est ce qui permet à
@@ -60,6 +70,9 @@ de périmètre.
 
 - Le SDK évolue plus vite que le change : le test de dérive échoue et nomme le
   symbole, ce qui est le comportement voulu d'un test.
+- Les 29 attributions de symbole sont le coût principal du change, et chacune est
+  une vérification, pas une déduction. C'est le seul endroit où une erreur
+  produirait un rapport faux mais plausible.
 - Ajouter un groupe casse l'assertion de tableau exact dans
   `audit-catalogue.test.ts` : c'est un test qui fait son travail, il se met à
   jour avec l'intention, pas autour d'elle.
