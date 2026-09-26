@@ -11,7 +11,8 @@ export const CAPABILITY_GROUPS = [
   "cross-app",
   "relevance",
   "execution",
-  "proof"
+  "proof",
+  "models"
 ] as const;
 export type CapabilityGroup = (typeof CAPABILITY_GROUPS)[number];
 
@@ -398,6 +399,117 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     claim: "siri-journey",
     security: "medium",
     classification: "siri-eligible"
+  },
+  // Foundation Models is not a brick of App Intents. It is the reasoning stack:
+  // its own framework, its own cycle, its own failure mode. The `models` group is
+  // therefore separate, and every record here carries `claim: "auditor"`, because
+  // this change teaches the auditor to see the stack, not to generate against it.
+  //
+  // Availability is the SDK's declared default deployment target, not a
+  // per-symbol claim: none of these declarations carries a version gate in the
+  // interface, only `@available(tvOS, unavailable)` and
+  // `@available(watchOS, unavailable)`. See the note in design.md.
+  {
+    id: "models.system-language-model",
+    group: "models",
+    surface: "SystemLanguageModel",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "SystemLanguageModel" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.language-model",
+    group: "models",
+    surface: "LanguageModel",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "LanguageModel" }],
+companions: [],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.dynamic-profile",
+    group: "models",
+    surface: "DynamicProfile",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "DynamicProfile" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.private-cloud-compute",
+    group: "models",
+    surface: "PrivateCloudComputeLanguageModel",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "PrivateCloudComputeLanguageModel" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "models.image-input",
+    group: "models",
+    surface: "ImageAttachmentContent",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "ImageAttachmentContent" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "models.generation-options",
+    group: "models",
+    surface: "GenerationOptions",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "GenerationOptions" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.tool",
+    group: "models",
+    surface: "Tool",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "Tool" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  // The two tool providers the SDK ships are public only in a bridge module. A
+  // scan that reads FoundationModels alone finds neither, and would report a
+  // capability missing from a project that in fact uses it.
+  {
+    id: "models.ocr-tool",
+    group: "models",
+    surface: "OCRTool",
+    availability: { macos: "27.0", ios: "27.0" },
+    companions: ["models.tool"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "medium",
+    sdk: [{ framework: "_Vision_FoundationModels", symbol: "OCRTool" }]
+  },
+  {
+    id: "models.spotlight-search-tool",
+    group: "models",
+    surface: "SpotlightSearchTool",
+    availability: { macos: "27.0", ios: "27.0" },
+    companions: ["models.tool"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "medium",
+    sdk: [{ framework: "_CoreSpotlight_FoundationModels", symbol: "SpotlightSearchTool" }]
   }
 ];
 

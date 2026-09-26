@@ -20,7 +20,8 @@ describe("capability catalogue", () => {
       "cross-app",
       "relevance",
       "execution",
-      "proof"
+      "proof",
+      "models"
     ]);
     expect([...CAPABILITY_CLAIMS]).toEqual(["auditor", "build", "surfaces", "siri-journey", "domain-package"]);
     expect([...SCHEMA_CLASSIFICATIONS]).toEqual(["siri-eligible", "shortcuts-only", "unknown"]);
@@ -102,8 +103,8 @@ describe("capability catalogue", () => {
       }
     }
     const proven = CAPABILITY_CATALOGUE.filter((record) => record.sdk.length > 0);
-    expect(proven.length).toBe(28);
-    expect(CAPABILITY_CATALOGUE.length).toBe(29);
+    expect(proven.length).toBe(37);
+    expect(CAPABILITY_CATALOGUE.length).toBe(38);
   });
 
   it("leaves the proof empty for the one record whose surface names a module, not a symbol", () => {

@@ -55,9 +55,11 @@
       protocole `LanguageModel`, `DynamicProfile`,
       `PrivateCloudComputeLanguageModel`, l'entrée image, `GenerationOptions` et
       le protocole `Tool`.
-- [ ] 4.2 Porter le framework-pont sur `OCRTool` et `SpotlightSearchTool`, et
+- [x] 4.2 Porter le framework-pont sur `OCRTool` et `SpotlightSearchTool`, et
       vérifier que l'auditeur les résout depuis leur framework-pont et ne conclut
-      pas qu'ils sont absents du module public.
+      pas qu'ils sont absents du module public. Mesuré : aucun des deux
+      n'apparaît dans le module public `FoundationModels`, et
+      `SpotlightSearchTool` n'est déclaré que par les deux interfaces arm64e.
 - [ ] 4.3 Vérifier qu'une application s'abstrait derrière `LanguageModel` est
       distinguée d'une application liée à `SystemLanguageModel`, et qu'une
       escalade cloud est distinguée d'un appel local.

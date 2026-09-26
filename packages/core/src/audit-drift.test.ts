@@ -47,7 +47,23 @@ const APP_INTENTS_INTERFACE = [
 
 const CORE_SPOTLIGHT_INTERFACE = [INTERFACE_HEADER, "public struct CSSearchableItemRefinement {", "}"];
 
-const FOUNDATION_MODELS_INTERFACE = [INTERFACE_HEADER, "public protocol Generable {", "}", "public struct GenerationOptions {", "}"];
+const FOUNDATION_MODELS_INTERFACE = [
+  INTERFACE_HEADER,
+  "public class SystemLanguageModel {",
+  "}",
+  "public protocol LanguageModel {",
+  "}",
+  "public protocol DynamicProfile {",
+  "}",
+  "public class PrivateCloudComputeLanguageModel {",
+  "}",
+  "public struct ImageAttachmentContent {",
+  "}",
+  "public struct GenerationOptions {",
+  "}",
+  "public protocol Tool {",
+  "}"
+];
 
 const CORE_SPOTLIGHT_HEADER = [
   "//  CSSearchableIndex.h",
@@ -593,20 +609,40 @@ describe.skipIf(installed === undefined)("the installed SDK 27", () => {
 
   // One test per variant: the SDK ships four interfaces for every framework, and
   // reading all four inside a single test would put it at the default timeout.
+  // `SpotlightSearchTool` is declared by the arm64e interfaces of
+  // `_CoreSpotlight_FoundationModels` and by neither x86_64 interface in SDK 27.
+  // That is a fact about the SDK, not a gap in the catalogue, and the honest way
+  // to hold it is to name it: an x86_64 audit must be told the tool does not exist
+  // there, and an arm64e audit must not have its resolution weakened. So each
+  // variant asserts the complete truth for that variant, which is a stronger
+  // statement than "everything resolves everywhere".
+  const ARM64E_ONLY = "SpotlightSearchTool";
+
   for (const variant of SWIFTINTERFACE_VARIANTS) {
-    it(`resolves every catalogue symbol for the ${variant} variant`, async () => {
+    it(`resolves every catalogue symbol the ${variant} variant declares, and names what it does not`, async () => {
       const sdk = installed;
       if (sdk === undefined) return;
+      const arm64e = variant.startsWith("arm64e");
       const index = await readSdkSymbolIndex(sdk.path, catalogueFrameworks(), variant);
       const drift = compareCatalogueWithSdk(index, variant);
 
-      expect({ variant: drift.variant, unresolved: drift.unresolvedEvidence, duplicates: drift.duplicateSymbols }).toEqual({
-        variant,
-        unresolved: [],
-        duplicates: []
-      });
+      expect({ variant: drift.variant, duplicates: drift.duplicateSymbols }).toEqual({ variant, duplicates: [] });
+      expect(drift.unresolvedEvidence.map((finding) => `${finding.framework}/${finding.symbol}`)).toEqual(
+        arm64e ? [] : [`_CoreSpotlight_FoundationModels/${ARM64E_ONLY}`]
+      );
+      // The absence is attributed to the record that claims it, so a reader knows
+      // which capability is unavailable rather than only which symbol is.
+      expect(drift.unresolvedEvidence[0]?.capability).toBe(arm64e ? undefined : "models.spotlight-search-tool");
       expect(index.map((frame) => frame.framework)).toEqual(
-        expect.arrayContaining(["AppIntents", "CoreSpotlight", "CoreTransferable", "Foundation", "FoundationModels"])
+        expect.arrayContaining([
+          "AppIntents",
+          "CoreSpotlight",
+          "CoreTransferable",
+          "Foundation",
+          "FoundationModels",
+          "_CoreSpotlight_FoundationModels",
+          "_Vision_FoundationModels"
+        ])
       );
     });
   }
