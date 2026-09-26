@@ -30,11 +30,23 @@ export type SchemaClassification = (typeof SCHEMA_CLASSIFICATIONS)[number];
 
 export type CapabilityAvailability = Readonly<{ macos?: string; ios?: string }>;
 
+/**
+ * The SDK proof that establishes a record. `framework` is the framework that
+ * ships the symbol, which is a bridge framework when the symbol is not
+ * resolvable from the public module. Symbol names come from the installed SDK,
+ * never from prose: a record that describes a behaviour carries the symbol that
+ * establishes it, and a record whose surface names a module rather than a
+ * symbol carries nothing, because inventing one would be a claim the SDK does
+ * not make.
+ */
+export type CapabilitySymbol = Readonly<{ framework: string; symbol: string }>;
+
 export type CapabilityRecord = Readonly<{
   id: string;
   group: CapabilityGroup;
   surface: string;
   availability: CapabilityAvailability;
+  sdk: readonly CapabilitySymbol[];
   companions: readonly string[];
   evidence: readonly AuditEvidenceKind[];
   claim: CapabilityClaim;
@@ -48,6 +60,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "foundation",
     surface: "AppIntent",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppIntent" }],
     companions: [],
     evidence: ["swift", "metadata"],
     claim: "build",
@@ -58,6 +71,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "foundation",
     surface: "@Parameter",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "Parameter" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift"],
     claim: "build",
@@ -68,6 +82,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "foundation",
     surface: "IntentResult traits",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IntentResult" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "metadata"],
     claim: "build",
@@ -78,6 +93,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "foundation",
     surface: "AppShortcutsProvider",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppShortcutsProvider" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "metadata"],
     claim: "surfaces",
@@ -88,6 +104,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "foundation",
     surface: "LocalizedStringResource",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "Foundation", symbol: "LocalizedStringResource" }],
     companions: [],
     evidence: ["swift"],
     claim: "build",
@@ -98,6 +115,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "App Schema conformance",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppSchema" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "metadata"],
     claim: "siri-journey",
@@ -109,6 +127,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "@AppIntent(schema:)",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppIntent" }],
     companions: ["semantics.app-schema"],
     evidence: ["swift", "metadata"],
     claim: "siri-journey",
@@ -120,6 +139,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "@AppEntity(schema:)",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppEntity" }],
     companions: ["semantics.app-schema", "discovery.entity-query"],
     evidence: ["swift", "metadata"],
     claim: "siri-journey",
@@ -131,6 +151,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "@AppEnum(schema:)",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppEnum" }],
     companions: ["semantics.app-schema"],
     evidence: ["swift", "metadata"],
     claim: "siri-journey",
@@ -142,6 +163,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "schema parameter and result completeness",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppSchemaIntent" }],
     companions: ["semantics.schema-intent", "semantics.schema-entity"],
     evidence: ["swift", "metadata", "test"],
     claim: "domain-package",
@@ -153,6 +175,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "semantics",
     surface: "Shortcuts automation schema",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppShortcutsContent" }],
     companions: [],
     evidence: ["swift", "metadata"],
     claim: "surfaces",
@@ -164,6 +187,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "discovery",
     surface: "EntityQuery",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "EntityQuery" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift"],
     claim: "build",
@@ -174,6 +198,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "discovery",
     surface: "IntentValueQuery",
     availability: { macos: "26.0", ios: "26.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IntentValueQuery" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift"],
     claim: "build",
@@ -184,6 +209,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "discovery",
     surface: "IndexedEntity",
     availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IndexedEntity" }],
     companions: ["discovery.entity-query", "discovery.spotlight-lifecycle"],
     evidence: ["swift", "metadata", "test"],
     claim: "domain-package",
@@ -194,6 +220,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "discovery",
     surface: "Spotlight indexing lifecycle",
     availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "CoreSpotlight", symbol: "CSSearchableIndex" }],
     companions: ["discovery.indexed-entity"],
     evidence: ["swift", "test"],
     claim: "surfaces",
@@ -204,6 +231,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "cross-app",
     surface: "Transferable value",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "CoreTransferable", symbol: "Transferable" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "test"],
     claim: "domain-package",
@@ -214,6 +242,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "cross-app",
     surface: "onscreen view annotations",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppEntityAnnotatable" }],
     companions: ["semantics.schema-entity"],
     evidence: ["swift"],
     claim: "domain-package",
@@ -224,6 +253,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "relevance",
     surface: "intent donations",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IntentDonationManager" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "test"],
     claim: "domain-package",
@@ -234,6 +264,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "relevance",
     surface: "RelevantEntities",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "RelevantEntities" }],
     companions: ["discovery.entity-query"],
     evidence: ["swift", "test"],
     claim: "domain-package",
@@ -244,6 +275,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "relevance",
     surface: "SyncableEntity",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "SyncableEntity" }],
     companions: ["discovery.entity-query"],
     evidence: ["swift", "test"],
     claim: "domain-package",
@@ -254,6 +286,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "execution",
     surface: "app-owned perform implementation",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "perform" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "test"],
     claim: "build",
@@ -264,6 +297,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "execution",
     surface: "long running intent",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "LongRunningIntent" }],
     companions: ["execution.native-handler"],
     evidence: ["swift", "test"],
     claim: "domain-package",
@@ -274,6 +308,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "execution",
     surface: "LiveActivityIntent",
     availability: { ios: "17.0" },
+    sdk: [{ framework: "AppIntents", symbol: "LiveActivityIntent" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift"],
     claim: "domain-package",
@@ -284,6 +319,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "requestConfirmation",
     availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "AppIntents", symbol: "requestConfirmation" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "test"],
     claim: "build",
@@ -294,6 +330,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "IntentAuthenticationPolicy",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IntentAuthenticationPolicy" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "metadata", "test"],
     claim: "build",
@@ -304,6 +341,10 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "AppIntentsTesting",
     availability: { macos: "15.0", ios: "18.0" },
+    // The surface names a module, not a symbol: no public declaration in
+    // AppIntentsTesting is called AppIntentsTesting, so the framework is the
+    // evidence and the list stays empty rather than carrying a guess.
+    sdk: [],
     companions: ["execution.native-handler"],
     evidence: ["test"],
     claim: "domain-package",
@@ -314,6 +355,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "Shortcuts app surface",
     availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppShortcutsProvider" }],
     companions: ["foundation.shortcuts-provider"],
     evidence: ["metadata"],
     claim: "surfaces",
@@ -324,6 +366,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "Spotlight content surface",
     availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "CoreSpotlight", symbol: "CSSearchableItem" }],
     companions: ["discovery.indexed-entity"],
     evidence: ["metadata", "test"],
     claim: "surfaces",
@@ -334,6 +377,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "proof",
     surface: "Siri and Apple Intelligence surface",
     availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppSchema" }],
     companions: ["semantics.app-schema"],
     evidence: ["test", "metadata"],
     claim: "siri-journey",

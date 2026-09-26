@@ -91,4 +91,39 @@ describe("capability catalogue", () => {
     expect(findCapability("proof.siri-surface")?.claim).toBe("siri-journey");
     expect(findCapability("missing.capability")).toBeUndefined();
   });
+
+  it("carries the SDK proof that establishes every record that can carry one", () => {
+    const bare = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    for (const record of CAPABILITY_CATALOGUE) {
+      for (const entry of record.sdk) {
+        expect(entry.framework).toMatch(bare);
+        expect(entry.framework).not.toContain(".framework");
+        expect(entry.symbol).toMatch(bare);
+      }
+    }
+    const proven = CAPABILITY_CATALOGUE.filter((record) => record.sdk.length > 0);
+    expect(proven.length).toBe(28);
+    expect(CAPABILITY_CATALOGUE.length).toBe(29);
+  });
+
+  it("leaves the proof empty for the one record whose surface names a module, not a symbol", () => {
+    const bare = CAPABILITY_CATALOGUE.filter((record) => record.sdk.length === 0).map((record) => record.id);
+    expect(bare).toEqual(["proof.app-intents-testing"]);
+    expect(findCapability("proof.app-intents-testing")?.surface).toBe("AppIntentsTesting");
+  });
+
+  it("never attributes one symbol to two frameworks", () => {
+    const frameworksBySymbol = new Map<string, Set<string>>();
+    for (const record of CAPABILITY_CATALOGUE) {
+      for (const entry of record.sdk) {
+        const frameworks = frameworksBySymbol.get(entry.symbol) ?? new Set<string>();
+        frameworks.add(entry.framework);
+        frameworksBySymbol.set(entry.symbol, frameworks);
+      }
+    }
+    const ambiguous = [...frameworksBySymbol.entries()]
+      .filter(([, frameworks]) => frameworks.size > 1)
+      .map(([symbol]) => symbol);
+    expect(ambiguous).toEqual([]);
+  });
 });

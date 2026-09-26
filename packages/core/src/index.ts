@@ -14,6 +14,7 @@ export * from "./audit-route.js";
 export * from "./audit-catalogue.js";
 export * from "./audit-detect.js";
 export * from "./audit-diff.js";
+export * from "./audit-drift.js";
 export * from "./audit-format.js";
 export * from "./audit-run.js";
 export * from "./audit-sdk.js";
