@@ -41,7 +41,7 @@ de périmètre.
   public. L'auditeur doit connaître le framework pour le détecter, donc le
   record le porte.
 
-- **La preuve est une liste, et aucun record n'en est privé.** Sur les 29 records
+- **La preuve est une liste, et le champ est requis partout.** Sur les 29 records
   existants, 15 nomment un symbole du SDK et 14 décrivent un comportement
   (« App Schema conformance », « Siri and Apple Intelligence surface »). Un champ
   unique ne rend pas les deux, et un champ obligatoire forcerait d'attribuer un
@@ -50,6 +50,13 @@ de périmètre.
   établit réellement, par exemple `CSSearchableIndex` pour le cycle de vie
   Spotlight. Le test de dérive devient l'arbitre de cette attribution : un symbole
   mal attribué échoue au lieu de mentir dans un rapport client.
+
+- **Une liste vide est une conclusion, pas une absence de travail.** Un record
+  porte `sdk: []` seulement quand le SDK ne déclare aucun symbole public qui
+  l'établit, ce qui est le cas de `AppIntentsTesting` : c'est un module, pas un
+  type. Ce cas est nommé dans le record, commenté et fixé par un test, pour qu'un
+  jour où le SDK publie le symbole, le test échoue au lieu que la liste vide
+  devienne une excuse muette.
 
 - **Le catalogue ne nomme aucune application.** La consommation et la priorité
   vivent dans un overlay séparé, joint au rapport. Le catalogue reste un fait

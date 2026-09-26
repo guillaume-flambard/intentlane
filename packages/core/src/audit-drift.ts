@@ -301,6 +301,15 @@ export type CatalogueDrift = Readonly<{
   catalogueVersion: string;
   variant: SwiftinterfaceVariant;
   inspected: readonly string[];
+  /**
+   * The frameworks the SDK did not let the reader open. A symbol attributed to
+   * one of them is unjudged, not validated, and a finding is deliberately not
+   * raised for it: the comparator never saw the SDK refute anything. That makes
+   * a non-empty `unreadable` a failure to compare rather than a clean bill of
+   * health, and a caller must not report the catalogue as verified against the
+   * SDK while it holds an entry, because a renamed or moved bridge framework
+   * would otherwise silence every attribution it carries.
+   */
   unreadable: readonly string[];
   unresolvedEvidence: readonly CatalogueDriftFinding[];
   duplicateSymbols: readonly CatalogueDriftFinding[];
@@ -338,7 +347,8 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
     }
   }
   const duplicateSymbols: CatalogueDriftFinding[] = [];
-  for (const entry of resolved.values()) {    const hosts = index.filter((frame) => frame.symbols.includes(entry.symbol)).map((frame) => frame.framework);
+  for (const entry of resolved.values()) {
+    const hosts = index.filter((frame) => frame.symbols.includes(entry.symbol)).map((frame) => frame.framework);
     if (hosts.length > 1) {
       duplicateSymbols.push({
         kind: "duplicate-symbol",
@@ -350,6 +360,11 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
   }
   const described = new Set(resolved.keys());
   const gaps: CatalogueDriftFinding[] = [];
+  // The scan covers the App Intents and Foundation Models stack only. Foundation
+  // is read because foundation.localization attributes a symbol to it, and it is
+  // deliberately not scanned: its public surface is a general-purpose
+  // framework's, not a capability IntentLane is meant to describe, and admitting
+  // it would turn most of the gap report into that one framework's inventory.
   for (const framework of CATALOGUE_DRIFT_FRAMEWORKS) {
     const symbols = findFrameworkSymbols(index, framework);
     if (symbols === undefined) continue;
