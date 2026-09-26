@@ -329,7 +329,7 @@ program.command("explain")
   .argument("<subject>", "Claim id, capability id, or diagnostic code")
   .option("--pilot <file>", "Pilot manifest, so a claim explanation shows its current state")
   .action((subject: string, options: { pilot?: string }) => {
-    let outcomes: ClaimOutcome[] = [];
+    let context: { outcomes?: ClaimOutcome[]; pilotClaims?: string[] } = {};
     if (options.pilot !== undefined) {
       const path = resolve(options.pilot);
       if (!existsSync(path)) {
@@ -339,9 +339,12 @@ program.command("explain")
       }
       try {
         const parsed = parsePilotManifest(parse(readFileSync(path, "utf8")) as unknown);
-        if (parsed.manifest !== undefined) {
-          outcomes = [...evaluateReleaseVerification({ claims: parsed.manifest.claims, gates: {}, observed: {} }).claims];
+        if (parsed.manifest === undefined) {
+          process.stderr.write(`${path} declares no usable pilot manifest.\n`);
+          process.exitCode = 1;
+          return;
         }
+        context = { pilotClaims: [...parsed.manifest.claims] };
       } catch (error) {
         process.stderr.write(`Could not read ${path} as a pilot manifest: ${(error as Error).message}\n`);
         process.exitCode = 1;
@@ -349,7 +352,7 @@ program.command("explain")
       }
     }
     try {
-      process.stdout.write(formatExplanation(subject, outcomes));
+      process.stdout.write(formatExplanation(subject, context));
     } catch (error) {
       process.stderr.write(`${(error as Error).message}\n`);
       process.exitCode = 1;

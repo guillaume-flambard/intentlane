@@ -15,7 +15,11 @@
 ## 3. Ne pas juger
 
 - [x] Refleter l'etat fourni par la derivation, avec sa raison et sa confiance.
-- [x] Distinguer « personne n'a verifie » de « le pilote lu ne revendique pas cela ».
+- [x] Distinguer trois cas : personne n'a verifie, le pilote lu ne revendique pas cela, et
+      le pilote le revendique mais aucune porte n'a tourné. Le dernier ne doit produire ni
+      statut dur ni confiance.
+- [x] N'imprimer une confiance nue que la ou elle signifie quelque chose, et dire
+      explicitement qu'un resultat de commande dur n'a pas de confiance contestable.
 
 ## 4. La decouverte de disponibilite
 

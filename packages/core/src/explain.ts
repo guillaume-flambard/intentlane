@@ -27,7 +27,7 @@ export function resolveExplainSubject(subject: string): ExplainSubject | undefin
 const unrecorded = (what: string, where: string) =>
   `${what} is not recorded in a form this command can read. A human has to read ${where}. This command will not invent one, because a reference it made up would be worse than none.`;
 
-function claimSections(id: PilotClaimId, outcomes: readonly ClaimOutcome[]): readonly string[] {
+function claimSections(id: PilotClaimId, outcomes: readonly ClaimOutcome[], pilotClaims: readonly string[] | undefined): readonly string[] {
   const found = claim(id);
   const outcome = outcomes.find((candidate) => candidate.id === id);
   const held = outcome?.status === "verified";
@@ -36,10 +36,16 @@ function claimSections(id: PilotClaimId, outcomes: readonly ClaimOutcome[]): rea
     "",
     "  Observed",
     outcome === undefined
-      ? outcomes.length === 0
-        ? "    - no verification has run, so nothing has been observed"
-        : `    - this claim is not part of the pilot that was read, so this command knows nothing about it`
-      : `    - status ${outcome.status}${outcome.confidence === undefined ? "" : `, confidence ${outcome.confidence.confidence}`}`,
+      ? pilotClaims !== undefined && !pilotClaims.includes(id)
+        ? "    - this claim is not part of the pilot that was read, so this command knows nothing about it"
+        : "    - no verification has run, so nothing has been observed"
+      : `    - status ${outcome.status}${
+          outcome.confidence === undefined || outcome.status === "contested" || outcome.status === "verified"
+            ? outcome.confidence === undefined
+              ? ""
+              : `, confidence ${outcome.confidence.confidence}`
+            : ", with no contestable confidence: a hard command outcome is not a contest"
+        }`,
     ...(outcome === undefined ? [] : [`    - ${outcome.reason}`]),
     "",
     "  Derived",
@@ -120,7 +126,17 @@ function diagnosticSections(id: string): readonly string[] {
   ];
 }
 
-export function explain(subject: string, outcomes: readonly ClaimOutcome[] = []): readonly string[] {
+export type ExplainContext = Readonly<{
+  outcomes?: readonly ClaimOutcome[];
+  pilotClaims?: readonly string[];
+}>;
+
+function toContext(context: ExplainContext | readonly ClaimOutcome[]): ExplainContext {
+  if (Array.isArray(context)) return { outcomes: context as readonly ClaimOutcome[] };
+  return context as ExplainContext;
+}
+
+export function explain(subject: string, rawContext: ExplainContext | readonly ClaimOutcome[] = {}): readonly string[] {
   const resolved = resolveExplainSubject(subject);
   if (resolved === undefined) {
     throw new Error(
@@ -129,17 +145,20 @@ export function explain(subject: string, outcomes: readonly ClaimOutcome[] = [])
         .join("; ")}.`
     );
   }
+  const settings = toContext(rawContext);
+  const outcomes = settings.outcomes ?? [];
+  const pilotClaims = settings.pilotClaims;
   const head = `${resolved.kind.toUpperCase()} ${resolved.id}`;
   const body =
     resolved.kind === "claim"
-      ? claimSections(resolved.id as PilotClaimId, outcomes)
+      ? claimSections(resolved.id as PilotClaimId, outcomes, pilotClaims)
       : resolved.kind === "capability"
         ? capabilitySections(findCapability(resolved.id) as CapabilityRecord)
         : diagnosticSections(resolved.id);
   return [head, "", ...body, "", "This command explains and does not judge. Verdicts come from `intentlane verify`."];
 }
 
-export function formatExplanation(subject: string, outcomes: readonly ClaimOutcome[] = []): string {
-  return `${explain(subject, outcomes).join("\n")}\n`;
+export function formatExplanation(subject: string, context: ExplainContext | readonly ClaimOutcome[] = {}): string {
+  return `${explain(subject, context).join("\n")}\n`;
 }
 

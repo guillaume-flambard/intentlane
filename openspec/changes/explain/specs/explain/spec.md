@@ -71,13 +71,35 @@ the pilot that was read does not claim.
 - **THEN** the observed section reports the status and the confidence the derivation
   produced, and the not proved section says nothing beyond what the command already proves
 
-#### Scenario: The two kinds of unknown are distinguished
+#### Scenario: The three kinds of unknown are distinguished
 
-- **WHEN** `explain` is given no outcomes at all
+- **WHEN** `explain` is given no outcomes and no pilot
 - **THEN** the observed section says no verification has run
 
-- **WHEN** `explain` is given outcomes that do not cover the claim
+- **WHEN** `explain` is given a pilot whose claims do not include this claim
 - **THEN** the observed section says the claim is not part of the pilot that was read
+
+- **WHEN** `explain` is given a pilot that does claim it, but no gate has run
+- **THEN** the observed section says no verification has run, and SHALL NOT report a hard
+  status, because a command that was never run reports nothing
+
+### Requirement: A confidence is printed only where it means something
+
+`explain` SHALL print a bare confidence only for an outcome whose status a confidence can
+qualify. For a hard command outcome, a high confidence is a tautology of the local source
+rather than a contested measurement, so the rendering SHALL say that instead of printing a
+number that reads as reassurance.
+
+#### Scenario: A hard outcome prints no bare number
+
+- **WHEN** an outcome is `failed` or `missing` with a confidence of 1
+- **THEN** the rendering says there is no contestable confidence, rather than printing
+  `confidence 1`
+
+#### Scenario: A contested outcome prints its confidence
+
+- **WHEN** an outcome is `contested` with a confidence of 0.26
+- **THEN** the rendering prints `confidence 0.26`, because that number is the whole point
 
 ### Requirement: The catalogue states the real availability
 

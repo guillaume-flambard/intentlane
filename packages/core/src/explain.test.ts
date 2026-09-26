@@ -121,8 +121,33 @@ describe("a claim explanation reports what the derivation already decided", () =
   });
 
   it("distinguishes a claim nobody verified from a claim the pilot does not claim", () => {
-    expect(formatExplanation("indexSync", [])).toMatch(/no verification has run/);
-    expect(formatExplanation("spotlight-ui-result", outcomes)).toMatch(/not part of the pilot that was read/);
+    expect(formatExplanation("registration", { outcomes })).toMatch(/no verification has run/);
+    expect(formatExplanation("spotlight-ui-result", { outcomes, pilotClaims: ["indexSync"] })).toMatch(
+      /not part of the pilot that was read/
+    );
+  });
+
+  it("says a claim the pilot holds is unverified, not unknown, when no gate ran here", () => {
+    const text = formatExplanation("indexSync", { pilotClaims: ["indexSync"] });
+    expect(text).toMatch(/no verification has run/);
+    expect(text).not.toMatch(/not part of the pilot/);
+  });
+
+  it("never invents a hard command outcome from an empty gate set", () => {
+    const text = formatExplanation("indexSync", { pilotClaims: ["indexSync"] });
+    expect(text).not.toContain("status missing");
+    expect(text).not.toContain("status failed");
+  });
+
+  it("prints a bare confidence only where it means something", () => {
+    const hard: ClaimOutcome[] = [
+      { id: "contract", evidence: "deterministic", status: "failed", verifiedBy: "intentlane validate", reason: "The contract did not validate.", confidence: { confidence: 1, distribution: { unsupported: 1 } } }
+    ];
+    expect(formatExplanation("contract", { outcomes: hard })).toMatch(/no contestable confidence/);
+    const contested: ClaimOutcome[] = [
+      { id: "contract", evidence: "deterministic", status: "contested", verifiedBy: "intentlane validate", reason: "Below the threshold.", confidence: { confidence: 0.26, distribution: { a: 0.5, b: 0.5 } } }
+    ];
+    expect(formatExplanation("contract", { outcomes: contested })).toContain("confidence 0.26");
   });
 
   it("draws nothing but its own evidence, and every claim renders", () => {
