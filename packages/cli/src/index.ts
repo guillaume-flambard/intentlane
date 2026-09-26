@@ -9,6 +9,7 @@ import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { formatObservations, runObservations } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -321,6 +322,46 @@ program.command("audit")
         for (const gap of blockers) process.stderr.write(`${gap.code} ${gap.message}\n`);
         process.exitCode = 1;
       }
+    }
+  });
+
+program.command("observe")
+  .argument("<manifest>", "Observation probe manifest to run")
+  .option("-o, --output <file>", "Write the report to a file")
+  .option("--format <format>", "Report format", "text")
+  .action(async (manifestPath: string, options: { output?: string; format: string }) => {
+    const path = resolve(manifestPath);
+    if (!existsSync(path)) {
+      process.stderr.write(`No observation manifest at ${path}.\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = parse(readFileSync(path, "utf8"));
+    } catch (error) {
+      process.stderr.write(`Could not read ${path} as YAML: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    let report: Awaited<ReturnType<typeof runObservations>>;
+    try {
+      report = await runObservations(parsed);
+    } catch (error) {
+      process.stderr.write(`${path} is not a valid observation manifest: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    const rendered = options.format === "json" ? `${JSON.stringify(report, null, 2)}\n` : formatObservations(report);
+    if (options.output) {
+      await atomicWrite(resolve(options.output), rendered);
+      process.stdout.write(`Wrote ${resolve(options.output)}\n`);
+    } else {
+      process.stdout.write(rendered);
+    }
+    if (report.unobserved.length > 0) {
+      process.stderr.write(`no observation was recorded for: ${report.unobserved.join(", ")}\n`);
+      process.exitCode = 1;
     }
   });
 

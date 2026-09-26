@@ -28,6 +28,7 @@ export * from "./pilot-executor.js";
 export * from "./discovery.js";
 export * from "./metadata-contract.js";
 export * from "./claim-confidence.js";
+export * from "./observe.js";
 export * from "./claims.js";
 export * from "./release-verification.js";
 export * from "./app-schemas.js";

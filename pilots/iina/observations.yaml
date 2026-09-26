@@ -1,0 +1,35 @@
+# What to observe about a live IINA, and the question each probe answers.
+#
+# This file declares observations, not claims. Nothing here certifies anything: a
+# probe that prints PASS is recorded as the text "PASS". Judgement belongs to
+# `intentlane verify`, which derives it.
+#
+# These are the observation-shaped commands that exist today. The per-application
+# probes that matter most are still missing, and they are what a live reading of the
+# system needs: whether the assistant actually accepted the app, and what the named
+# index held after a real playback. Both were established by hand during the pilot,
+# and neither is declared here, because a probe that cannot be run is worse than a
+# probe that is not written down.
+#
+# Commands resolve from the repository root, so run observe from there.
+
+schema: observation-probes/1.0
+
+probes:
+  - id: core_behaviour
+    subject: adapter-core
+    question: Does the adapter's pure core behave as its own tests describe?
+    command: bash pilots/iina/tests/run-core-tests.sh
+    format: text
+
+  - id: index_lifecycle
+    subject: spotlight-index
+    question: Does a real named Core Spotlight index accept, replace and remove the generated entity?
+    command: bash pilots/iina/tests/run-index-tests.sh
+    format: text
+
+  - id: integration_paths
+    subject: resolver-open-search
+    question: Do the resolver, the open path and the search routing run against the real generated entities?
+    command: bash pilots/iina/tests/run-integration-tests.sh
+    format: text

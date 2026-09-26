@@ -187,3 +187,39 @@ export const claimConfidenceSchema = z
   .strict();
 
 export type ClaimConfidence = z.infer<typeof claimConfidenceSchema>;
+
+export const OBSERVATION_PROBE_FORMATS = ["text", "json"] as const;
+
+const observationProbeSchema = z
+  .object({
+    id: identifierSchema,
+    question: z.string().min(1),
+    command: z.string().min(1),
+    format: z.enum(OBSERVATION_PROBE_FORMATS),
+    subject: z.string().min(1).optional()
+  })
+  .strict();
+
+export const observationProbeManifestSchema = z
+  .object({
+    schema: z.literal("observation-probes/1.0"),
+    probes: z.array(observationProbeSchema).min(1)
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    value.probes.forEach((probe, index) => {
+      if (seen.has(probe.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["probes", index, "id"],
+          message: `Probe '${probe.id}' appears twice. Running the same question twice records the same thing twice.`
+        });
+      }
+      seen.add(probe.id);
+    });
+  });
+
+export type ObservationProbeManifest = z.infer<typeof observationProbeManifestSchema>;
+export type ObservationProbe = z.infer<typeof observationProbeSchema>;
+export type ObservationProbeFormat = (typeof OBSERVATION_PROBE_FORMATS)[number];
