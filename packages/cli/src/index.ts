@@ -8,7 +8,7 @@ import { Command } from "commander";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
-import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { analyseContract, analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, readContract, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { compareCatalogueWithSdk, driftIsComplete, readSdkSymbolIndex } from "../../core/src/audit-drift.js";
 import { formatObservations, runObservations } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
@@ -639,8 +639,9 @@ pilot.command("run")
   .requiredOption("--pilot <id>", "Identifier of the pilot being run")
   .requiredOption("--repository <path>", "Path to the application repository")
   .option("--run-dir <path>", "Directory holding the journal and its evidence", ".intentlane/run")
+  .option("--contract <path>", "The pilot contract naming the seams analyse checks, when it is not next to the working directory")
   .option("--plan", "Print the steps this run would take and stop")
-  .action(async (options: { pilot: string; repository: string; runDir: string; plan?: boolean }) => {
+  .action(async (options: { pilot: string; repository: string; runDir: string; contract?: string; plan?: boolean }) => {
     const repository = resolve(options.repository);
     const runDirectory = resolve(options.runDir);
     const journalFile = join(runDirectory, "journal.json");
@@ -726,18 +727,29 @@ pilot.command("run")
     }
 
     if (plan.steps[0] === "analyse") {
-      const discovery = await discover(await indexRepository(repository));
-      const analysis = analyseDiscovery(discovery);
+      const index = await indexRepository(repository);
+      const discovery = await discover(index);
+      // A contract that names the seams wins over a motif that has to guess them, and
+      // the discovery is written either way: it is what the application offers, which is
+      // a different question from what the pilot claims.
+      const contractPath =
+        options.contract ?? join(process.cwd(), "pilots", options.pilot, "contract.yaml");
+      const config = existsSync(contractPath) ? await readContract(contractPath) : undefined;
+      const analysis = config === undefined ? analyseDiscovery(discovery) : analyseContract(config, index);
       await atomicWrite(join(runDirectory, "discovery.json"), `${JSON.stringify(discovery, null, 2)}\n`);
       await atomicWrite(journalFile, `${JSON.stringify(applyAnalyse(journal, analysis), null, 2)}\n`);
-      for (const object of discovery.objects) {
-        const seams = [
-          ...object.identifiers.map((entry) => `identifier ${entry.property}`),
-          ...object.openers.map((entry) => `opener ${entry.symbol}`)
-        ];
-        process.stdout.write(
-          `${object.name}  ${object.proof.path}:${object.proof.line}  [${seams.join(", ") || "no seam found"}]\n`
-        );
+      if (config !== undefined) {
+        process.stdout.write(`contract: ${contractPath}\n`);
+      } else {
+        for (const object of discovery.objects) {
+          const seams = [
+            ...object.identifiers.map((entry) => `identifier ${entry.property}`),
+            ...object.openers.map((entry) => `opener ${entry.symbol}`)
+          ];
+          process.stdout.write(
+            `${object.name}  ${object.proof.path}:${object.proof.line}  [${seams.join(", ") || "no seam found"}]\n`
+          );
+        }
       }
       process.stdout.write(`${analysis.status} analyse: ${analysis.reason}\n`);
       process.stdout.write(`findings written to ${join(runDirectory, "discovery.json")}\n`);
