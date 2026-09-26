@@ -7,11 +7,29 @@ export const PILOT_LEDGER_PLATFORMS = ["macos", "ios"] as const;
 
 export type PilotLedgerPlatform = (typeof PILOT_LEDGER_PLATFORMS)[number];
 
-export const PILOT_LEDGER_LAYERS = ["contract", "build", "shortcuts", "spotlight", "siri"] as const;
+export const PILOT_LEDGER_LAYERS = [
+  "contract",
+  "build",
+  "metadata",
+  "runtime",
+  "query",
+  "spotlight",
+  "annotations",
+  "shortcuts",
+  "siri"
+] as const;
 
 export type PilotLedgerLayer = (typeof PILOT_LEDGER_LAYERS)[number];
 
-export const PILOT_LEDGER_CLAIMABLE_LAYERS = ["shortcuts", "spotlight", "siri"] as const;
+export const PILOT_LEDGER_CLAIMABLE_LAYERS = [
+  "metadata",
+  "runtime",
+  "query",
+  "spotlight",
+  "annotations",
+  "shortcuts",
+  "siri"
+] as const;
 
 export type PilotLedgerClaimableLayer = (typeof PILOT_LEDGER_CLAIMABLE_LAYERS)[number];
 

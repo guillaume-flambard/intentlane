@@ -20,11 +20,54 @@ function loadFixture(name: string): unknown {
 describe("pilot ledger contract", () => {
   it("publishes the versioned ledger contract", () => {
     expect(PILOT_LEDGER_VERSION).toBe("pilot-evidence/1.0");
-    expect([...PILOT_LEDGER_LAYERS]).toEqual(["contract", "build", "shortcuts", "spotlight", "siri"]);
-    expect([...PILOT_LEDGER_CLAIMABLE_LAYERS]).toEqual(["shortcuts", "spotlight", "siri"]);
+    expect([...PILOT_LEDGER_LAYERS]).toEqual([
+      "contract",
+      "build",
+      "metadata",
+      "runtime",
+      "query",
+      "spotlight",
+      "annotations",
+      "shortcuts",
+      "siri"
+    ]);
+    expect([...PILOT_LEDGER_CLAIMABLE_LAYERS]).toEqual([
+      "metadata",
+      "runtime",
+      "query",
+      "spotlight",
+      "annotations",
+      "shortcuts",
+      "siri"
+    ]);
     expect([...PILOT_LEDGER_LAYER_STATUSES]).toEqual(["pass", "fail", "not-applicable", "blocked"]);
   });
-});
+
+  it("keeps the version stable while the layer vocabulary grows, because layers were always optional", () => {
+    const result = validatePilotLedger(loadFixture("verified-macos.yaml"));
+    expect(result.status).toBe("verified");
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("reads a new layer without a version bump, and still refuses an unknown one", () => {
+    const withNewLayer = loadFixture("verified-macos.yaml") as Record<string, unknown>;
+    const journeys = (withNewLayer["journeys"] as Array<Record<string, unknown>>).map((journey) => ({
+      ...journey,
+      layers: { ...(journey["layers"] as Record<string, unknown>), runtime: "pass", query: "pass" }
+    }));
+    const accepted = validatePilotLedger({ ...withNewLayer, journeys });
+    expect(accepted.diagnostics).toEqual([]);
+
+    const rejected = validatePilotLedger({
+      ...withNewLayer,
+      journeys: journeys.map((journey) => ({
+        ...journey,
+        layers: { ...(journey["layers"] as Record<string, unknown>), telepathy: "pass" }
+      }))
+    });
+    expect(rejected.diagnostics.length).toBeGreaterThan(0);
+    expect(JSON.stringify(rejected.diagnostics)).toMatch(/telepathy/);
+  });});
 
 describe("pilot ledger validation", () => {
   it("marks the complete macOS ledger verified", () => {

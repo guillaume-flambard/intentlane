@@ -1,3 +1,5 @@
+import type { PilotLedgerLayer } from "./pilot-ledger.js";
+
 export const CLAIM_EVIDENCE_KINDS = ["deterministic", "observed"] as const;
 
 export type ClaimEvidenceKind = (typeof CLAIM_EVIDENCE_KINDS)[number];
@@ -22,11 +24,13 @@ export type PilotClaim = Readonly<{
   title: string;
   verifiedBy: string;
   defaultClaimed: boolean;
+  requires: readonly PilotLedgerLayer[];
 }>;
 
 export const PILOT_CLAIMS: readonly PilotClaim[] = [
   {
     id: "contract",
+    requires: ["contract"],
     evidence: "deterministic",
     title: "The contract validates against the IntentLane schema",
     verifiedBy: "intentlane validate",
@@ -34,6 +38,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "generated",
+    requires: ["contract", "build"],
     evidence: "deterministic",
     title: "The committed generated Swift matches the contract",
     verifiedBy: "intentlane generate --check",
@@ -41,6 +46,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "applicationTests",
+    requires: ["contract", "build"],
     evidence: "deterministic",
     title: "The application-owned business tests pass",
     verifiedBy: "the application test command",
@@ -48,6 +54,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "integrationTests",
+    requires: ["contract", "build"],
     evidence: "deterministic",
     title: "The resolver, the open path and the search routing run against the real generated entities",
     verifiedBy: "the integration test command",
@@ -55,6 +62,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "metadata",
+    requires: ["contract", "build", "metadata"],
     evidence: "deterministic",
     title: "The built app exposes the declared system protocols and entities",
     verifiedBy: "appintentsmetadataprocessor plus the metadata gate",
@@ -62,6 +70,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "indexSync",
+    requires: ["contract", "build", "metadata", "query", "spotlight"],
     evidence: "deterministic",
     title: "The named index accepts the generated entity and a full refresh cycle",
     verifiedBy: "the index test command",
@@ -69,6 +78,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "registration",
+    requires: ["contract", "build", "metadata", "runtime"],
     evidence: "deterministic",
     title: "The adapter registers the resolver and both intent handlers at launch",
     verifiedBy: "the registration probe or the registration test",
@@ -76,6 +86,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "siri-conversation",
+    requires: ["contract", "build", "metadata", "runtime", "siri"],
     evidence: "observed",
     title: "Siri resolves a spoken or typed name and opens that exact item",
     verifiedBy: "a person, recorded in the evidence ledger",
@@ -83,6 +94,7 @@ export const PILOT_CLAIMS: readonly PilotClaim[] = [
   },
   {
     id: "spotlight-ui-result",
+    requires: ["contract", "build", "metadata", "query", "spotlight"],
     evidence: "observed",
     title: "A Spotlight result is attributed to the app and opens that exact item",
     verifiedBy: "a person, recorded in the evidence ledger",
