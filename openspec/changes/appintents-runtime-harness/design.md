@@ -47,6 +47,33 @@ etre observe, parce que rien n'a ete emis. Le generateur ne doit donc pas ecrire
 format tant qu'il n'a pas ete observe, sinon le harnais compilera et echouera a
 l'execution, ce qui est le pire resultat possible pour un harnais de preuve.
 
+## Ce que l'experience instrumentee a etabli depuis
+
+L'experience a ete poussee jusqu'au maillon precis, et elle donne une chaine verifiee
+sauf un seul lien.
+
+Le processeur lit bien les valeurs constantes, et l'option est `-scl`. En lui donnant un
+chemin que `swiftc` n'a jamais cree, il a repondu `Failed to read file at path: .../cv`
+puis `No swiftconstvalues found` puis `Extracted no relevant App Intents symbols`. Donc
+les deux bouts sont connus : le processeur consomme par `-scl`, le compilateur doit
+ecrire par `-emit-const-values-path`.
+
+Le maillon ouvert est donc unique : `swiftc` n'ecrit rien meme quand on lui demande
+`-emit-const-values-path`. Quatre formes ont ete essayees, compilation primaire, module
+entier avec `-wmo`, evolution de bibliotheque, et chacune a produit un `.o` sans aucun
+`.swiftconstvalues`. Aucune erreur, aucun fichier, ce qui signifie que le chemin est
+accepte et laisse vide.
+
+Le frontend ne connait aucun interrupteur d'activation. `swift-frontend -help-hidden` ne
+montre que `-disable-const-value-importing` et `-emit-const-values-path`, et rien qui
+active ou desactive l'emission. L'emission est donc active par defaut et depend
+uniquement du chemin fourni, ce qui elimine l'hypothese d'un drapeau manquant.
+
+Reste donc a repondre par un build de cible Xcode reel : quelle ligne de commande Xcode
+ajoute, et ou il pose les `.swiftconstvalues`. C'est exactement la fixture native que la
+decision de route fixe, donc l'enquete et la fixture sont le meme prochain pas, et non
+deux taches.
+
 ## Ce que la change fait donc
 
 Elle ne genere pas encore de harnais. Elle etablit la recette verifiee, la surface
