@@ -60,7 +60,9 @@ export const AUDIT_DIAGNOSTIC_CODES = [
   "ILA177",
   "ILA178",
   "ILA179",
-  "ILA180"
+  "ILA180",
+  "ILA181",
+  "ILA182"
 ] as const;
 
 export type AuditDiagnosticCode = (typeof AUDIT_DIAGNOSTIC_CODES)[number];

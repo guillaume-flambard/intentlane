@@ -1,4 +1,5 @@
 import type { AuditDiagnosticCode } from "./audit.js";
+import { claim, isPilotClaimId, type PilotClaimId } from "./claims.js";
 import { isNonEmptyString, isRecord } from "./guards.js";
 
 export const PILOT_LEDGER_VERSION = "pilot-evidence/1.0";
@@ -48,6 +49,7 @@ export type PilotLedgerRiskEvidence = Readonly<{
 export type PilotLedgerJourney = Readonly<{
   id: string;
   claimed: readonly PilotLedgerClaimableLayer[];
+  claims?: readonly PilotClaimId[];
   layers: Readonly<Record<PilotLedgerLayer, PilotLedgerLayerStatus>>;
   risky: boolean;
   riskEvidence?: PilotLedgerRiskEvidence;
@@ -71,7 +73,7 @@ export type PilotLedger = Readonly<{
 
 export type PilotLedgerStatus = "verified" | "unverified";
 
-export type PilotLedgerDiagnosticCode = Extract<AuditDiagnosticCode, "ILA173" | "ILA174" | "ILA175">;
+export type PilotLedgerDiagnosticCode = Extract<AuditDiagnosticCode, "ILA173" | "ILA174" | "ILA175" | "ILA181" | "ILA182">;
 
 export type PilotLedgerDiagnostic = Readonly<{
   code: PilotLedgerDiagnosticCode;
@@ -172,10 +174,56 @@ function checkJourney(value: unknown, path: string, errors: PilotLedgerDiagnosti
       }
     }
   }
+  let claims: PilotClaimId[] | undefined;
+  const claimsRaw = value["claims"];
+  if (claimsRaw !== undefined) {
+    if (!Array.isArray(claimsRaw)) {
+      errors.push(invalid("ILA181", "A journey claim list must be a list.", `${path}.claims`));
+      valid = false;
+    } else {
+      const known: PilotClaimId[] = [];
+      claimsRaw.forEach((entry, index) => {
+        if (typeof entry !== "string" || !isPilotClaimId(entry)) {
+          errors.push(
+            invalid(
+              "ILA181",
+              `Journey claim must be a known claim id. A ledger names what it proves, so it may not name a claim that does not exist.`,
+              `${path}.claims[${index}]`
+            )
+          );
+          valid = false;
+          return;
+        }
+        if (known.includes(entry)) {
+          errors.push(invalid("ILA181", `Journey claim '${entry}' is named twice.`, `${path}.claims[${index}]`));
+          valid = false;
+          return;
+        }
+        known.push(entry);
+      });
+      const held = new Set<string>([...claimed, ...PILOT_LEDGER_REQUIRED_LAYERS]);
+      for (const id of known) {
+        const uncovered = claim(id).requires.filter((layer) => !held.has(layer));
+        if (uncovered.length > 0) {
+          errors.push(
+            invalid(
+              "ILA182",
+              `Claim '${id}' requires the layer(s) ${uncovered.join(", ")}, which this journey neither claims nor holds by default. A claim whose proof the journey cannot hold cannot be demonstrated by it.`,
+              `${path}.claims[${known.indexOf(id)}]`
+            )
+          );
+          valid = false;
+        }
+      }
+      claims = known;
+    }
+  }
+
   if (!valid || layers === undefined || !isNonEmptyString(value["id"])) return undefined;
   const journey: PilotLedgerJourney = {
     id: value["id"],
     claimed,
+    ...(claims ? { claims } : {}),
     layers: layers as Readonly<Record<PilotLedgerLayer, PilotLedgerLayerStatus>>,
     risky: risky as boolean,
     ...(riskEvidence ? { riskEvidence } : {})
