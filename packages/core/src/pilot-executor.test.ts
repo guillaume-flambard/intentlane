@@ -127,6 +127,26 @@ describe("reading a build outcome", () => {
   it("still gives a signature when the log has no recognisable error, so the loop cannot be fooled into thinking it changed", () => {
     expect(parseBuildOutcome(2, "something went wrong").signature).toBeTruthy();
   });
+
+  it("reads a project-level error, because a build that fails on signing never names a line or a column", () => {
+    const log = [
+      "{ platform:macOS, name:Any Mac }",
+      "/a/FSNotes.xcodeproj: error: Signing for \"FSNotes\" requires selecting either a development team or a provisioning profile",
+      "** BUILD FAILED **",
+      "(1 failure)"
+    ].join("\n");
+    const outcome = parseBuildOutcome(65, log);
+    expect(outcome.diagnostic).toContain("requires selecting either a development team");
+    expect(outcome.signature).toContain("requires selecting either a development team");
+  });
+
+  it("still prefers a compiler error, because the first thing a human reads is the file that failed", () => {
+    const log = [
+      "/a/FSNotes.xcodeproj: error: Signing for \"FSNotes\" requires a development team",
+      "/a/File.swift:12:9: error: cannot find 'X' in scope"
+    ].join("\n");
+    expect(parseBuildOutcome(65, log).diagnostic).toContain("cannot find 'X' in scope");
+  });
 });
 
 describe("the sandbox profile", () => {

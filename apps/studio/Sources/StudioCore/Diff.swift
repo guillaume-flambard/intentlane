@@ -34,6 +34,82 @@ public enum DiffReader {
         case changed(what: String)
     }
 
+    /// What a run changed, file by file, with the origin of each one. The origin is
+    /// derived from the names the generator and the engine actually use, so a file
+    /// is never labelled "generated" because it looked machine written.
+    public struct ChangedFile: Sendable, Equatable, Identifiable {
+        public enum Origin: String, Sendable, Equatable {
+            case generated = "IntentLane generated"
+            case adapter = "Agent adapted"
+            case test = "Test"
+            case existing = "Existing code"
+
+            public var symbol: String {
+                switch self {
+                case .generated: "wand.and.stars"
+                case .adapter: "wrench.and.screwdriver"
+                case .test: "checkmark.seal"
+                case .existing: "doc.text"
+                }
+            }
+        }
+
+        public enum Change: String, Sendable, Equatable {
+            case added, modified, deleted, renamed, untracked
+        }
+
+        public let id: String
+        public let path: String
+        public let origin: Origin
+        public let change: Change
+
+        public init(path: String, origin: Origin, change: Change) {
+            self.id = path
+            self.path = path
+            self.origin = origin
+            self.change = change
+        }
+    }
+
+    public static let generatedFileName = "IntentLaneGenerated.swift"
+    public static let adapterFileName = "IntentLaneAdapter.swift"
+
+    public static func changedFiles(worktree: URL) -> [ChangedFile] {
+        let output = Shell.run(
+            URL(fileURLWithPath: "/usr/bin/git"),
+            ["-C", worktree.path, "status", "--porcelain", "-uall"]
+        ).stdout
+        return output.split(separator: "\n").compactMap { raw in
+            let line = String(raw)
+            guard line.count > 3 else { return nil }
+            let code = String(line.prefix(2))
+            let path = String(line.dropFirst(3))
+            guard !path.isEmpty else { return nil }
+
+            let change: ChangedFile.Change
+            switch code.trimmingCharacters(in: .whitespaces) {
+            case "??": change = .untracked
+            case "M", "MM", " T": change = .modified
+            case "A", "AM": change = .added
+            case "D": change = .deleted
+            case "R", "C": change = .renamed
+            default: change = .modified
+            }
+
+            let origin: ChangedFile.Origin
+            if path.hasSuffix(generatedFileName) {
+                origin = .generated
+            } else if path.contains("/IntentLane/") || path.hasSuffix(adapterFileName) {
+                origin = .adapter
+            } else if path.contains("/Tests/") || path.contains("/tests/") {
+                origin = .test
+            } else {
+                origin = .existing
+            }
+            return ChangedFile(path: path, origin: origin, change: change)
+        }
+    }
+
     public static func state(of repository: URL) -> RepositoryState {
         func lines(_ arguments: [String]) -> [String] {
             Shell.run(URL(fileURLWithPath: "/usr/bin/git"), ["-C", repository.path] + arguments)

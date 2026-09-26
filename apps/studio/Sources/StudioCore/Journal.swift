@@ -93,6 +93,15 @@ public struct RunJournal: Sendable, Codable, Equatable {
     public var blockingDiagnostic: String? {
         steps.first { $0.status == .blocked || $0.status == .fail }?.diagnostic
     }
+
+    /// The step the engine would take next, mirroring `planRun`: the first one that
+    /// is not a pass at this commit. `nil` means every step is settled, which is
+    /// the only state in which a run may be called complete.
+    public var nextStep: RunStep? {
+        RunStepID.declaredSequence
+            .compactMap { step($0) }
+            .first { $0.status != .pass || $0.commit != commit }
+    }
 }
 
 /// Why a journal could not be read. The engine has its own parser and its own

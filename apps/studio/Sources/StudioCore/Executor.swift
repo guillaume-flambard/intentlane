@@ -9,6 +9,8 @@ public enum RunOutcome: Sendable, Equatable {
     case providerUnavailable(detail: String)
     case quotaOrDelay(detail: String)
     case engineMissing
+    case worktreeUnavailable(detail: String)
+    case engineFailed(detail: String)
     case unreadableJournal(detail: String)
 }
 
@@ -64,6 +66,8 @@ public struct RunReport: Sendable, Equatable {
             case let .providerUnavailable(detail): return .stopped(reason: "Provider unavailable. \(detail)")
             case let .quotaOrDelay(detail): return .stopped(reason: "Stopped on a quota or a delay. \(detail)")
             case .engineMissing: return .stopped(reason: "The engine is not installed.")
+            case let .worktreeUnavailable(detail): return .stopped(reason: "The isolated worktree could not be created. \(detail)")
+            case let .engineFailed(detail): return .stopped(reason: "The engine stopped before it wrote a journal. \(detail)")
             case let .unreadableJournal(detail): return .stopped(reason: "The journal could not be read. \(detail)")
             }
         }
@@ -123,41 +127,107 @@ public struct Executor: Sendable {
         self.run = run
     }
 
+    /// One invocation of the engine settles one step, so a run is a sequence of
+    /// invocations until the journal has no step left. It stops rather than loops
+    /// when the engine says a step is blocked or failed, because those are decisions
+    /// that a person has to act on, and a window that retried them forever would be
+    /// hiding that decision behind a spinner.
     public func runPilot(_ scope: RunScope, pilot: String, planOnly: Bool = false) -> RunReport {
         let journalPath = scope.workingDirectory
             .appendingPathComponent(configuration.runDirectoryName)
             .appendingPathComponent("journal.json")
 
-        var arguments = ["pilot", "run", "--pilot", pilot, "--repository", scope.repository.path, "--run-dir", configuration.runDirectoryName]
+        // The engine runs against the isolated worktree, never the user's checkout.
+        // Discovery indexes what it is pointed at, so pointing it at the parent
+        // repository would index the worktree a second time and report every object
+        // twice.
+        var arguments = [
+            "pilot", "run", "--pilot", pilot,
+            "--repository", scope.workingDirectory.path,
+            "--run-dir", configuration.runDirectoryName
+        ]
+        if let contract = scope.contract { arguments += ["--contract", contract.path] }
         if planOnly { arguments.append("--plan") }
 
         var progress: [RunProgress] = []
         var observations: [String] = []
+        var exitCode: Int32 = 0
 
-        if cancelled() {
-            return RunReport(outcome: .cancelled, progress: progress, toolObservations: observations, journal: nil, diff: nil, unverifiedByAHuman: [])
+        func collect(_ result: (status: Int32, stdout: String, stderr: String)) {
+            for raw in (result.stdout + "\n" + result.stderr).split(separator: "\n", omittingEmptySubsequences: true) {
+                let entry = RunProgress(line: String(raw))
+                progress.append(entry)
+                observations.append(String(raw))
+                onLine(entry)
+            }
         }
 
-        let result = run(scope.engine, arguments, scope.workingDirectory)
-        for raw in (result.stdout + "\n" + result.stderr).split(separator: "\n", omittingEmptySubsequences: true) {
-            let line = String(raw)
-            let entry = RunProgress(line: line)
-            progress.append(entry)
-            observations.append(line)
-            onLine(entry)
+        func readJournal() -> RunJournal? {
+            guard let data = try? Data(contentsOf: journalPath) else { return nil }
+            return try? JournalReader.read(data)
         }
 
-        if cancelled() {
-            var partial: RunJournal?
-            if let data = try? Data(contentsOf: journalPath) { partial = try? JournalReader.read(data) }
-            return RunReport(
+        func cancelledReport() -> RunReport {
+            RunReport(
                 outcome: .cancelled,
                 progress: progress,
                 toolObservations: observations,
-                journal: partial,
+                journal: readJournal(),
                 diff: nil,
                 unverifiedByAHuman: []
             )
+        }
+
+        var invocations = 0
+        while true {
+            if cancelled() { return cancelledReport() }
+            let result = run(scope.engine, arguments, scope.workingDirectory)
+            collect(result)
+            exitCode = result.status
+            if cancelled() { return cancelledReport() }
+
+            guard let current = readJournal() else {
+                // `--plan` on a run that has produced nothing yet prints the plan and
+                // writes no journal, which is a plan, not a failure.
+                if planOnly {
+                    return RunReport(
+                        outcome: .finished(exitCode: result.status),
+                        progress: progress,
+                        toolObservations: observations,
+                        journal: nil,
+                        diff: nil,
+                        unverifiedByAHuman: []
+                    )
+                }
+                // Outside that case the engine stopped before it could record anything, and
+                // its own last word is the only reason there is.
+                return RunReport(
+                    outcome: .engineFailed(detail: progress.last?.line ?? "exited \(result.status) without writing a journal."),
+                    progress: progress,
+                    toolObservations: observations,
+                    journal: nil,
+                    diff: nil,
+                    unverifiedByAHuman: []
+                )
+            }
+
+            if planOnly {
+                return RunReport(
+                    outcome: .finished(exitCode: result.status),
+                    progress: progress,
+                    toolObservations: observations,
+                    journal: current,
+                    diff: nil,
+                    unverifiedByAHuman: Self.unverifiedByAHuman(current)
+                )
+            }
+
+            guard let next = current.nextStep else { break }
+            if next.status == .blocked || next.status == .fail { break }
+            if result.status != 0 { break }
+
+            invocations += 1
+            if invocations >= Self.maximumInvocations { break }
         }
 
         guard let data = try? Data(contentsOf: journalPath) else {
@@ -189,7 +259,7 @@ public struct Executor: Sendable {
         let unverified = Self.unverifiedByAHuman(journal)
 
         return RunReport(
-            outcome: .finished(exitCode: result.status),
+            outcome: .finished(exitCode: exitCode),
             progress: progress,
             toolObservations: observations,
             journal: journal,
@@ -197,6 +267,10 @@ public struct Executor: Sendable {
             unverifiedByAHuman: unverified
         )
     }
+
+    /// Seven steps, and the engine's own repair budget on top. A bound exists so a
+    /// journal that never settles cannot spin the window forever.
+    static let maximumInvocations = 20
 
     /// The claims the engine settled by a command are not the same as a person
     /// having tried the journey. The pilot manifest lists the two that no public

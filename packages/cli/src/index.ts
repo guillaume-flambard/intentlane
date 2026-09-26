@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, statSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -15,6 +15,42 @@ import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_
 
 const configPath = (value: string): string => resolve(value);
 const diagnosticsText = (diagnostics: readonly Diagnostic[]): string => diagnostics.map((item) => `${item.severity.toUpperCase()} ${item.code} ${item.path}: ${item.message}`).join("\n");
+
+// A build or a test suite writes far more than the 1 MiB spawnSync keeps in memory, and on
+// overflow it kills the child, drops the output and reports only that it died. The log goes to a
+// file in the run directory instead: it survives any size, and it is the evidence a failure can be
+// read from, next to the journal it already belongs to.
+function runToFile(logPath: string, command: string, args: readonly string[]): { status: number; log: string } {
+  mkdirSync(dirname(logPath), { recursive: true });
+  const handle = openSync(logPath, "w");
+  let status = 1;
+  try {
+    status = spawnSync(command, [...args], { stdio: ["ignore", handle, handle] }).status ?? 1;
+  } finally {
+    closeSync(handle);
+  }
+  try {
+    return { status, log: readFileSync(logPath, "utf8") };
+  } catch {
+    return { status, log: "" };
+  }
+}
+
+// The engine runs from the repository's own sources, from its built bundle, and from the
+// application that ships it, and the pilot fixtures sit a different number of directories up from
+// this file in each. Walking up from the script that is actually running is the one rule that
+// holds in all three, where a fixed number of `..` holds in none of them once it is bundled.
+function locatePilotTests(pilot: string): string | undefined {
+  let directory = dirname(resolve(process.argv[1] ?? "."));
+  for (let depth = 0; depth < 6; depth += 1) {
+    const candidate = join(directory, "pilots", pilot, "tests", "run-all-tests.sh");
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  return undefined;
+}
 
 async function load(file: string) {
   const result = await parseConfigFile(configPath(file));
@@ -707,8 +743,8 @@ pilot.command("run")
       const invocation = buildInvocation(repository, overrides, target);
       const started = Date.now();
       process.stdout.write(`running: ${invocation.command} ${invocation.args.join(" ")}\n`);
-      const run = spawnSync(invocation.command, invocation.args, { encoding: "utf8" });
-      const outcome = parseBuildOutcome(run.status ?? 1, `${run.stdout ?? ""}\n${run.stderr ?? ""}`);
+      const captured = runToFile(join(runDirectory, "build.log"), invocation.command, invocation.args);
+      const outcome = parseBuildOutcome(captured.status, captured.log);
       const result: PrepareResult = {
         status: outcome.status,
         exitCode: outcome.exitCode,
@@ -790,20 +826,19 @@ pilot.command("run")
     }
 
     if (plan.steps[0] === "test") {
-      const productRoot = resolve(import.meta.dirname, "..", "..", "..");
-      const suites = join(productRoot, "pilots", options.pilot, "tests", "run-all-tests.sh");
-      if (!existsSync(suites)) {
-        process.stderr.write(`FAIL there is no application-owned test command for the pilot: ${suites}\n`);
+      const suites = locatePilotTests(options.pilot);
+      if (suites === undefined) {
+        process.stderr.write(`FAIL there is no application-owned test command for the pilot: pilots/${options.pilot}/tests/run-all-tests.sh\n`);
         process.exitCode = 1;
         return;
       }
       const started = Date.now();
-      const run = spawnSync("bash", [suites], { encoding: "utf8" });
-      const output = `${run.stdout ?? ""}\n${run.stderr ?? ""}`;
+      const captured = runToFile(join(runDirectory, "test.log"), "bash", [suites]);
+      const output = captured.log;
       const checks = (output.match(/^ok /gm) ?? []).length;
       const commands = (output.match(/^== /gm) ?? []).length;
       const result = evaluateTest({
-        suitesPassed: run.status === 0,
+        suitesPassed: captured.status === 0,
         checks,
         commands,
         unobserved: UNOBSERVED_BY_DEFAULT,

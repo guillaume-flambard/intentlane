@@ -10,6 +10,7 @@ public struct RunScope: Sendable, Equatable {
     public let commit: String
     public let branch: String
     public let workingDirectory: URL
+    public let contract: URL?
     public let engine: URL
     public let provider: Provider
     public let sendsCodeToModel: Bool
@@ -19,6 +20,7 @@ public struct RunScope: Sendable, Equatable {
         commit: String,
         branch: String,
         workingDirectory: URL,
+        contract: URL? = nil,
         engine: URL,
         provider: Provider,
         sendsCodeToModel: Bool
@@ -27,6 +29,7 @@ public struct RunScope: Sendable, Equatable {
         self.commit = commit
         self.branch = branch
         self.workingDirectory = workingDirectory
+        self.contract = contract
         self.engine = engine
         self.provider = provider
         self.sendsCodeToModel = sendsCodeToModel

@@ -85,26 +85,38 @@ export function buildInvocation(
 }
 
 const ERROR_LINE = /^(.*?):(\d+):(\d+): (error|fatal error): (.*)$/;
+// A project-level error names no line and no column, and a build that fails on signing or on a
+// destination reports nothing else. Reading only the compiler form of an error leaves such a build
+// with "(1 failure)" as its reason, which says nothing to whoever has to repair it.
+const PROJECT_ERROR_LINE = /^(.*?): (error|fatal error): (.*)$/;
+
+function errorLinesOf(log: string): readonly string[] {
+  const lines = log.split("\n").map((entry) => entry.trim());
+  return [
+    ...lines.filter((entry) => ERROR_LINE.test(entry)),
+    ...lines.filter((entry) => !ERROR_LINE.test(entry) && PROJECT_ERROR_LINE.test(entry))
+  ];
+}
 
 function signatureOf(diagnostic: string): string {
-  const line = diagnostic.split("\n").find((entry) => ERROR_LINE.test(entry.trim()));
+  const line = errorLinesOf(diagnostic)[0];
   if (line === undefined) {
     return diagnostic.trim().slice(0, 120);
   }
-  const match = ERROR_LINE.exec(line.trim());
+  const match = ERROR_LINE.exec(line) ?? PROJECT_ERROR_LINE.exec(line);
   if (match === null) {
     return diagnostic.trim().slice(0, 120);
   }
-  return `error: ${match[5] ?? ""}`.slice(0, 120);
+  const message = ERROR_LINE.test(line) ? match[5] : match[3];
+  return `error: ${message ?? ""}`.slice(0, 120);
 }
 
 export function parseBuildOutcome(exitCode: number, log: string): BuildOutcome {
-  const lines = log.split("\n");
-  const firstError = lines.find((entry) => ERROR_LINE.test(entry.trim()));
+  const firstError = errorLinesOf(log)[0];
   const succeeded = exitCode === 0 && /BUILD SUCCEEDED/.test(log) && !/BUILD FAILED/.test(log);
   const diagnostic = succeeded
     ? "** BUILD SUCCEEDED **"
-    : firstError?.trim() ?? lines.filter((entry) => entry.trim()).slice(-1)[0]?.trim() ?? `xcodebuild exited ${exitCode}`;
+    : firstError ?? log.split("\n").filter((entry) => entry.trim()).slice(-1)[0]?.trim() ?? `xcodebuild exited ${exitCode}`;
   return {
     status: succeeded ? "pass" : "fail",
     exitCode,
