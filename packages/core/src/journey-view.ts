@@ -78,30 +78,30 @@ export function journeyView(input: JourneyViewInput): JourneyReport {
     const requiredLayers = [...new Set(claims.flatMap((entry) => entry.requires))].filter((layer) => held.has(layer));
     const unmetLayers = requiredLayers.filter((layer) => !layerIsPassed(layers, layer));
 
-    const reasons: string[] = [];
+    const ownReasons: string[] = [];
     if (journey.claims === undefined) {
-      reasons.push("This journey names no claim, so nothing is inferred from its layers.");
+      ownReasons.push("This journey names no claim, so nothing is inferred from its layers.");
     }
     for (const entry of claims) {
       if (entry.status !== "verified") {
-        reasons.push(`Claim '${entry.id}' is ${entry.status}. ${entry.reason}`);
+        ownReasons.push(`Claim '${entry.id}' is ${entry.status}. ${entry.reason}`);
       }
     }
     for (const layer of unmetLayers) {
-      reasons.push(`Layer '${layer}' is required by a named claim and is not at pass.`);
+      ownReasons.push(`Layer '${layer}' is required by a named claim and is not at pass.`);
     }
     for (const diagnostic of diagnostics) {
       if (diagnostic.path.startsWith(`journeys.${journey.id}.`)) {
-        reasons.push(`${diagnostic.code} ${diagnostic.message}`);
-      }
-    }
-    for (const diagnostic of diagnostics) {
-      if (!diagnostic.path.startsWith("journeys.")) {
-        reasons.push(`${diagnostic.code} ${diagnostic.message}`);
+        ownReasons.push(`${diagnostic.code} ${diagnostic.message}`);
       }
     }
 
-    const status: JourneyView["status"] = ledgerStatus === "verified" && reasons.length === 0 ? "verified" : "unverified";
+    const globalReasons = diagnostics
+      .filter((diagnostic) => !diagnostic.path.startsWith("journeys."))
+      .map((diagnostic) => `${diagnostic.code} ${diagnostic.message}`);
+
+    const reasons = [...ownReasons, ...globalReasons];
+    const status: JourneyView["status"] = reasons.length === 0 ? "verified" : "unverified";
     return {
       id: journey.id,
       claims,

@@ -149,6 +149,46 @@ describe("a journey is verified only when everything already decided says so", (
     expect(result.journeys[0]?.reasons.join(" ")).toContain("Independent reproduction");
   });
 
+  it("verifies a clean journey even when a sibling journey is broken", () => {
+    const result = report(
+      [
+        journey({ id: "clean", claimed: ["metadata"], claims: ["metadata"] }),
+        journey({ id: "broken", claimed: ["siri"], layers: { contract: "pass", build: "pass", siri: "blocked" } })
+      ],
+      ["metadata"]
+    );
+    const clean = result.journeys.find((entry) => entry.id === "clean");
+    expect(clean?.status).toBe("verified");
+    expect(clean?.reasons).toEqual([]);
+  });
+
+  it("never reports a journey unverified without saying why", () => {
+    const result = report(
+      [
+        journey({ id: "clean", claimed: ["metadata"], claims: ["metadata"] }),
+        journey({ id: "broken", claimed: ["siri"], layers: { contract: "pass", build: "pass", siri: "blocked" } })
+      ],
+      ["metadata"]
+    );
+    for (const entry of result.journeys) {
+      if (entry.status === "unverified") {
+        expect(entry.reasons.length, `${entry.id} is unverified with no reason`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("does not put a sibling journey's defect on this journey", () => {
+    const result = report(
+      [
+        journey({ id: "clean", claimed: ["metadata"], claims: ["metadata"] }),
+        journey({ id: "broken", claimed: ["siri"], layers: { contract: "pass", build: "pass", siri: "blocked" } })
+      ],
+      ["metadata"]
+    );
+    const clean = result.journeys.find((entry) => entry.id === "clean");
+    expect(JSON.stringify(clean?.reasons)).not.toContain("broken");
+  });
+
   it("never verifies a journey that names no claim, because nothing was shown", () => {
     const result = report([journey({ claimed: ["spotlight"] })], ["contract"]);
     expect(result.journeys[0]?.status).toBe("unverified");

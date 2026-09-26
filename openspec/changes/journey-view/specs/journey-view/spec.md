@@ -63,6 +63,32 @@ because the validator already refuses a journey that names a claim it cannot hol
 - **WHEN** a required layer sits at `blocked`
 - **THEN** the journey reports it unmet and the proof state counts it as unsatisfied
 
+### Requirement: A journey is judged on its own defects, not a sibling's
+
+A journey's status SHALL be derived from the reasons that concern that journey, plus the
+ledger-level reasons that concern every journey. A defect belonging to a different journey
+SHALL NOT appear in this journey's reasons, and SHALL NOT make it unverified. A journey
+reported `unverified` SHALL always carry at least one reason.
+
+#### Scenario: A clean journey beside a broken one stays verified
+
+- **WHEN** one journey holds every claim it names at pass, and a second journey has a layer
+  that is not at pass
+- **THEN** the first journey is `verified` with no reasons, and the second is `unverified`
+  with its own reason
+
+#### Scenario: An unverified journey always says why
+
+- **WHEN** any journey is reported `unverified`
+- **THEN** it carries at least one reason, because a verdict with no stated cause is a claim
+  the reader cannot check
+
+#### Scenario: A global blocker reaches every journey
+
+- **WHEN** independent reproduction has not happened
+- **THEN** every journey carries that reason, because one reproduction covers the pilot and
+  not one journey
+
 ### Requirement: Proof state is information, never a threshold
 
 The view MAY report how many required layers are satisfied. It SHALL NOT use that count

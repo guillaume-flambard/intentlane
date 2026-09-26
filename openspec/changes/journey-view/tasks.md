@@ -16,6 +16,9 @@
       journey.
 - [x] Refuser tout journey qu'une revendication dépasse, puisque le validateur le
       rejette et qu'il n'y a donc rien à afficher.
+- [x] Juger chaque journey sur ses propres défauts et non sur le booléen global du
+      ledger, qui confondait le défaut d'un journey frère avec un blocage global.
+- [x] Garantir qu'un journey `unverified` porte toujours au moins une raison.
 
 ## 3. Couches requises et état de preuve
 
