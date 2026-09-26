@@ -7,16 +7,22 @@ import {
   CATALOGUE_DRIFT_FRAMEWORKS,
   DEFAULT_SWIFTINTERFACE_VARIANT,
   DRIFT_FINDING_KINDS,
+  FRAMEWORK_READ_STATES,
   SWIFTINTERFACE_VARIANTS,
   catalogueFrameworks,
   compareCatalogueWithSdk,
+  driftIsComplete,
+  findFrameworkSymbols,
   parseObjcHeaders,
   parseSwiftinterface,
+  parseSwiftinterfaceMembers,
+  readFramework,
   readFrameworkSymbols,
   readSdkSymbolIndex
 } from "./audit-drift.js";
 import { readSdkInfo } from "./audit-sdk.js";
 import { AUDIT_STATES } from "./audit.js";
+import { AUDIT_CATALOGUE_STATES } from "./audit-catalogue.js";
 import { CAPABILITY_CATALOGUE } from "./audit-catalogue.js";
 import { runAudit } from "./audit-run.js";
 
@@ -60,9 +66,17 @@ const APP_INTENTS_TESTING_INTERFACE = [INTERFACE_HEADER, "public protocol AppInt
 
 const APP_INTENTS_SYMBOLS = ["AppIntent", "IntentResult", "ParameterMode", "UnclaimedSymbol", "perform", "required"];
 
-/** An interface that declares exactly the symbols the catalogue attributes to one framework. */
-function interfaceDeclaring(symbols: readonly string[]): readonly string[] {
-  return symbols.map((symbol) => (/^[A-Z]/.test(symbol) ? `public struct ${symbol} {` : `public func ${symbol}()`));
+/** An interface that declares exactly the symbols and members one framework is credited with. */
+function interfaceDeclaring(symbols: readonly string[], members: readonly string[] = []): readonly string[] {
+  const owners = new Set(members.map((pair) => pair.split(" ")[0] ?? ""));
+  const lines = symbols
+    .filter((symbol) => !owners.has(symbol))
+    .map((symbol) => (/^[A-Z]/.test(symbol) ? `public struct ${symbol} {` : `public func ${symbol}()`));
+  for (const pair of members) {
+    const [owner, member] = pair.split(" ");
+    lines.push(`public protocol ${owner} {`, `  func ${member}() async throws`, "}");
+  }
+  return lines;
 }
 
 const CLAIMED_BY_APP_INTENTS = [
@@ -81,7 +95,22 @@ const CLAIMED_BY_CORE_SPOTLIGHT = [
   )
 ].sort();
 
-type FrameFixture = Readonly<{ interface?: readonly string[]; headers?: readonly string[] }>;
+const CLAIMED_MEMBERS_BY_APP_INTENTS = [
+  ...new Set(
+    CAPABILITY_CATALOGUE.flatMap((record) => record.sdk)
+      .filter((entry) => entry.framework === "AppIntents" && entry.member !== undefined)
+      .map((entry) => `${entry.symbol} ${entry.member as string}`)
+  )
+].sort();
+
+type FrameFixture = Readonly<{
+  interface?: readonly string[];
+  headers?: readonly string[];
+  /** A framework bundle with no readable interface and no headers. */
+  bundleOnly?: boolean;
+  /** A `.h` entry that is a directory, so reading it fails. */
+  brokenHeader?: boolean;
+}>;
 
 async function sdkFixture(
   frames: Readonly<Record<string, FrameFixture>>,
@@ -94,15 +123,21 @@ async function sdkFixture(
   if (options.platformFrameworks === true) bases.push(join(root, "Developer", "Library", "Frameworks"));
   for (const [framework, frame] of Object.entries(frames)) {
     for (const base of bases) {
+      if (frame.bundleOnly === true) {
+        await mkdir(join(base, `${framework}.framework`), { recursive: true });
+      }
       if (frame.interface !== undefined) {
         const bundle = join(base, `${framework}.framework`, "Modules", `${framework}.swiftmodule`);
         await mkdir(bundle, { recursive: true });
         await writeFile(join(bundle, `${variant}.swiftinterface`), frame.interface.join("\n"), "utf8");
       }
-      if (frame.headers !== undefined) {
+      if (frame.headers !== undefined || frame.brokenHeader === true) {
         const headers = join(base, `${framework}.framework`, "Headers");
         await mkdir(headers, { recursive: true });
-        await writeFile(join(headers, `${framework}.h`), frame.headers.join("\n"), "utf8");
+        if (frame.brokenHeader === true) await mkdir(join(headers, "Broken.h"), { recursive: true });
+        if (frame.headers !== undefined) {
+          await writeFile(join(headers, `${framework}.h`), frame.headers.join("\n"), "utf8");
+        }
       }
     }
   }
@@ -201,6 +236,70 @@ describe("parseObjcHeaders", () => {
   });
 });
 
+describe("parseSwiftinterfaceMembers", () => {
+  it("binds a member to the type that declares it, because the SDK overloads member names", () => {
+    // `perform` is declared twelve times in AppIntents, and only the requirement
+    // inside `public protocol AppIntent` is the one an app implements. A bare
+    // member name cannot say which of the twelve is the evidence; the owner can.
+    expect(parseSwiftinterfaceMembers(APP_INTENTS_INTERFACE.join("\n"))).toEqual([
+      { owner: "AppIntent", member: "perform" },
+      { owner: "ParameterMode", member: "required" }
+    ]);
+  });
+
+  it("never binds a member of a type that is not public", () => {
+    expect(
+      parseSwiftinterfaceMembers(["struct Hidden {", "  public var leaked: Swift::Int { get }", "}"].join("\n"))
+    ).toEqual([]);
+  });
+
+  it("binds a member to the nearest enclosing public type", () => {
+    const members = parseSwiftinterfaceMembers(
+      ["public struct Outer {", "  public struct Inner {", "    public var deep: Swift::Int { get }", "  }", "}"].join("\n")
+    );
+
+    expect(members).toEqual([{ owner: "Inner", member: "deep" }]);
+  });
+});
+
+describe("readFramework", () => {
+  it("separates a framework the SDK does not ship from one it ships but cannot open", async () => {
+    const sdk = await sdkFixture({ AppIntents: { interface: APP_INTENTS_INTERFACE }, Sealed: { bundleOnly: true } });
+
+    const absent = await readFramework(sdk, "FoundationModels");
+    const unreadable = await readFramework(sdk, "Sealed");
+
+    expect(absent.state).toBe("absent");
+    expect(absent.reason).toContain("ships no FoundationModels.framework");
+    expect(unreadable.state).toBe("unreadable");
+    expect(unreadable.reason).toContain("opens no readable");
+    // Neither may support a claim, and neither is an empty symbol set.
+    expect(findFrameworkSymbols([absent, unreadable], "Sealed")).toBeUndefined();
+  });
+
+  it("calls a framework read in part partial, so its silence is unknown rather than refuted", async () => {
+    // The reviewer of the drift reader called this out and it was real: the old
+    // reader set `readable` when EITHER source opened, so a framework whose
+    // interface failed and whose headers succeeded returned a symbol set with no
+    // Swift declarations and was indistinguishable from a complete read.
+    const sdk = await sdkFixture({ CoreSpotlight: { headers: CORE_SPOTLIGHT_HEADER, brokenHeader: true } });
+
+    const read = await readFramework(sdk, "CoreSpotlight");
+
+    expect(read.state).toBe("partial");
+    expect(read.reason).toContain("read only in part");
+    expect(findFrameworkSymbols([read], "CoreSpotlight")).toBeUndefined();
+  });
+
+  it("reads a pure-Swift framework that ships no headers as complete", async () => {
+    // FoundationModels and the bridge modules ship no Headers directory at all.
+    // That is what a pure Swift module looks like, not a partial read.
+    const sdk = await sdkFixture({ FoundationModels: { interface: FOUNDATION_MODELS_INTERFACE } });
+
+    expect((await readFramework(sdk, "FoundationModels")).state).toBe("complete");
+  });
+});
+
 describe("readFrameworkSymbols", () => {
   it("lists the public symbols a framework ships", async () => {
     const sdk = await sdkFixture({
@@ -242,7 +341,7 @@ describe("readFrameworkSymbols", () => {
 describe("compareCatalogueWithSdk", () => {
   it("resolves a catalogue symbol in the framework it declares", async () => {
     const sdk = await sdkFixture({
-      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS), "public class UnclaimedSymbol {"] },
+      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS, CLAIMED_MEMBERS_BY_APP_INTENTS), "public class UnclaimedSymbol {"] },
       CoreSpotlight: { interface: CORE_SPOTLIGHT_INTERFACE, headers: CORE_SPOTLIGHT_HEADER }
     });
     const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents", "CoreSpotlight"]));
@@ -260,13 +359,14 @@ describe("compareCatalogueWithSdk", () => {
     const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
 
     expect(drift.unreadable).toEqual(expect.arrayContaining(["CoreSpotlight", "CoreTransferable", "Foundation", "FoundationModels"]));
+    expect(drift.partial).toEqual([]);
     expect(new Set(drift.unresolvedEvidence.map((finding) => finding.framework))).toEqual(new Set(["AppIntents"]));
     expect(drift.unresolvedEvidence[0]).toEqual({
       kind: "unresolved-evidence",
       framework: "AppIntents",
       symbol: "AppIntent",
       capability: "foundation.app-intent",
-      detail: "foundation.app-intent claims AppIntent in AppIntents, and the installed SDK does not declare it there."
+      detail: "foundation.app-intent claims AppIntent in AppIntents, and the installed SDK does not establish it there."
     });
     for (const finding of drift.unresolvedEvidence) expect(finding.kind).toBe("unresolved-evidence");
   });
@@ -278,7 +378,13 @@ describe("compareCatalogueWithSdk", () => {
     });
     const drift = compareCatalogueWithSdk([
       ...(await readSdkSymbolIndex(sdk, ["AppIntents", "FoundationModels"])),
-      { framework: "AppIntentsTypeSupport", symbols: ["AppIntent"] }
+      {
+        framework: "AppIntentsTypeSupport",
+        state: "complete",
+        reason: "synthetic second host for a symbol AppIntents already declares",
+        symbols: ["AppIntent"],
+        members: []
+      }
     ]);
 
     expect(drift.duplicateSymbols).toEqual([
@@ -296,7 +402,7 @@ describe("compareCatalogueWithSdk", () => {
     // it, so the only thing that can stop the comparison is the frameworks the
     // reader could not open.
     const sdk = await sdkFixture({
-      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS)] }
+      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS, CLAIMED_MEMBERS_BY_APP_INTENTS)] }
     });
     const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
 
@@ -327,6 +433,87 @@ describe("compareCatalogueWithSdk", () => {
       ])
     );
     expect(judged.size).toBe(0);
+  });
+
+  it("holds a member to a stronger test than a symbol, and reports a member its owner does not declare", async () => {
+    // AppIntent is declared, but not the perform() requirement, so the evidence
+    // is not established. A member that resolves as a bare module-level name is
+    // exactly the false precision the `member` field exists to remove.
+    const sdk = await sdkFixture({
+      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS)] }
+    });
+    const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
+
+    expect(drift.unresolvedEvidence).toContainEqual({
+      kind: "unresolved-evidence",
+      framework: "AppIntents",
+      symbol: "AppIntent.perform",
+      capability: "execution.native-handler",
+      detail:
+        "execution.native-handler claims AppIntent.perform in AppIntents, and the installed SDK does not establish it there."
+    });
+  });
+
+  it("establishes a member only against the type that declares it", async () => {
+    const sdk = await sdkFixture({
+      AppIntents: {
+        interface: [
+          INTERFACE_HEADER,
+          ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS, CLAIMED_MEMBERS_BY_APP_INTENTS),
+          "public struct AppIntent {",
+          "}"
+        ]
+      }
+    });
+    const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
+
+    expect(drift.unresolvedEvidence).toEqual([]);
+    expect(drift.partial).toEqual([]);
+  });
+
+  it("reports an incomplete comparison as incomplete, so a caller cannot read silence as a clean bill of health", async () => {
+    // RelevanceKit is a framework the catalogue really scans, shipped here as a
+    // bundle that opens nothing: the state that used to be indistinguishable
+    // from a framework declaring no symbol.
+    const sdk = await sdkFixture({
+      AppIntents: {
+        interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS, CLAIMED_MEMBERS_BY_APP_INTENTS)]
+      },
+      RelevanceKit: { bundleOnly: true }
+    });
+    const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents", "RelevanceKit"]));
+
+    // Everything the catalogue claims of AppIntents resolves, and everything
+    // else is unreadable: the worst shape, because unresolvedEvidence is empty
+    // while the comparison established almost nothing.
+    expect(drift.unresolvedEvidence).toEqual([]);
+    expect(driftIsComplete(drift)).toBe(false);
+    expect(drift.unreadable).toContain("RelevanceKit");
+    expect(drift.reads.find((read) => read.framework === "RelevanceKit")?.state).toBe("unreadable");
+  });
+
+  it("reports a comparison that read every framework it attempted as complete", async () => {
+    const sdk = await sdkFixture({
+      AppIntents: {
+        interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS, CLAIMED_MEMBERS_BY_APP_INTENTS)]
+      },
+      CoreSpotlight: { interface: CORE_SPOTLIGHT_INTERFACE, headers: CORE_SPOTLIGHT_HEADER },
+      CoreTransferable: { interface: [INTERFACE_HEADER, "public protocol Transferable {", "}"] },
+      Foundation: { interface: [INTERFACE_HEADER, "public struct LocalizedStringResource {", "}"] },
+      FoundationModels: { interface: FOUNDATION_MODELS_INTERFACE },
+      RelevanceKit: { interface: [INTERFACE_HEADER, "public struct RelevantEntities {", "}"] },
+      AppIntentsTypeSupport: { interface: [INTERFACE_HEADER, "public struct TypeSupport {", "}"] },
+      _CoreSpotlight_FoundationModels: { interface: [INTERFACE_HEADER, "public struct SpotlightSearchTool {", "}"] },
+      _FoundationModels_AppKit: { interface: [INTERFACE_HEADER, "public struct AppKitBridge {", "}"] },
+      _FoundationModels_SwiftUI: { interface: [INTERFACE_HEADER, "public struct SwiftUIBridge {", "}"] },
+      _Vision_FoundationModels: { interface: [INTERFACE_HEADER, "public struct OCRTool {", "}"] }
+    });
+    const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, catalogueFrameworks()));
+
+    expect(drift.unreadable).toEqual([]);
+    expect(drift.partial).toEqual([]);
+    expect(drift.unresolvedEvidence).toEqual([]);
+    expect(driftIsComplete(drift)).toBe(true);
   });
 
   it("reports an out-of-catalogue symbol as a catalogue gap, never as a finding of an audited project", async () => {
@@ -383,8 +570,10 @@ describe.skipIf(installed === undefined)("the installed SDK 27", () => {
 
     expect(sdk.version).toBe("27.0");
     expect(drift.unreadable).toEqual([]);
+    expect(drift.partial).toEqual([]);
     expect(drift.unresolvedEvidence).toEqual([]);
     expect(drift.duplicateSymbols).toEqual([]);
+    expect(driftIsComplete(drift)).toBe(true);
   });
 
   it("declares no public symbol named AppIntentsTesting, so the one empty proof list stays a conclusion", async () => {
@@ -438,5 +627,18 @@ describe("DRIFT_FINDING_KINDS", () => {
   it("names drift with a vocabulary that is not the vocabulary of an audit state", () => {
     expect([...DRIFT_FINDING_KINDS]).toEqual(["unresolved-evidence", "duplicate-symbol", "catalogue-gap"]);
     for (const kind of DRIFT_FINDING_KINDS) expect(AUDIT_STATES).not.toContain(kind);
+  });
+});
+
+describe("FRAMEWORK_READ_STATES", () => {
+  it("separates the four things a read can fail to be, and borrows no audit state", () => {
+    expect([...FRAMEWORK_READ_STATES]).toEqual(["complete", "partial", "absent", "unreadable"]);
+    // A read is a diagnostic about the SDK. Reusing an audit state here would
+    // let a read outcome be read as a verdict about an audited project, which is
+    // the one thing the drift vocabulary must never do.
+    for (const state of FRAMEWORK_READ_STATES) {
+      expect(AUDIT_STATES).not.toContain(state);
+      expect(AUDIT_CATALOGUE_STATES).not.toContain(state);
+    }
   });
 });

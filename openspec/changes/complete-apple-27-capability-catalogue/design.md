@@ -69,6 +69,25 @@ de périmètre.
   produirait un faux positif sur chaque projet tant que le catalogue n'est pas à
   jour.
 
+- **Un membre est une preuve plus forte qu'un symbole, et se vérifie plus fort.**
+  Le SDK surcharge les noms de membres : `perform` est déclaré douze fois dans
+  AppIntents, dont onze `public func perform` qui sont des implémentations par
+  défaut d'extension ou d'autres protocoles, et une seule fois sans modificateur
+  d'accès, à l'intérieur de `public protocol AppIntent`. Un nom nu ne dit pas
+  laquelle des douze est la preuve. L'entrée porte donc le type propriétaire et le
+  membre, et le lecteur exige que le propriétaire déclare le membre : un membre
+  que son propriétaire ne déclare pas est une attribution non établie, jamais
+  une attribution vérifiée. Le champ est interne au catalogue et n'atteint pas le
+  JSON client.
+
+- **Une lecture qui n'établit rien ne produit aucun verdict, et le dit.** Les
+  états de lecture (`complete`, `partial`, `absent`, `unreadable`) appartiennent
+  au SDK, pas à l'audit : aucun n'est réutilisé, parce qu'un état de
+  lecture lu comme un état d'audit dirait du projet ce qu'il dit du SDK. Seul
+  `complete` porte une preuve, car un symbole absent d'une lecture partielle est
+  inconnu et non réfuté. `driftIsComplete` est la garde, et `--strict` l'appelle :
+  un audit strict qui n'a pas établi sa preuve échoue au lieu de se taire.
+
 - **`models` est un groupe à part entière, pas une extension de `foundation`.**
   Foundation Models n'est pas une brique des App Intents : c'est la pile de
   raisonnement, elle a son cycle, son framework et son mode d'échec.

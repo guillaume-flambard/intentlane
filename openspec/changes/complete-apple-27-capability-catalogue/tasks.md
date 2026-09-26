@@ -12,8 +12,20 @@
 - [x] 1.3 Vérifier que la dérive est un manque de catalogue : ajouter un symbole
       hors catalogue dans une fixture et vérifier qu'il est rapporté comme tel,
       et non comme une capacité manquante du projet audité.
-- [ ] 1.4 Vérifier qu'un chemin de SDK absent laisse l'état `unknown` et ne fait
-      pas échouer l'audit.
+- [x] 1.4 Vérifier qu'un chemin de SDK absent laisse l'état `unknown` et ne fait
+      pas échouer l'audit, et porter la garde qui manquait : une lecture qui
+      n'établit rien doit échouer explicitement en mode strict. Les cinq issues
+      sont distinguées, SDK non disponible par l'état `unknown` existant,
+      framework introuvable, fichier illisible, extraction partielle, et
+      inspection réussie sans correspondance par le finding
+      `unresolved-evidence`. `driftIsComplete` est la garde, et `--strict`
+      l'appelle.
+- [x] 1.5 Porter sur la référence SDK interne un champ `member` optionnel, pour
+      nommer le membre de son type propriétaire : `AppIntent.perform` plutôt
+      qu'un `perform` nu. Vérifié sur le SDK installé, où `perform` est déclaré
+      douze fois et une seule fois sans modificateur d'accès, dans
+      `public protocol AppIntent`. Le champ reste interne au catalogue et ne
+      change pas le JSON client.
 
 ## 2. Entités et paramètres
 

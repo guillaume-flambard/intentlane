@@ -39,7 +39,20 @@ export type CapabilityAvailability = Readonly<{ macos?: string; ios?: string }>;
  * symbol carries nothing, because inventing one would be a claim the SDK does
  * not make.
  */
-export type CapabilitySymbol = Readonly<{ framework: string; symbol: string }>;
+export type CapabilitySymbol = Readonly<{
+  framework: string;
+  symbol: string;
+  /**
+   * A member of `symbol`, when the evidence is a member rather than the type
+   * itself. The SDK overloads member names, so a member is only evidence
+   * against its owning type: `perform` is declared twelve times in AppIntents
+   * and exactly once without an access modifier, inside `public protocol
+   * AppIntent`, and that single declaration is the requirement an app
+   * implements. A reader must therefore resolve a member against its owner, and
+   * a member that is not declared by its owner is no evidence at all.
+   */
+  member?: string;
+}>;
 
 export type CapabilityRecord = Readonly<{
   id: string;
@@ -286,7 +299,9 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     group: "execution",
     surface: "app-owned perform implementation",
     availability: { macos: "13.0", ios: "16.0" },
-    sdk: [{ framework: "AppIntents", symbol: "perform" }],
+    // `perform` is overloaded twelve times in AppIntents, so the evidence names
+    // the type that declares the requirement and the member, not the bare name.
+    sdk: [{ framework: "AppIntents", symbol: "AppIntent", member: "perform" }],
     companions: ["foundation.app-intent"],
     evidence: ["swift", "test"],
     claim: "build",

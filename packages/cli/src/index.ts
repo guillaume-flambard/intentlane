@@ -9,6 +9,7 @@ import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
+import { compareCatalogueWithSdk, driftIsComplete, readSdkSymbolIndex } from "../../core/src/audit-drift.js";
 import { formatObservations, runObservations } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
@@ -321,6 +322,36 @@ program.command("audit")
       if (blockers.length > 0) {
         for (const gap of blockers) process.stderr.write(`${gap.code} ${gap.message}\n`);
         process.exitCode = 1;
+      }
+      // A strict audit also claims the catalogue holds against an installed SDK.
+      // That claim is evidence, so a read which established nothing must fail
+      // rather than pass quietly: an unreadable framework is not a resolved
+      // symbol, and a partial read is not a refuted one. The read states are the
+      // vocabulary of the SDK, not of the audit, so the audit diagnostic codes
+      // are left alone.
+      if (options.sdkPath === undefined) {
+        process.stderr.write(
+          "catalogue-sdk-evidence no-sdk-path: --strict verifies the capability catalogue against an installed SDK, and no --sdk-path was given, so no evidence was established.\n"
+        );
+        process.exitCode = 1;
+      } else {
+        const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(resolve(options.sdkPath)));
+        for (const read of drift.reads) {
+          if (read.state === "complete") continue;
+          process.stderr.write(`catalogue-sdk-evidence ${read.state} ${read.framework}: ${read.reason}\n`);
+          process.exitCode = 1;
+        }
+        for (const finding of drift.unresolvedEvidence) {
+          process.stderr.write(
+            `catalogue-sdk-evidence ${finding.kind} ${finding.framework} ${finding.symbol}: ${finding.detail}\n`
+          );
+          process.exitCode = 1;
+        }
+        if (driftIsComplete(drift) && drift.unresolvedEvidence.length === 0) {
+          process.stderr.write(
+            `catalogue-sdk-evidence complete: the catalogue ${drift.catalogueVersion} is established against the SDK (${drift.variant}), ${drift.reads.length} frameworks read, ${drift.gaps.length} public symbols to examine.\n`
+          );
+        }
       }
     }
   });

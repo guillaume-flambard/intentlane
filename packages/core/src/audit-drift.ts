@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { CAPABILITY_CATALOGUE, CAPABILITY_CATALOGUE_VERSION, type CapabilitySymbol } from "./audit-catalogue.js";
@@ -44,11 +44,41 @@ const SYSTEM_FRAMEWORKS = ["System", "Library", "Frameworks"] as const;
  */
 const PLATFORM_FRAMEWORKS = ["..", "..", "Library", "Frameworks"] as const;
 
-export type SdkFrameworkSymbols = Readonly<{ framework: string; symbols: readonly string[] }>;
+export type SwiftinterfaceMember = Readonly<{ owner: string; member: string }>;
+
+/**
+ * What one framework read actually established. A read is a diagnostic about the
+ * SDK, never a verdict about an audited project, so it borrows none of the audit
+ * vocabulary. `complete` is the only state whose symbols may support a claim: a
+ * symbol missing from a `partial` set is unknown rather than refuted, so a
+ * partial read must never produce a resolution verdict in either direction.
+ */
+export const FRAMEWORK_READ_STATES = ["complete", "partial", "absent", "unreadable"] as const;
+export type FrameworkReadState = (typeof FRAMEWORK_READ_STATES)[number];
+
+export type FrameworkRead = Readonly<{
+  framework: string;
+  state: FrameworkReadState;
+  reason: string;
+  symbols: readonly string[];
+  members: readonly SwiftinterfaceMember[];
+}>;
+
+export type SdkFrameworkSymbols = FrameworkRead;
 export type SdkSymbolIndex = readonly SdkFrameworkSymbols[];
 
+/**
+ * The symbols of a framework that are fit to support a claim. A framework that
+ * was not read in full has no such symbols: returning its partial set would let
+ * an absence look like a refutation.
+ */
 export function findFrameworkSymbols(index: SdkSymbolIndex, framework: string): readonly string[] | undefined {
-  return index.find((entry) => entry.framework === framework)?.symbols;
+  const entry = index.find((candidate) => candidate.framework === framework);
+  return entry?.state === "complete" ? entry.symbols : undefined;
+}
+
+export function frameworkRead(index: SdkSymbolIndex, framework: string): FrameworkRead | undefined {
+  return index.find((candidate) => candidate.framework === framework);
 }
 
 function interfaceCandidates(framework: string, variant: SwiftinterfaceVariant): readonly string[] {
@@ -206,6 +236,53 @@ export function parseSwiftinterface(text: string): readonly string[] {
   return [...new Set(names)].sort();
 }
 
+const NON_MEMBER_KEYWORDS = new Set(["struct", "class", "enum", "protocol", "actor", "macro", "extension"]);
+
+/**
+ * Lists the members a public declaration owns, against the declaration that owns
+ * them. The SDK overloads member names across a module, so a bare member name
+ * cannot say which overload is the evidence; only the owning type can. A member
+ * declared with an explicit non-public modifier is never a member of the public
+ * surface, a member of a non-public type is never recorded at all, and a nested
+ * type is not a member either: a type is named by `symbol`, and an evidence
+ * entry that mixed the two would read as a requirement the SDK never declared.
+ */
+export function parseSwiftinterfaceMembers(text: string): readonly SwiftinterfaceMember[] {
+  const pairs = new Map<string, SwiftinterfaceMember>();
+  const scopes: { name?: string; public: boolean }[] = [];
+  for (const raw of text.split("\n")) {
+    const line = stripComment(raw);
+    const enclosing = scopes[scopes.length - 1];
+    const declared = parseDeclaration(line);
+    const isPublic = declared !== undefined && (declared.access === "public" || (declared.access === "inherited" && enclosing?.public === true));
+    if (declared !== undefined && isPublic && !NON_MEMBER_KEYWORDS.has(declared.keyword)) {
+      const owner = [...scopes].reverse().find((scope) => scope.name !== undefined);
+      // A public member of a non-public type is not publicly reachable, so the
+      // owner has to be public too, not only the member.
+      if (owner?.name !== undefined && owner.public) {
+        pairs.set(`${owner.name} ${declared.name}`, { owner: owner.name, member: declared.name });
+      }
+    }
+    let quoted = false;
+    let braces = 0;
+    for (const character of line) {
+      if (character === '"') {
+        quoted = !quoted;
+        continue;
+      }
+      if (quoted) continue;
+      if (character === "{") {
+        const opensFirst = braces === 0 && declared !== undefined && declared.keyword !== "extension";
+        scopes.push({ ...(opensFirst ? { name: declared.name } : {}), public: isPublic });
+        braces += 1;
+      } else if (character === "}") scopes.pop();
+    }
+  }
+  return [...pairs.values()].sort((left, right) =>
+    left.owner === right.owner ? left.member.localeCompare(right.member) : left.owner.localeCompare(right.owner)
+  );
+}
+
 const OBJC_INTERFACE = /^[ \t]*@interface[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*:[ \t]/gm;
 const OBJC_PROTOCOL = /^[ \t]*@protocol[ \t]+([A-Za-z_][A-Za-z0-9_]*)(?![A-Za-z0-9_])[ \t]*(?!;)/gm;
 
@@ -224,40 +301,102 @@ export function parseObjcHeaders(text: string): readonly string[] {
   return [...names].sort();
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Reads the public symbols of one framework for one architecture variant.
- * Returns undefined when the framework ships no readable interface or header,
- * which is the difference between "not readable" and "declares no symbol".
+ * Reads one framework and reports what the read established, which is not the
+ * same question as which symbols it declares. A framework the SDK does not ship
+ * is `absent`, a framework it ships but will not open is `unreadable`, and a
+ * framework that yielded some sources and failed others is `partial`. Only
+ * `complete` may support a claim, because a symbol missing from a partial read
+ * is unknown rather than refuted.
  */
-export async function readFrameworkSymbols(
+export async function readFramework(
   sdkPath: string,
   framework: string,
   variant: SwiftinterfaceVariant = DEFAULT_SWIFTINTERFACE_VARIANT
-): Promise<readonly string[] | undefined> {
+): Promise<FrameworkRead> {
   const roots = frameworkRoots(sdkPath);
+  const bundles = await Promise.all(roots.map((root) => exists(join(root, `${framework}.framework`))));
+  if (!bundles.some(Boolean)) {
+    return {
+      framework,
+      state: "absent",
+      reason: `the SDK ships no ${framework}.framework under ${roots.join(" or ")}`,
+      symbols: [],
+      members: []
+    };
+  }
   const interfaceText = await readFirst(
     roots.flatMap((root) => interfaceCandidates(framework, variant).map((relative) => join(root, relative)))
   );
-  let readable = interfaceText !== undefined;
-  const names = new Set<string>(interfaceText === undefined ? [] : parseSwiftinterface(interfaceText));
-  const directories = roots.flatMap((root) => headerCandidates(framework).map((relative) => join(root, relative)));
-  for (const directory of directories) {
+  const headerDirectories = roots.flatMap((root) => headerCandidates(framework).map((relative) => join(root, relative)));
+  const headerTexts: string[] = [];
+  let headerDirectorySeen = false;
+  let headerUnreadable = 0;
+  for (const directory of headerDirectories) {
     let entries: string[];
     try {
       entries = await readdir(directory);
     } catch {
       continue;
     }
-    readable = true;
+    headerDirectorySeen = true;
     for (const entry of entries.filter((name) => name.endsWith(".h")).sort()) {
       try {
-        for (const name of parseObjcHeaders(await readFile(join(directory, entry), "utf8"))) names.add(name);
+        headerTexts.push(await readFile(join(directory, entry), "utf8"));
       } catch {
-        continue;
+        headerUnreadable += 1;
       }
     }
   }
-  return readable ? [...names].sort() : undefined;
+  if (interfaceText === undefined && !headerDirectorySeen) {
+    return {
+      framework,
+      state: "unreadable",
+      reason: `${framework}.framework opens no readable ${variant}.swiftinterface and no readable Headers directory`,
+      symbols: [],
+      members: []
+    };
+  }
+  const symbols = new Set<string>();
+  const members: SwiftinterfaceMember[] = [];
+  if (interfaceText !== undefined) {
+    for (const name of parseSwiftinterface(interfaceText)) symbols.add(name);
+    members.push(...parseSwiftinterfaceMembers(interfaceText));
+  }
+  for (const text of headerTexts) for (const name of parseObjcHeaders(text)) symbols.add(name);
+  const partial = headerUnreadable > 0 || (headerDirectorySeen && interfaceText === undefined);
+  return {
+    framework,
+    state: partial ? "partial" : "complete",
+    reason: partial
+      ? `${framework} was read only in part: ${interfaceText === undefined ? "no readable .swiftinterface and " : ""}${headerUnreadable} unreadable header file(s), so a symbol it does not list is unknown rather than refuted`
+      : `${framework} was read in full`,
+    symbols: [...symbols].sort(),
+    members
+  };
+}
+
+/**
+ * The symbols of one framework, or undefined when the framework ships nothing
+ * readable. Prefer `readFramework`: this cannot tell a partial read from a
+ * complete one, and must not be used to decide whether evidence holds.
+ */
+export async function readFrameworkSymbols(
+  sdkPath: string,
+  framework: string,
+  variant: SwiftinterfaceVariant = DEFAULT_SWIFTINTERFACE_VARIANT
+): Promise<readonly string[] | undefined> {
+  const read = await readFramework(sdkPath, framework, variant);
+  return read.state === "complete" || read.state === "partial" ? read.symbols : undefined;
 }
 
 /** The frameworks the drift scan reads: the scanned stack plus every framework a record declares. */
@@ -273,9 +412,7 @@ export async function readSdkSymbolIndex(
 ): Promise<SdkSymbolIndex> {
   const entries: SdkFrameworkSymbols[] = [];
   for (const framework of frameworks) {
-    const symbols = await readFrameworkSymbols(sdkPath, framework, variant);
-    if (symbols === undefined) continue;
-    entries.push({ framework, symbols });
+    entries.push(await readFramework(sdkPath, framework, variant));
   }
   return entries;
 }
@@ -302,22 +439,54 @@ export type CatalogueDrift = Readonly<{
   variant: SwiftinterfaceVariant;
   inspected: readonly string[];
   /**
-   * The frameworks the SDK did not let the reader open. A symbol attributed to
-   * one of them is unjudged, not validated, and a finding is deliberately not
-   * raised for it: the comparator never saw the SDK refute anything. That makes
-   * a non-empty `unreadable` a failure to compare rather than a clean bill of
-   * health, and a caller must not report the catalogue as verified against the
-   * SDK while it holds an entry, because a renamed or moved bridge framework
-   * would otherwise silence every attribution it carries.
+  /**
+   * The frameworks nothing could be read from, whether the SDK does not ship
+   * them or would not open them. A symbol attributed to one of them is
+   * unjudged, not validated, and a finding is deliberately not raised for it:
+   * the comparator never saw the SDK refute anything.
    */
   unreadable: readonly string[];
+  /**
+   * The frameworks that were read in part. A symbol they do not list is unknown
+   * rather than refuted, so a partial read is held to the same rule as an
+   * unreadable one and is reported apart, because the remedy differs.
+   */
+  partial: readonly string[];
+  /** Every framework the scan attempted, with the state and the reason for it. */
+  reads: readonly FrameworkRead[];
   unresolvedEvidence: readonly CatalogueDriftFinding[];
   duplicateSymbols: readonly CatalogueDriftFinding[];
   gaps: readonly CatalogueDriftFinding[];
 }>;
 
+/**
+ * Whether the comparison established everything it set out to. A caller that
+ * reports the catalogue as verified against an SDK must require this: a renamed
+ * or moved bridge framework would otherwise turn every attribution it carries
+ * into silence, and an empty `unresolvedEvidence` would read as a clean bill of
+ * health.
+ */
+export function driftIsComplete(drift: CatalogueDrift): boolean {
+  return drift.unreadable.length === 0 && drift.partial.length === 0;
+}
+
+function describes(entry: CapabilitySymbol): string {
+  return entry.member === undefined ? `${entry.symbol} in ${entry.framework}` : `${entry.symbol}.${entry.member} in ${entry.framework}`;
+}
+
+/**
+ * Whether the SDK establishes the evidence a record names. A member is a
+ * stronger claim than a symbol and is held to a stronger test: the SDK
+ * overloads member names, so a member only counts when the type that owns it
+ * declares it, and an owner that does not is an unresolved attribution rather
+ * than a resolved one.
+ */
 function resolvedIn(index: SdkSymbolIndex, entry: CapabilitySymbol): boolean {
-  return findFrameworkSymbols(index, entry.framework)?.includes(entry.symbol) ?? false;
+  const read = frameworkRead(index, entry.framework);
+  if (read === undefined || read.state !== "complete") return false;
+  if (!read.symbols.includes(entry.symbol)) return false;
+  if (entry.member === undefined) return true;
+  return read.members.some((member) => member.owner === entry.symbol && member.member === entry.member);
 }
 
 /**
@@ -327,7 +496,10 @@ function resolvedIn(index: SdkSymbolIndex, entry: CapabilitySymbol): boolean {
  * gap. None of the three says anything about an audited project.
  */
 export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: SwiftinterfaceVariant = DEFAULT_SWIFTINTERFACE_VARIANT): CatalogueDrift {
-  const unreadable = catalogueFrameworks().filter((framework) => findFrameworkSymbols(index, framework) === undefined);
+  const frameworks = catalogueFrameworks();
+  const reads = frameworks.map((framework) => frameworkRead(index, framework) ?? { framework, state: "absent" as const, reason: "the scan did not attempt this framework", symbols: [], members: [] });
+  const unreadable = reads.filter((read) => read.state === "absent" || read.state === "unreadable").map((read) => read.framework);
+  const partial = reads.filter((read) => read.state === "partial").map((read) => read.framework);
   const unresolvedEvidence: CatalogueDriftFinding[] = [];
   const resolved = new Map<string, CapabilitySymbol>();
   for (const record of CAPABILITY_CATALOGUE) {
@@ -337,9 +509,9 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
         unresolvedEvidence.push({
           kind: "unresolved-evidence",
           framework: entry.framework,
-          symbol: entry.symbol,
+          symbol: entry.member === undefined ? entry.symbol : `${entry.symbol}.${entry.member}`,
           capability: record.id,
-          detail: `${record.id} claims ${entry.symbol} in ${entry.framework}, and the installed SDK does not declare it there.`
+          detail: `${record.id} claims ${describes(entry)}, and the installed SDK does not establish it there.`
         });
         continue;
       }
@@ -348,7 +520,9 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
   }
   const duplicateSymbols: CatalogueDriftFinding[] = [];
   for (const entry of resolved.values()) {
-    const hosts = index.filter((frame) => frame.symbols.includes(entry.symbol)).map((frame) => frame.framework);
+    const hosts = index
+      .filter((frame) => findFrameworkSymbols(index, frame.framework)?.includes(entry.symbol))
+      .map((frame) => frame.framework);
     if (hosts.length > 1) {
       duplicateSymbols.push({
         kind: "duplicate-symbol",
@@ -365,6 +539,11 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
   // deliberately not scanned: its public surface is a general-purpose
   // framework's, not a capability IntentLane is meant to describe, and admitting
   // it would turn most of the gap report into that one framework's inventory.
+  // Measured on the installed SDK 27: the scanned scope holds 2160 candidates,
+  // Foundation would add 2832 (it declares 2833 public symbols, of which one,
+  // LocalizedStringResource, the catalogue already describes) for 4992 in all.
+  // A gap is a candidate to examine, never an automatic capability: writing up
+  // thousands of records from this list is a separate decision, not this loop.
   for (const framework of CATALOGUE_DRIFT_FRAMEWORKS) {
     const symbols = findFrameworkSymbols(index, framework);
     if (symbols === undefined) continue;
@@ -383,6 +562,8 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
     variant,
     inspected: index.map((frame) => frame.framework),
     unreadable,
+    partial,
+    reads,
     unresolvedEvidence,
     duplicateSymbols,
     gaps
