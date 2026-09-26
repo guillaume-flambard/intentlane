@@ -175,6 +175,21 @@ describe("parseSwiftinterface", () => {
   it("ignores a declaration that hides behind a line comment", () => {
     expect(parseSwiftinterface(["public struct Real {", "// public struct Commented {"].join("\n"))).toEqual(["Real"]);
   });
+
+  it("reaches a protocol requirement that carries no access modifier, and only inside a public protocol", () => {
+    // execution.native-handler is attributed to the AppIntent requirement
+    // perform(), which the SDK prints without an access modifier because the
+    // enclosing public protocol already grants it. This pins where that
+    // attribution comes from, so a resolution of a bare method name is never
+    // mistaken for evidence that any method name is valid evidence.
+    const requirement = ["public protocol AppIntent {", "  func perform() async throws -> Self.PerformResult", "}"].join("\n");
+
+    expect(parseSwiftinterface(requirement)).toEqual(["AppIntent", "perform"]);
+    expect(parseSwiftinterface(["protocol AppIntent {", "  func perform() async throws", "}"].join("\n"))).toEqual([]);
+    expect(parseSwiftinterface(["public extension AppIntent {", "  func perform() async throws", "}"].join("\n"))).toEqual([
+      "perform"
+    ]);
+  });
 });
 
 describe("parseObjcHeaders", () => {
@@ -276,6 +291,44 @@ describe("compareCatalogueWithSdk", () => {
     ]);
   });
 
+  it("names an unreadable framework and judges none of the symbols attributed to it", async () => {
+    // AppIntents is readable and declares exactly what the catalogue claims of
+    // it, so the only thing that can stop the comparison is the frameworks the
+    // reader could not open.
+    const sdk = await sdkFixture({
+      AppIntents: { interface: [...INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_APP_INTENTS)] }
+    });
+    const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
+
+    expect(drift.unreadable).toEqual(
+      expect.arrayContaining(["CoreSpotlight", "CoreTransferable", "Foundation", "FoundationModels"])
+    );
+
+    const judged = new Set(drift.unresolvedEvidence.map((finding) => `${finding.framework}/${finding.symbol}`));
+    const silenced: string[] = [];
+    for (const record of CAPABILITY_CATALOGUE) {
+      for (const entry of record.sdk) {
+        if (!drift.unreadable.includes(entry.framework)) continue;
+        silenced.push(`${record.id} ${entry.framework}/${entry.symbol}`);
+        expect(judged).not.toContain(`${entry.framework}/${entry.symbol}`);
+      }
+    }
+
+    // The comparison is partial, and it has to say so out loud. A caller that
+    // reads only unresolvedEvidence sees nothing at all here, so the comparator
+    // must name every framework it could not open, and must not invent a verdict
+    // about a symbol it never saw.
+    expect(silenced).toEqual(
+      expect.arrayContaining([
+        "discovery.spotlight-lifecycle CoreSpotlight/CSSearchableIndex",
+        "proof.spotlight-surface CoreSpotlight/CSSearchableItem",
+        "cross-app.transferable CoreTransferable/Transferable",
+        "foundation.localization Foundation/LocalizedStringResource"
+      ])
+    );
+    expect(judged.size).toBe(0);
+  });
+
   it("reports an out-of-catalogue symbol as a catalogue gap, never as a finding of an audited project", async () => {
     const sdk = await sdkFixture({ AppIntents: { interface: APP_INTENTS_INTERFACE } });
     const drift = compareCatalogueWithSdk(await readSdkSymbolIndex(sdk, ["AppIntents"]));
@@ -334,13 +387,31 @@ describe.skipIf(installed === undefined)("the installed SDK 27", () => {
     expect(drift.duplicateSymbols).toEqual([]);
   });
 
-  it("resolves the same catalogue symbols for every architecture variant the SDK ships", async () => {
+  it("declares no public symbol named AppIntentsTesting, so the one empty proof list stays a conclusion", async () => {
     const sdk = installed;
     if (sdk === undefined) return;
-    for (const variant of SWIFTINTERFACE_VARIANTS) {
+    // The framework ships outside the SDK root, in the platform developer
+    // directory, which is why the reader searches both roots. Reading it proves
+    // the module was genuinely inspected rather than silently empty, and the
+    // absence of a symbol bearing the module name is what makes proof.app-intents
+    // -testing carry nothing. An SDK that published one must fail here.
+    const symbols = await readFrameworkSymbols(sdk.path, "AppIntentsTesting");
+
+    expect(symbols).toBeDefined();
+    expect(symbols ?? []).toContain("AppIntentTypeDefinition");
+    expect(symbols ?? []).not.toContain("AppIntentsTesting");
+  });
+
+  // One test per variant: the SDK ships four interfaces for every framework, and
+  // reading all four inside a single test would put it at the default timeout.
+  for (const variant of SWIFTINTERFACE_VARIANTS) {
+    it(`resolves every catalogue symbol for the ${variant} variant`, async () => {
+      const sdk = installed;
+      if (sdk === undefined) return;
       const index = await readSdkSymbolIndex(sdk.path, catalogueFrameworks(), variant);
       const drift = compareCatalogueWithSdk(index, variant);
-      expect({ variant, unresolved: drift.unresolvedEvidence, duplicates: drift.duplicateSymbols }).toEqual({
+
+      expect({ variant: drift.variant, unresolved: drift.unresolvedEvidence, duplicates: drift.duplicateSymbols }).toEqual({
         variant,
         unresolved: [],
         duplicates: []
@@ -348,8 +419,8 @@ describe.skipIf(installed === undefined)("the installed SDK 27", () => {
       expect(index.map((frame) => frame.framework)).toEqual(
         expect.arrayContaining(["AppIntents", "CoreSpotlight", "CoreTransferable", "Foundation", "FoundationModels"])
       );
-    }
-  });
+    });
+  }
 });
 
 describe("CATALOGUE_DRIFT_FRAMEWORKS", () => {
