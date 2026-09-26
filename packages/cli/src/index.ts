@@ -6,10 +6,10 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { parse } from "yaml";
-import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
+import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ClaimOutcome, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
-import { formatObservations, runObservations } from "../../core/src/index.js";
+import { explain, formatExplanation, formatObservations, runObservations } from "../../core/src/index.js";
 import { AUDIT_FORMATS, AUDIT_PLATFORM_SELECTIONS, AuditDiffError, SDK_SETTINGS_FILE, blockingGaps, diffAuditDocuments, formatDeltaJson, formatDeltaText, formatReport, formatReports, runAudit, type AuditFormat, type AuditPlatform, type AuditReport } from "../../core/src/index.js";
 
 const configPath = (value: string): string => resolve(value);
@@ -322,6 +322,37 @@ program.command("audit")
         for (const gap of blockers) process.stderr.write(`${gap.code} ${gap.message}\n`);
         process.exitCode = 1;
       }
+    }
+  });
+
+program.command("explain")
+  .argument("<subject>", "Claim id, capability id, or diagnostic code")
+  .option("--pilot <file>", "Pilot manifest, so a claim explanation shows its current state")
+  .action((subject: string, options: { pilot?: string }) => {
+    let outcomes: ClaimOutcome[] = [];
+    if (options.pilot !== undefined) {
+      const path = resolve(options.pilot);
+      if (!existsSync(path)) {
+        process.stderr.write(`No pilot manifest at ${path}.\n`);
+        process.exitCode = 1;
+        return;
+      }
+      try {
+        const parsed = parsePilotManifest(parse(readFileSync(path, "utf8")) as unknown);
+        if (parsed.manifest !== undefined) {
+          outcomes = [...evaluateReleaseVerification({ claims: parsed.manifest.claims, gates: {}, observed: {} }).claims];
+        }
+      } catch (error) {
+        process.stderr.write(`Could not read ${path} as a pilot manifest: ${(error as Error).message}\n`);
+        process.exitCode = 1;
+        return;
+      }
+    }
+    try {
+      process.stdout.write(formatExplanation(subject, outcomes));
+    } catch (error) {
+      process.stderr.write(`${(error as Error).message}\n`);
+      process.exitCode = 1;
     }
   });
 

@@ -303,7 +303,7 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     id: "proof.app-intents-testing",
     group: "proof",
     surface: "AppIntentsTesting",
-    availability: { macos: "15.0", ios: "18.0" },
+    availability: { macos: "27.0", ios: "27.0" },
     companions: ["execution.native-handler"],
     evidence: ["test"],
     claim: "domain-package",
