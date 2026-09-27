@@ -85,6 +85,41 @@ checkout, with the tools a normal developer already has?
   parts that happen to compile standalone and call the pilot done: for HandBrake
   the whole point is the Objective-C to Swift step, which is exactly the part a
   standalone test compile cannot prove.
+- **Before planning to add generated Swift anywhere, prove the project's own
+  build can compile Swift.** A build that was never told Swift exists will
+  accept a `.swift` source, exit zero, and produce no object for it, so the
+  failure is invisible: `BUILD SUCCEEDED` and a build with no App Intents in it.
+  Transmission is the measured case. Its CMake project declares `project(transmission)`
+  with no languages beyond C and CXX, and adding a Swift file to its target gave
+  configure exit 0, build exit 0, and no Swift object anywhere. Enabling Swift
+  does not rescue it either, because the CMake on this machine, Homebrew 4.4.3,
+  ships the Swift documentation and not `CMakeSwiftInformation.cmake`, so
+  `enable_language(SWIFT)` dies with `Unknown extension ".swift"`. Six lines
+  reproduce it outside the application, and the check belongs in this stage
+  rather than at the mapping stage, where it is expensive:
+
+  ```sh
+  scripts/can-this-build-compile-swift.sh <fork-path>
+  ```
+
+  A pilot that answers no cannot add generated code to that project's target. It
+  is blocked at stage 0, where the answer costs six lines, and the remedy belongs
+  to the person who owns the machine: replacing the build tool, or building the
+  app through a project that can already compile Swift. What a pilot must not do
+  is discover this at the mapping stage, after the contract is written, and then
+  satisfy the step with a standalone compile.
+- **Do not assume the IDE project still builds.** "Run the project's own build,
+  then the IDE build" is sound, and the second leg can be a project file that
+  predates the toolchain. Transmission's `Transmission.xcodeproj` declares
+  `MACOSX_DEPLOYMENT_TARGET = 11.0` in three places and Xcode 27 accepts 12.0 to
+  27.0. Raising those three removed that error and was not enough: the vendored
+  `dht` target then failed at Libtool with zero inputs. Record whether the IDE
+  leg builds at all, because a stale project is not a fallback, and a pilot that
+  reports "open the Xcode project" without having run it is guessing.
+- **Give the two build systems different output roots.** `xcodebuild` defaults
+  `SYMROOT` and `OBJROOT` to `build/`, which is also where CMake writes, so the
+  two builds pollute each other and the second failure becomes unreadable. This
+  cost one wasted attempt on Transmission and would cost the next pilot the same.
 - This stage is a cost like any other and belongs in the effort sheet, because
   "adaptable to every stack" is a claim about time as much as about code.
 

@@ -242,3 +242,64 @@ planning to add any**".
 
 The two counts in the log are also corrected by measurement: the target is 88
 `.mm` and `.m` files, Objective-C++, not 81 plain `.m`.
+
+## The guard this cost, now written down
+
+The deviation log says `amend`, and the recipe says a recipe is amended, so the
+amendment is in `recipe.md` stage 0 and the check is
+`scripts/can-this-build-compile-swift.sh`. It prints two signals because either
+alone lies: whether the **project** ever enabled Swift, and whether the
+**toolchain** can compile a Swift source when asked. A project can enable Swift
+on a machine whose build tool cannot, and a machine can have a capable toolchain
+behind a project that never asked.
+
+Run against this pilot:
+
+```
+project:   does-not-declare-SWIFT
+toolchain: cannot-enable-Swift (CMAKE_SWIFT_COMPILER not set after EnableLanguage)
+verdict:   NO. Replacing the build tool is a decision for the person who owns the machine.
+```
+
+Against a project with an Xcode target, the same script asks `swiftc` rather than
+`cmake`, because that is the compiler Xcode would use, and answers `YES`. Asking
+`cmake` there would have measured the wrong tool and called a capable machine
+incapable, which is the same mistake one level up.
+
+The probe builds nothing of Transmission. It is one `.swift` file, one `main.c`
+and a `find` for `SwiftProbe.swift.o`, and it costs seconds.
+
+**What is still not verified about the script.** Its `YES` path is exercised
+through the Xcode branch on this machine. Its CMake `compiles-Swift` path cannot
+be exercised here at all, because the only cmake available cannot enable Swift,
+so that branch is written from the documented behaviour of
+`enable_language(SWIFT)` and not from a run. It says `ASK` rather than guessing
+when a signal does not settle, and a pilot that cannot get a `YES` here should
+treat the `NO` as the finding rather than looking for a way around it.
+
+## The decision this leaves open
+
+Stage 2.3 asks for the generated sources to be added to the target, and the
+stage's exit criterion is `BUILD SUCCEEDED`. On this machine that cannot happen
+for Transmission: the project's current build cannot compile Swift, and its IDE
+project does not build on Xcode 27. So the choice is between two honest-looking
+options and they are not equivalent.
+
+**Add a separate test target that compiles the generated Swift** and leave
+Transmission's own build alone. It is cheap and it proves the generated code
+compiles and that its seams behave. It does **not** prove the code is inside the
+real application, and stage 2.3 says "add the sources to the target", so under
+this option the stage is not finished and must not be ticked. This is the
+HandBrake integration pattern, and it is a weaker claim than the recipe asks for.
+
+**Repair the Xcode project until it builds** with the generated Swift inside the
+real target. It satisfies 2.3 as written. It is a repair of a third party's
+stale project file, it already needed a deployment-target change that alters
+what the app supports, and the vendored `dht` failure is not understood well
+enough to promise it lands.
+
+The second is the only one that closes 2.3 honestly. The first is what a pilot
+would be tempted to do, and the reason it is written down here rather than just
+done is that it would produce a green pilot and a claim the build does not
+support. Replacing Homebrew's cmake, which is the third possibility, is a change
+to the machine and therefore the owner's decision.
