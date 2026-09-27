@@ -3,7 +3,7 @@
 # Compiles NotebookCore.swift on its own, with no AppIntents and no FSNotes, and
 # checks eligibility, name matching and identifier lookup directly.
 set -euo pipefail
-FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/active/apps/clients/intentlane-fsnotes}"
+FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/experiments/intentlane-fsnotes}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CORE="$FSNOTES_DIR/FSNotes/IntentLane/NotebookCore.swift"
 OUT="$HERE/.build/coretests"

@@ -3,7 +3,7 @@
 # Compiles PresetCore.swift on its own, with no AppIntents and no HandBrake, and
 # checks eligibility, name matching and identifier lookup directly.
 set -euo pipefail
-HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/active/apps/clients/intentlane-handbrake}"
+HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/experiments/intentlane-handbrake}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CORE="$HANDBRAKE_DIR/macosx/IntentLane/PresetCore.swift"
 OUT="$HERE/.build/coretests"

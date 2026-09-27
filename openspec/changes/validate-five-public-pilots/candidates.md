@@ -4,7 +4,7 @@ Qualification for task group 1. Every row was produced by cloning the repository
 reading its own licence and contribution files, and running the project's audit. No
 claim below comes from memory about the application.
 
-Screening clones live in `~/projects/active/apps/clients/intentlane-candidates`,
+Screening clones live in `~/projects/_external/intentlane-candidates`,
 shallow at the revision recorded here. The audit was run as
 `intentlane audit <repo> --platform macos --format json` with the local SDK
 (macOS 27.0 build 26A428, Xcode 27 build 27A266a).

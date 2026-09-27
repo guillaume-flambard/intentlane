@@ -10,7 +10,7 @@
 # The fixture is the preset JSON the manager itself reads, written into a sandbox
 # directory, so the developer's own presets are never loaded or rewritten.
 set -euo pipefail
-HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/active/apps/clients/intentlane-handbrake}"
+HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/experiments/intentlane-handbrake}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$HANDBRAKE_DIR/macosx/IntentLane"
 OUT="$HERE/.build"

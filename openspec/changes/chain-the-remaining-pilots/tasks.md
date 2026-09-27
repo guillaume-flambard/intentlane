@@ -163,9 +163,13 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       warning` notés, Homebrew construisant `gettext` et `libevent` pour macOS
       26.0 alors que le bundle déclare 11.0. La fiche note aussi que
       l'installation a fait passer `glib` de 2.88.3 à 2.90.0 sur la machine.
-      La condition 2 est remplie au dossier et **non rejouable** : les copies de
-      travail de FSNotes et HandBrake ont disparu de la machine, donc la
-      certification est une foi écrite ici et non un test rejoué.
+      La condition 2 est remplie au dossier et **rejouable** : les copies de
+      travail de FSNotes et de HandBrake avaient été lues comme disparues, alors
+      qu'elles avaient seulement été déplacées. Elles sont à
+      `~/projects/experiments/intentlane-fsnotes` et
+      `~/projects/experiments/intentlane-handbrake`, sur leurs branches de pilote,
+      avec leurs sources `IntentLane`. La correction est écrite dans la fiche
+      Transmission plutôt que faite en silence.
 - [x] 2.2 Lire le modèle avant d'écrire, choisir l'objet, et écrire le contrat avec
       la raison de l'exclusion de ce que l'application ne sait pas faire. Vérifié
       par `validate` qui sort à zéro et par la relecture de la raison. **Fait.**

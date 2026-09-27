@@ -114,7 +114,7 @@ the generation, which matters for pricing: once the contract is right, the
 compiler side is free.
 
 The working copy is an isolated clone at
-`~/projects/active/apps/clients/intentlane-fsnotes`, pinned to `a96b9b5`, on
+`~/projects/experiments/intentlane-fsnotes`, pinned to `a96b9b5`, on
 branch `intentlane/pilot-notebook`. Its `origin` is the local screening clone, so
 it cannot push upstream even by accident.
 

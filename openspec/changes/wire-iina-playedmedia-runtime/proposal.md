@@ -30,7 +30,7 @@ actually driven by the application.
 
 ## Impact
 
-Pilot worktree `~/projects/active/apps/clients/intentlane-iina` (branch
+Pilot worktree `~/projects/experiments/intentlane-iina` (branch
 `intentlane/pilot-playedmedia`): `iina/IntentLane/*`,
 `iina/AppDelegate.swift`, one new `IntentLane` group in `iina.xcodeproj/project.pbxproj`.
 No upstream change, no contact, no pull request.

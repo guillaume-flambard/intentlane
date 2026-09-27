@@ -3,7 +3,7 @@
 # Compiles the pilot's core with its tests and runs them. No IINA build needed.
 # The IINA working copy is located by IINA_DIR, defaulting to the durable clone.
 set -euo pipefail
-IINA_DIR="${IINA_DIR:-$HOME/projects/active/apps/clients/intentlane-iina}"
+IINA_DIR="${IINA_DIR:-$HOME/projects/experiments/intentlane-iina}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CORE="$IINA_DIR/iina/IntentLane/PlayedMediaCore.swift"
 OUT="$HERE/.build/coretests"

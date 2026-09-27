@@ -3,7 +3,7 @@
 # Spotlight index. Compiles the generated entities exactly as the HandBrake target
 # compiles them, plus the index wrapper, then exercises a test-specific index name.
 set -euo pipefail
-HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/active/apps/clients/intentlane-handbrake}"
+HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/experiments/intentlane-handbrake}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GENERATED="$HANDBRAKE_DIR/macosx/IntentLane/IntentLaneGenerated.swift"
 INDEX="$HANDBRAKE_DIR/macosx/IntentLane/PresetIndex.swift"

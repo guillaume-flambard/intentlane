@@ -8,7 +8,7 @@
 # PresetIntegration.swift is deliberately absent from this compile. That is the
 # split: the file that speaks Objective-C is not part of what these tests exercise.
 set -euo pipefail
-HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/active/apps/clients/intentlane-handbrake}"
+HANDBRAKE_DIR="${HANDBRAKE_DIR:-$HOME/projects/experiments/intentlane-handbrake}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$HANDBRAKE_DIR/macosx/IntentLane"
 OUT="$HERE/.build/integrationtests"

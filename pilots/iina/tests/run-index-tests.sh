@@ -3,7 +3,7 @@
 # index. Compiles the generated entities exactly as the IINA target compiles them,
 # plus the adapter's index wrapper, then exercises a test-specific index name.
 set -euo pipefail
-IINA_DIR="${IINA_DIR:-$HOME/projects/active/apps/clients/intentlane-iina}"
+IINA_DIR="${IINA_DIR:-$HOME/projects/experiments/intentlane-iina}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GENERATED="$IINA_DIR/iina/IntentLane/IntentLaneGenerated.swift"
 INDEX="$IINA_DIR/iina/IntentLane/PlayedMediaIndex.swift"

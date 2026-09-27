@@ -42,9 +42,14 @@ system search and open schemas.
   claims a person has to settle.
 - `out/` — generated output and extracted metadata, not versioned.
 
-The IINA working copy is expected at `~/projects/active/apps/clients/intentlane-iina`
+The IINA working copy is expected at `~/projects/experiments/intentlane-iina`
 on the branch `intentlane/pilot-playedmedia`. Set `IINA_DIR` to point the tests
 elsewhere. Manifest paths and gate commands resolve from the manifest's own
 directory, so the pilot verifies the same way from anywhere.
+
+The branch matters as much as the path, and the failure when it is wrong is
+silent: the core gate then reports `error opening input file ... PlayedMediaCore.swift`
+and the cause is a checkout on `intentlane/from-scratch`, not a missing file. The
+pilot sources exist on `intentlane/pilot-playedmedia` and on no other branch.
 
 

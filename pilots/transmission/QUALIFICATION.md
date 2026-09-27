@@ -69,13 +69,19 @@ FSNotes is certified: `pilots/fsnotes/QUALIFICATION.md` records
 integrationTests, metadata, indexSync`, 63 checks in three suites, and
 `verify --strict` exiting 0.
 
-What cannot be re-checked: the working copies of the two certified pilots are
-gone from this machine. `pilots/fsnotes/QUALIFICATION.md` points at
-`~/projects/intentlane-fsnotes` and no such directory exists any more; neither
-does a HandBrake copy. Only the sandbox container data remains, which proves the
-apps were built and run, not what they contained. So the certification is
-trusted as a written record and is **not** re-run here. If a later stage needs
-the FSNotes code, it has to be cloned again first.
+What **is** re-runnable, and this corrects a claim an earlier pass in this file made:
+it said both certified working copies had disappeared from this machine. They had
+not, they had moved. `~/projects/experiments/intentlane-fsnotes` is on
+`intentlane/pilot-notebook` at `11b11e52`, and `~/projects/experiments/intentlane-handbrake`
+is on `intentlane/pilot-preset` at `93955375f`, both still carrying the pilot's
+own `IntentLane` sources. A directory move was read as a deletion, which is the
+same class of error this campaign exists to remove, committed here instead of
+silently. So the certification is **re-runnable** from this machine, and the
+`not instrumented` lines below are re-measurable rather than frozen.
+
+What is still not re-runnable is anything that depended on the Homebrew formula
+the earlier pass installed, because that installation is no longer the state of
+the machine.
 
 ### 3. No known defect from an earlier pilot is unfixed in the code being reused
 

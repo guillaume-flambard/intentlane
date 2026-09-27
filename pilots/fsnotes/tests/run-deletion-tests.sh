@@ -13,7 +13,7 @@
 # delegate is not on the path that removes a notebook, so nothing it does is
 # needed; the type is, because AppDelegate+URLRoutes refers to it.
 set -euo pipefail
-FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/active/apps/clients/intentlane-fsnotes}"
+FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/experiments/intentlane-fsnotes}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$HERE/.build"
 BUILD_DIR=$(xcodebuild -project "$FSNOTES_DIR/FSNotes.xcodeproj" -scheme FSNotes -configuration Debug -destination "platform=macOS" -showBuildSettings 2>/dev/null | python3 -c 'import re,sys; print(re.search(r"^\s*BUILD_DIR = (.+)$", sys.stdin.read(), re.M).group(1))')

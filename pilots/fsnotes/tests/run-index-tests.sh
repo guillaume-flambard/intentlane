@@ -4,7 +4,7 @@
 # compiles them, plus the adapter's index wrapper, then exercises a test-specific
 # index name.
 set -euo pipefail
-FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/active/apps/clients/intentlane-fsnotes}"
+FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/experiments/intentlane-fsnotes}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GENERATED="$FSNOTES_DIR/FSNotes/IntentLane/IntentLaneGenerated.swift"
 INDEX="$FSNOTES_DIR/FSNotes/IntentLane/NotebookIndex.swift"

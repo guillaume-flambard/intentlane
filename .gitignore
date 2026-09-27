@@ -1,5 +1,6 @@
 node_modules/
 .intentlane/
+.worktrees/
 coverage/
 *.tsbuildinfo
 packages/*/dist/

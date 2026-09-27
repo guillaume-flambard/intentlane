@@ -90,7 +90,7 @@ binary = pathlib.Path(
         "INTENTLANE_HANDBRAKE_BINARY",
         str(
             pathlib.Path.home()
-            / "projects/active/apps/clients/intentlane-handbrake"
+            / "projects/experiments/intentlane-handbrake"
             / "build/xroot/release-sandbox/HandBrake.app/Contents/MacOS/HandBrake"
         ),
     )

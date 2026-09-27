@@ -23,7 +23,7 @@ other. When this plan and the specs disagree, the specs are the requirement.
 Screening record: `candidates.md`, with the revision, licence, contribution path,
 audit result and data classification for every candidate, and the reason for each
 rejection. Screening clones are in
-`~/projects/active/apps/clients/intentlane-candidates`.
+`~/projects/_external/intentlane-candidates`.
 
 - [x] 1.1 Record nine official public repositories, licences and contribution
       paths. Five qualified: FSNotes (MIT), LuLu (GPLv3), HandBrake (GPLv2),

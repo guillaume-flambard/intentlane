@@ -60,7 +60,7 @@ campagne, et que la phrase « Siri marche » reste à ne pas dire.
 1. Rejouer les portes, qui doivent rester vertes :
 
    ```sh
-   cd ~/projects/active/apps/clients/intentlane
+   cd ~/projects/products/intentlane
    pnpm exec tsx packages/cli/src/index.ts verify --pilot pilots/iina/pilot.yaml --strict
    ```
 

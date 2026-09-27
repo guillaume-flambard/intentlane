@@ -11,7 +11,7 @@ deux.
 
 Trois candidats qualifiés restent : Transmission, LuLu, tous deux Objective-C, et
 Cyberduck, un shell natif au-dessus d'une application Java. Ils sont clonés dans
-`~/projects/active/apps/clients/intentlane-candidates`, avec les révisions figées.
+`~/projects/_external/intentlane-candidates`, avec les révisions figées.
 
 Une revue de branche a produit une liste de constats, dont trois sont des
 défauts de code et non des tâches de vente : la couture qui lit l'application

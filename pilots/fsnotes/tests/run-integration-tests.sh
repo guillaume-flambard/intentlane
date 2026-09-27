@@ -8,7 +8,7 @@
 # NotebookIntegration.swift is deliberately absent from this compile. That is the
 # split: the file that imports FSNotes is not part of what these tests exercise.
 set -euo pipefail
-FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/active/apps/clients/intentlane-fsnotes}"
+FSNOTES_DIR="${FSNOTES_DIR:-$HOME/projects/experiments/intentlane-fsnotes}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$FSNOTES_DIR/FSNotes/IntentLane"
 OUT="$HERE/.build/integrationtests"

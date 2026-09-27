@@ -5,7 +5,7 @@
 # and a recording search surface. The three IINA seams are replaced; everything
 # under test is production code.
 set -euo pipefail
-IINA_DIR="${IINA_DIR:-$HOME/projects/active/apps/clients/intentlane-iina}"
+IINA_DIR="${IINA_DIR:-$HOME/projects/experiments/intentlane-iina}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$IINA_DIR/iina/IntentLane"
 OUT="$HERE/.build/integrationtests"
