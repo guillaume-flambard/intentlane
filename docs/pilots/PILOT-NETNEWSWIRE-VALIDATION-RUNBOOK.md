@@ -29,9 +29,17 @@ in Shortcuts):
 - add a local-only feed after a localhost whitelist check (external URLs refused);
 - unsubscribe a local feed with device authentication, unknown targets refused.
 
-The authoritative result bundle is:
+The authoritative result bundle is the `.xcresult` for the `Test-NetNewsWire`
+scheme inside Xcode's DerivedData, at the path `xcodebuild` prints with
+`-resultBundlePath`. **The absolute path is not written here on purpose**: it
+carries the account name of whoever ran it, and this file is in a public
+repository. Use `-resultBundlePath` and name the bundle yourself:
 
-`/Users/memo/Library/Developer/Xcode/DerivedData/NetNewsWire-amwdwxujfwcbjjhemfrusgrvvscl/Logs/Test/Test-NetNewsWire-2026.09.23_20-30-38-+0200.xcresult`
+```sh
+xcodebuild test \
+  -resultBundlePath "$(mktemp -d)/Test-NetNewsWire.xcresult" \
+  ...
+```
 
 It records macOS 27.0, build 26A428, 22 passed tests and 0 failed tests
 (totalTestCount 22, result "Passed"). The App Intents testing harness does not
