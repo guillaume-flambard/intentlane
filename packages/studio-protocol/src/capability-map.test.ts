@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { capabilityTree } from "./capability-map.js";
 import type { AuditFinding, AuditReport } from "../../../core/src/audit.js";
 
 const version = "1.0";
+
+// The FSNotes pilot's own real audit, slimmed to what the map reads: findings,
+// target and score. It is the only fixture with a shape the engine produced, so
+// the mapping is exercised against evidence rather than against invention.
+const realReport = JSON.parse(
+  readFileSync(join(import.meta.dirname, "..", "fixtures", "fsnotes-audit.json"), "utf8")
+) as AuditReport;
 
 function report(findings: AuditFinding[]): AuditReport {
   return {
@@ -118,5 +127,73 @@ describe("capability map", () => {
     expect(ids).toEqual(["other"]);
     expect(ids).not.toContain("unlisted");
     expect(ids).not.toContain("also-unlisted");
+  });
+
+  describe("the FSNotes pilot's real audit", () => {
+    it("51 findings produce 51 nodes, none dropped and none duplicated", () => {
+      const tree = capabilityTree(realReport);
+      const nodes = tree.groups.flatMap((group) => group.nodes);
+      expect(nodes).toHaveLength(realReport.findings.length);
+      const ids = nodes.map((node) => node.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it("the groups come out in catalogue order, and every group is a known one", () => {
+      const tree = capabilityTree(realReport);
+      const ids = tree.groups.map((group) => group.id);
+      expect(ids).toEqual([
+        "foundation",
+        "semantics",
+        "entity",
+        "parameters",
+        "models",
+        "discovery",
+        "cross-app",
+        "relevance",
+        "execution",
+        "proof"
+      ]);
+      expect(ids).not.toContain("other");
+    });
+
+    it("a node's state is always a state the report carries, and nothing else", () => {
+      const tree = capabilityTree(realReport);
+      for (const node of tree.groups.flatMap((group) => group.nodes)) {
+        expect(["unsupported", "unknown", "detected", "implemented", "tested", "feasible"]).toContain(
+          node.state
+        );
+      }
+      const rendered = tree.groups.flatMap((group) => group.nodes.map((node) => node.state));
+      const states = new Set(realReport.findings.map((finding) => finding.state));
+      for (const state of states) {
+        expect(rendered).toContain(state);
+      }
+    });
+
+    it("a finding with evidence keeps its own path and line, verbatim", () => {
+      const tree = capabilityTree(realReport);
+      const withEvidence = realReport.findings.filter((f) => f.evidence.length > 0);
+      expect(withEvidence.length).toBeGreaterThan(0);
+      for (const finding of withEvidence) {
+        const node = tree.groups
+          .flatMap((group) => group.nodes)
+          .find((node) => node.id === finding.capability);
+        expect(node?.evidence.map((entry) => entry.path)).toEqual(
+          finding.evidence.map((entry) => entry.path)
+        );
+        expect(node?.evidence.map((entry) => entry.line)).toEqual(
+          finding.evidence.map((entry) => entry.line)
+        );
+      }
+    });
+
+    it("a node's gaps and nextAction are the finding's own, verbatim", () => {
+      const tree = capabilityTree(realReport);
+      for (const node of tree.groups.flatMap((group) => group.nodes)) {
+        const source = realReport.findings.find((f) => f.capability === node.id);
+        expect(node.gaps).toEqual(source?.gaps);
+        expect(node.nextAction).toBe(source?.nextAction);
+      }
+    });
   });
 });
