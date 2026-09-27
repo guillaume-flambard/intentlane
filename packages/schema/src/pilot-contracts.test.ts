@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { readdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { intentLaneConfigSchema } from "./index.js";
@@ -9,10 +10,15 @@ const pilotsDirectory = resolve(import.meta.dirname, "..", "..", "..", "pilots")
 
 async function contractPaths(): Promise<readonly string[]> {
   const entries = await readdir(pilotsDirectory, { withFileTypes: true });
+  // A pilot directory exists before its contract does: the recipe requires the
+  // record and the three entry conditions to be written before the first line of
+  // the integration. Reading a contract by naming it rather than by finding it
+  // would make the suite red for the whole time a pilot is being qualified, so
+  // this lists the contracts that are actually there.
   return entries
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(pilotsDirectory, entry.name, "contract.yaml"))
-    .filter((path) => path.endsWith("contract.yaml"));
+    .filter((path) => existsSync(path));
 }
 
 describe("every shipped pilot contract", () => {
