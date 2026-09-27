@@ -89,6 +89,85 @@ describe("audit score", () => {
     expect(foundation.discovery).toBe("none");
   });
 
+  it("moves the denominator but no observed fact when the catalogue describes more", () => {
+    // Describing more capabilities is something the tool did, not something the
+    // project changed, so nothing the project actually did may move because of
+    // it. The score is a ratio and the denominator therefore does grow; the
+    // points, the discovery and the observed counts are the facts a client
+    // reads, and they are pinned here so a future catalogue addition cannot
+    // quietly rewrite a report.
+    const observed = [
+      finding("semantics.schema-intent", "implemented"),
+      finding("semantics.schema-entity", "implemented"),
+      finding("discovery.entity-query", "implemented"),
+      finding("discovery.indexed-entity", "detected"),
+      finding("proof.siri-surface", "detected"),
+      finding("execution.live-activity", "unsupported")
+    ];
+    const before = scoreAuditReport(createAuditReport(target, observed));
+    const described = [
+      ...observed,
+      ...["entity.file", "entity.collection", "parameters.union", "models.system-language-model", "models.tool"].map((capability) =>
+        finding(capability, "unknown")
+      )
+    ];
+    const after = scoreAuditReport(createAuditReport(target, described));
+
+    expect(after.applicable).toBe(before.applicable + 5);
+    expect(after.maximum).toBe(before.maximum + 15);
+    expect({
+      points: after.points,
+      discovery: after.discovery,
+      implemented: after.counts.implemented,
+      detected: after.counts.detected,
+      unsupported: after.counts.unsupported
+    }).toEqual({
+      points: before.points,
+      discovery: before.discovery,
+      implemented: before.counts.implemented,
+      detected: before.counts.detected,
+      unsupported: before.counts.unsupported
+    });
+    // The ratio falls, and that is a fact about the catalogue's size, not a
+    // regression in the project. The score is reported next to the denominator
+    // so a reader can see which of the two moved.
+    expect(after.score).toBeLessThan(before.score);
+  });
+
+  it("lets a band fall without the project changing, which is why the denominator is published", () => {
+    // The band is not invariant, and pretending otherwise would be a test that
+    // lies. An app sitting near a band boundary sees the band fall purely
+    // because IntentLane learned to describe something new. This is a fact about
+    // the metric that a client has to be able to see, so the score is always
+    // reported next to the applicable count and the maximum it was divided by.
+    const observed = [
+      finding("semantics.schema-intent", "implemented"),
+      finding("semantics.schema-entity", "implemented"),
+      finding("discovery.entity-query", "implemented"),
+      finding("discovery.indexed-entity", "detected"),
+      finding("proof.siri-surface", "detected"),
+      finding("execution.live-activity", "unsupported")
+    ];
+    const before = scoreAuditReport(createAuditReport(target, observed));
+    const after = scoreAuditReport(
+      createAuditReport(target, [
+        ...observed,
+        ...Array.from({ length: 5 }, (_, index) => finding(`models.described-${index}`, "unknown"))
+      ])
+    );
+
+    expect(before.band).toBe("partial");
+    expect(after.band).toBe("early");
+    expect(after.points).toBe(before.points);
+    // Nothing about the project changed, so the report has to carry enough for a
+    // reader to tell the difference between the app moving and the catalogue
+    // moving. Both numbers are in the score for exactly this.
+    expect({ applicable: after.applicable, maximum: after.maximum }).not.toEqual({
+      applicable: before.applicable,
+      maximum: before.maximum
+    });
+  });
+
   it("scores a real audit run", async () => {
     const directory = await mkdtemp(join(tmpdir(), "intentlane-score-"));
     await mkdir(join(directory, "Sources", "App"), { recursive: true });

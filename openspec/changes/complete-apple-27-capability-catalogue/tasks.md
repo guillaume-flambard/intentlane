@@ -151,20 +151,40 @@
       `HEAD` avant toute modification. `pnpm build` : `tsc --noEmit` propre et
       bundle produit, avec l'avertissement `import.meta` en cjs qui existait
       avant. `pnpm validate` : `Valid IntentLane 0.1: 1 intent(s) ready.`
-- [ ] 6.2 Rejouer `intentlane audit` sur la fixture macOS existante et vérifier
+- [x] 6.2 Rejouer `intentlane audit` sur la fixture macOS existante et vérifier
       que les scores et les bandes sont inchangés : ce change décrit ce que
       l'auditeur sait voir, il ne doit rien changer à ce qu'un projet obtient.
-      **Mesuré, et l'attente est fausse.** Fixture macOS de schéma, même audit
+      **Mesuré, et l'attente est fausse. Décision prise : on ne touche pas à la
+      formule, on épingle l'invariant.** Fixture macOS de schéma, même audit
       avant et après : score 15 → 9, bande `early` inchangée, points 13
       inchangés, `implemented` 6 inchangé, `detected` 1 inchangé, découverte
       `schema-backed` inchangée, `unsupported` 1 inchangé. Ce qui change est le
       dénominateur : 28 capacités applicables → 50. Le score est un ratio sur
       toutes les capacités applicables, donc décrire 22 primitives absentes
       d'un projet le fait baisser mécaniquement. Aucun fait observé n'a bougé.
-      **Décision à prendre, pas à encaisser en silence** : soit le score est
-      redefini sur les capacités que le projet peut viser, soit la baisse est
-      la bonne nouvelle et le rapport doit la dire. À trancher avec lejalon du
-      15/11, parce que c'est un nombre que l'audit vend.
+
+      Trois raisons de ne pas réécrire le dénominateur. Un, la sortie publie
+      déjà `applicable` et `maximum` à côté du score, donc un lecteur voit ce
+      qui a bougé. Deux, décider quelles capacités sont « applicables » à un
+      projet est un jugement que l'auditeur n'a aucune preuve pour rendre, et
+      ce change existe précisément pour ne pas inventer. Trois, rétrécir le
+      dénominateur après coup rendrait les scores de deux ans non comparables
+      en silence, ce qui est pire que la baisse elle-même.
+
+      **La vraie découverte, en écrivant le test** : la bande n'est pas
+      invariante. J'avais écrit un test qui l'affirmait, il a échoué, et il avait
+      raison de m'arrêter. Sur un projet proche d'un seuil, ajouter des
+      capacités inconnues fait passer la bande de `partial` à `early` alors que
+      le projet n'a pas bougé d'un point. C'est un risque commercial réel et
+      mesurable, pas une abstraction. Les deux tests le disent maintenant : l'un
+      épingle ce qui ne doit pas bouger (points, découverte, comptages observés),
+      l'autre nomme la chute de bande et exige que le dénominateur soit publié
+      pour qu'un lecteur distingue un projet qui recule d'un catalogue qui
+      grandit.
+
+      Reste ouvert, et c'est volontaire : rien n'empêche aujourd'hui un rapport
+      de présenter une bande sans son dénominateur à côté. Le corriger est un
+      changement de format de sortie, donc un change à part.
 - [x] 6.3 Vérifier que la sortie JSON et les snapshots sont inchangés pour les
       rapports existants, et que le nouveau groupe apparaît sans casser le
       schéma déclaré. Les snapshots passent sans mise à jour, donc aucun rapport
