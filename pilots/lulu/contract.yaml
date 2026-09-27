@@ -1,0 +1,133 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.lulu-pilot
+  name: LuLu
+  # LuLu declares no URL scheme today: there is no CFBundleURLTypes in
+  # LuLu/App/Info.plist and the installed app registers none. The contract
+  # requires one, and the rule the HandBrake pilot established applies unchanged:
+  # registering it is a task of this pilot and a line in the pull request. A
+  # contract must not declare a scheme the application does not handle.
+  url_scheme: lulu
+  # The built bundle declares 12.0, read back from the built Info.plist. The
+  # authored floor was 10.15, which Xcode 27 refuses, so the pilot raised it to
+  # the minimum the toolchain accepts. App Intents requires macOS 27, so the
+  # availability guard comes from the system schema, not from this floor.
+  min_macos: "12.0"
+  # The app ships German, English, Spanish, French, Italian, Korean, Polish and
+  # Brazilian Portuguese among others. This pilot declares en only, as the other
+  # pilots do, because a claim about a localised phrase is a claim about phrases
+  # this pilot does not produce.
+  locales:
+    - en
+
+# One object: a firewall rule, which is the application's decision about one
+# process or one endpoint.
+#
+# **The identifier is the rule's `uuid` and never its `key`, and that is the
+# decision this contract rests on.** Read in LuLu/Shared/Rule.m, `generateKey`
+# prefers a code-signing identifier and otherwise falls back to exactly this:
+#
+#     if(0 == key.length)
+#     {
+#         key = self.path;
+#     }
+#
+# So the application's own canonical identifier is a filesystem path, or a
+# signing identity that names an organisation. A path carries the developer's
+# user name, their build directory and their project name; a DevID identity names
+# a legal entity. `key` is exactly what must not reach a client report, and it is
+# the field the application itself considers canonical, so exporting it would
+# export the application's notion of identity with a path attached.
+#
+# Not a blocked connection. A connection is over the moment it ends, nothing
+# persists it, and there is no identifier that survives a restart.
+#
+# Not a log entry. The log is a stream of what passed, and an entry has no
+# addressable identity either.
+#
+# Exposed fields: the rule's `name`, and its `action` as the subtitle so a person
+# choosing between two rules can tell a block from an allow. **Not** the `path`,
+# **not** the `endpointAddr` or `endpointHost`, and **not** the `csInfo`. This is
+# the sensitivity classification from the pilot's record applied field by field,
+# and it is stricter than the three previous pilots: a torrent name and a
+# notebook name are the user's own content, whereas a firewall rule's path and
+# endpoint record what the machine talked to and what ran on it.
+entities:
+  - id: rule
+    title:
+      en: Rule
+    identifier: id
+    # `id` is the normalised field, as in every other pilot. The application's
+    # field behind it is `Rule.uuid`, and the pilot's tests bind the two. The
+    # comment above says why it is not `key`.
+    display:
+      title: name
+      subtitle: action
+    query:
+      mode: static
+    # `source_disabled` is a rule the application will not act on:
+    # `Rule.isDisabled` exists and RulesWindowController.m reads it to render the
+    # row in the disabled colour, so the application is saying the source is off.
+    #
+    # `item_not_usable` is a rule that can no longer do anything even though it is
+    # still in the list: one whose `expiration` has passed, or one that
+    # `isTemporary` and whose process has gone, which Rule.h defines as a rule
+    # whose duration is process lifetime.
+    #
+    # `item_missing` is **not** declared, and that is the same measured choice the
+    # Transmission pilot made rather than a copied one: nothing was observed
+    # removing a rule from the application's store, and a condition asserted
+    # without an observation is a condition that can be wrong.
+    exposure:
+      rules: [source_disabled, item_not_usable]
+
+# Two surfaces, and both are ones this application really has.
+#
+# `system.open` selects the rule in the rules list, which is what the
+# application's own table does. It changes which rule is on screen and changes
+# nothing about the firewall.
+#
+# `system.searchInApp` is here because the application has a real in-app search
+# to route into: `RulesWindowController.h` declares `filterBox` as an
+# `NSSearchField` outlet, `windowWillOpen` clears it, and the controller filters
+# and reloads the table from it. This is the fourth pilot to be classified on this
+# surface and the second to keep it, after the netnewswire draft and Transmission.
+# HandBrake lost it because that application has no search field, and the verdict
+# came from the class, not from the stack.
+#
+# Deliberately absent, each for a reason found in the code:
+#
+# - Enabling or disabling a rule. It is the obvious action in a firewall, and
+#   `isDisabled` is right there. It is also the most safety-relevant write in the
+#   application, so it is the one most worth proving properly rather than
+#   adding while the navigation is still being established. A claim about
+#   opening content does not need it.
+# - Removing a rule. The application has no separate remove path here, and a rule
+#   the person wrote carries their own intent.
+# - Anything keyed on `path` or `endpoint`. The classification forbids exposing
+#   them, and an intent that names a process path would reintroduce the field
+#   the identifier was chosen to avoid.
+intents:
+  - id: open_rule
+    title:
+      en: Open rule
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: rule
+  - id: search_rules
+    title:
+      en: Search rules
+    description:
+      en: Search firewall rules in LuLu
+    parameters: []
+    execution:
+      mode: native
+      # A search intent names no target entity, because a system search resolves
+      # inside the application rather than at one row, and a targetless native
+      # intent must name the handler. Both halves are enforced: IL1301 for the
+      # missing handler, IL1401 for a target that must not be there.
+      handler: SearchRulesHandler
+    schema: system.searchInApp

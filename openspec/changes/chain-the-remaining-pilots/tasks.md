@@ -272,7 +272,7 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 - [ ] 3.1 Classer la sensibilité avant le contrat, et écrire ce que les noms
       d'objets peuvent porter. Vérifié par la section de classification dans la
       fiche.
-- [ ] 3.2 Appliquer les conditions d'entrée, avec Transmission certifié. Vérifié
+- [x] 3.2 Appliquer les conditions d'entrée, avec Transmission certifié. Vérifié
       par la liste cochée.
 - [ ] 3.3 Contrat, génération, construction, trois suites, métadonnées,
       certification. Vérifié par les mêmes commandes que pour Transmission.

@@ -214,6 +214,51 @@ cannot be read as a shipped pilot. No code is reused between the pilots: each
 integrates into its own application, and the reused thing is the generator, which
 has no open defect from these pilots.
 
+## The object, and the identifier the classification forced
+
+**A firewall rule, identified by its `uuid` and never by its `key`.**
+
+`validate` exits zero and `generate --check` exits zero, and the generated
+entity carries exactly three fields:
+
+```swift
+struct IntentLaneRuleEntity: AppEntity, IndexedEntity {
+  let id: String
+  @Property(title: ..., indexingKey: \.title) var name: String
+  let action: String?
+```
+
+The three `path` occurrences in the generated file are all in the route helper's
+URL builder, not in the entity. That was checked rather than assumed, because the
+whole point of the classification is that a path must not reach a client report,
+and a contract that says so in a comment while the generated struct says
+otherwise would be a comment.
+
+**Two objects rejected for reasons in the code.** A blocked connection is over
+the moment it ends, nothing persists it, and no identifier survives a restart. A
+log entry is a stream of what passed, and an entry has no addressable identity
+either. So the rule is the only candidate that has one at all.
+
+**The two surfaces, and the search was verified rather than assumed.** LuLu has a
+real in-app search: `RulesWindowController.h:71` declares `filterBox` as an
+`NSSearchField` outlet, `windowWillOpen` clears it, and the controller filters
+and reloads the table from it. This is the fourth pilot classified on
+`system.searchInApp` and the second to keep it. HandBrake lost the same surface
+because it has no search field, so the verdict came from the class and not from
+the stack, which is the whole point of classifying per application.
+
+**What is deliberately absent.** Enabling or disabling a rule is the obvious
+action in a firewall and `isDisabled` is right there in the model. It is also the
+most safety-relevant write in the application, so it is the one most worth proving
+properly rather than adding while navigation is still being established. Nothing
+keyed on `path` or `endpoint` either, because an intent naming a process path
+would reintroduce the exact field the identifier was chosen to avoid.
+
+**The URL scheme.** LuLu registers none today, so `url_scheme: lulu` is a task of
+this pilot and a line in the pull request, exactly as the HandBrake pilot
+established. A contract must not declare a scheme the application does not
+handle.
+
 ## The pattern, and what it actually is
 
 Three pilots in, and one of them is a false pattern, which is worth as much as
