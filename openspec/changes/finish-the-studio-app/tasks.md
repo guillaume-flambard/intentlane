@@ -31,10 +31,10 @@
 
 ## 2. Vert, dans cet ordre
 
-- [ ] 2.1 Passer le plancher à macOS 27 dans `Package.swift` et
+- [x] 2.1 Passer le plancher à macOS 27 dans `Package.swift` et
       `Info.plist`, et écrire la décision arm64 dans `AGENTS.md`. Vérifié par
       1.1 et par un build.
-- [ ] 2.2 Retirer la promesse de localisation: supprimer `fr.lproj` et l'entrée
+- [x] 2.2 Retirer la promesse de localisation: supprimer `fr.lproj` et l'entrée
       `fr`, et noter dans `AGENTS.md` que le shell est en anglais par choix.
       Vérifié par 1.2.
 - [ ] 2.3 Ajouter Settings, About et Help, et un menu de commandes qui porte les

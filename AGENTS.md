@@ -43,6 +43,15 @@ Use the `xcodebuildmcp` CLI for direct Xcode build, test, run and log work. Disc
 
 Never invent an App Intents symbol or availability. Read the relevant skill reference and the installed SDK before emitting code. Keep stable intent type names, entity identifiers, enum raw values and shortcut phrases compatible unless the active specification explicitly authorizes a breaking change.
 
+## Studio application platform
+
+Decided 2026-09-27 in the `finish-the-studio-app` change, and recorded here because the Apple 27 baseline requires the architecture decision to live in the project's instructions rather than in a commit.
+
+- **arm64 only.** macOS 26 was the last release bootable on Intel. The window is the operator's tool, not a client deliverable: no client installs it, so there is no Intel base to carry. Do not add an `x86_64` slice "just in case".
+- **Minimum macOS 27.** The functional layer uses `glassEffect`, which arrived in macOS 26, and the app targets the release it is built against. `AppSurfaceTests` fails if `Package.swift` and `Resources/Info.plist` ever disagree, or if the floor drops below what the app's own APIs need.
+- **The interface is English, by decision.** The bundle declares no localization and ships no `.lproj`. The previous French claim was removed because ten of its twelve strings were used by no screen, and localizing six screens for a single operator does not earn its cost before the first paid audit. Reversing this is a deliberate act: add the language to `CFBundleLocalizations`, add the `.lproj`, and express the views in `LocalizedStringKey`. `AppSurfaceTests` enforces that a declared language has strings the views really use.
+- **Glass is a functional layer.** Navigation, the journey rail and controls may be translucent; content surfaces a reader reads from stay opaque. See the `apple-liquid-glass-design` skill.
+
 ## Implementation rules
 
 - Use the existing OpenSpec change instead of creating a parallel plan.

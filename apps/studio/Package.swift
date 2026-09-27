@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.4
 import PackageDescription
 
 // The views live in a library rather than in the executable, so the snapshot tests
@@ -6,7 +6,7 @@ import PackageDescription
 // of the screen would only prove that the copy looks right.
 let package = Package(
     name: "IntentLaneStudio",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v27)],
     products: [
         .library(name: "StudioCore", targets: ["StudioCore"]),
         .library(name: "StudioUI", targets: ["StudioUI"]),

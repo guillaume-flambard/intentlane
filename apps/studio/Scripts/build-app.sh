@@ -16,9 +16,10 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 
 cp "$binary" "$app/Contents/MacOS/IntentLaneStudio"
 cp "$package/Resources/Info.plist" "$app/Contents/Info.plist"
-mkdir -p "$app/Contents/Resources/en.lproj" "$app/Contents/Resources/fr.lproj"
-cp "$package/Resources/en.lproj/Localizable.strings" "$app/Contents/Resources/en.lproj/Localizable.strings"
-cp "$package/Resources/fr.lproj/Localizable.strings" "$app/Contents/Resources/fr.lproj/Localizable.strings"
+# No .lproj is copied: the window writes its labels inline and the bundle declares
+# no localization, so a strings table here would be a promise nobody reads.
+# `AppSurfaceTests` fails if a declared language ever comes back without strings
+# the views use, or if a strings file returns without a declared language.
 
 # The engine the window drives, bundled rather than resolved from a path, so the
 # app cannot silently run a different engine than the one it was built with.
