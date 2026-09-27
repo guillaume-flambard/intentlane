@@ -25,7 +25,7 @@
       {
         "kind": "swift",
         "path": "IntentLaneGenerated.swift",
-        "line": 22
+        "line": 23
       }
     ],
     "nextAction": "Add a PrivacyInfo.xcprivacy manifest before indexing user content for Spotlight."
@@ -91,14 +91,14 @@
       {
         "kind": "swift",
         "path": "IntentLaneGenerated.swift",
-        "line": 113
+        "line": 135
       }
     ],
     "nextAction": "Keep the action signals with the evidence ledger."
   },
   "catalogue": {
     "version": "27.0",
-    "capabilities": 29,
+    "capabilities": 52,
     "state": "unknown",
     "nextAction": "Pass --sdk-path to compare the catalogue (27.0) with the installed SDK."
   },
@@ -143,6 +143,23 @@
       "nextAction": "Scope the cross-app journey with a pilot before asking for cross-app.view-annotations."
     },
     {
+      "capability": "discovery.entity-property-query",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "discovery.entity-property-query is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the discovery journey with a pilot before asking for discovery.entity-property-query."
+    },
+    {
       "capability": "discovery.entity-query",
       "platform": "macos",
       "state": "implemented",
@@ -151,7 +168,7 @@
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 63,
+          "line": 68,
           "platform": "macos"
         }
       ],
@@ -170,7 +187,7 @@
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 41,
+          "line": 43,
           "platform": "macos"
         }
       ],
@@ -185,6 +202,24 @@
         }
       ],
       "nextAction": "Implement discovery.spotlight-lifecycle before relying on discovery.indexed-entity."
+    },
+    {
+      "capability": "discovery.indexed-entity-query",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query",
+        "discovery.indexed-entity"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "discovery.indexed-entity-query is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the discovery journey with a pilot before asking for discovery.indexed-entity-query."
     },
     {
       "capability": "discovery.intent-value-query",
@@ -219,6 +254,78 @@
         }
       ],
       "nextAction": "Scope the discovery journey with a pilot before asking for discovery.spotlight-lifecycle."
+    },
+    {
+      "capability": "entity.collection",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.collection in this project."
+    },
+    {
+      "capability": "entity.file",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.file in this project."
+    },
+    {
+      "capability": "entity.ownership",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "relevance.syncable-entity"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.ownership in this project."
+    },
+    {
+      "capability": "entity.transient",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.transient in this project."
+    },
+    {
+      "capability": "entity.unique",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.unique in this project."
+    },
+    {
+      "capability": "entity.url-representation",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "discovery.entity-query"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for entity.url-representation in this project."
     },
     {
       "capability": "execution.live-activity",
@@ -272,6 +379,58 @@
       "nextAction": "Scope the execution journey with a pilot before asking for execution.native-handler."
     },
     {
+      "capability": "execution.snippet",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "execution.snippet-view",
+        "execution.native-handler"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "execution.snippet is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the execution journey with a pilot before asking for execution.snippet."
+    },
+    {
+      "capability": "execution.snippet-view",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.result-traits"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "execution.snippet-view is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the execution journey with a pilot before asking for execution.snippet-view."
+    },
+    {
+      "capability": "execution.targets",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.app-intent"
+      ],
+      "gaps": [
+        {
+          "code": "ILA150",
+          "message": "execution.targets is an advanced capability. IntentLane adds it only with a documented pilot journey, a platform matrix and safety fixtures."
+        }
+      ],
+      "nextAction": "Scope the execution journey with a pilot before asking for execution.targets."
+    },
+    {
       "capability": "foundation.app-intent",
       "platform": "macos",
       "state": "implemented",
@@ -280,19 +439,13 @@
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 99,
+          "line": 121,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 118,
-          "platform": "macos"
-        },
-        {
-          "kind": "swift",
-          "path": "IntentLaneGenerated.swift",
-          "line": 125,
+          "line": 159,
           "platform": "macos"
         }
       ],
@@ -347,6 +500,153 @@
       "nextAction": "No evidence for foundation.shortcuts-provider in this project."
     },
     {
+      "capability": "models.dynamic-profile",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.language-model",
+        "models.tool"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.dynamic-profile in this project."
+    },
+    {
+      "capability": "models.generation-options",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.system-language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.generation-options in this project."
+    },
+    {
+      "capability": "models.image-input",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.system-language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.image-input in this project."
+    },
+    {
+      "capability": "models.language-model",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.system-language-model",
+        "models.private-cloud"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.language-model in this project."
+    },
+    {
+      "capability": "models.ocr-tool",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.tool"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.ocr-tool in this project."
+    },
+    {
+      "capability": "models.private-cloud",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.private-cloud in this project."
+    },
+    {
+      "capability": "models.private-cloud-compute",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.private-cloud-compute in this project."
+    },
+    {
+      "capability": "models.spotlight-tool",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.tool",
+        "discovery.indexed-entity"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.spotlight-tool in this project."
+    },
+    {
+      "capability": "models.system-language-model",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.system-language-model in this project."
+    },
+    {
+      "capability": "models.tool",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "models.system-language-model"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for models.tool in this project."
+    },
+    {
+      "capability": "parameters.rich-value",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "cross-app.transferable"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for parameters.rich-value in this project."
+    },
+    {
+      "capability": "parameters.union",
+      "platform": "macos",
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
+      "requirements": [
+        "foundation.parameters"
+      ],
+      "gaps": [],
+      "nextAction": "No evidence for parameters.union in this project."
+    },
+    {
       "capability": "proof.app-intents-testing",
       "platform": "macos",
       "state": "unknown",
@@ -397,14 +697,19 @@
     {
       "capability": "proof.siri-surface",
       "platform": "macos",
-      "state": "detected",
+      "state": "unknown",
       "confidence": "medium",
       "evidence": [],
       "requirements": [
         "semantics.app-schema"
       ],
-      "gaps": [],
-      "nextAction": "Record a manual Siri proof before claiming the journey."
+      "gaps": [
+        {
+          "code": "ILA140",
+          "message": "Shortcut-only evidence does not establish Siri or Apple Intelligence discovery."
+        }
+      ],
+      "nextAction": "Add schema-backed intents before claiming Siri discovery."
     },
     {
       "capability": "proof.spotlight-surface",
@@ -472,31 +777,31 @@
     {
       "capability": "semantics.app-schema",
       "platform": "macos",
-      "state": "implemented",
-      "confidence": "high",
+      "state": "unknown",
+      "confidence": "low",
       "evidence": [
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 40,
+          "line": 42,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 98,
+          "line": 120,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 117,
+          "line": 140,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 124,
+          "line": 158,
           "platform": "macos"
         }
       ],
@@ -504,37 +809,31 @@
         "foundation.app-intent"
       ],
       "gaps": [],
-      "nextAction": "Keep semantics.app-schema covered by tests and extracted metadata."
+      "nextAction": "No evidence for semantics.app-schema in this project."
     },
     {
       "capability": "semantics.schema-completeness",
       "platform": "macos",
-      "state": "implemented",
-      "confidence": "high",
-      "evidence": [
-        {
-          "kind": "swift",
-          "path": "IntentLaneGenerated.swift",
-          "platform": "macos"
-        }
-      ],
+      "state": "unknown",
+      "confidence": "low",
+      "evidence": [],
       "requirements": [
         "semantics.schema-intent",
         "semantics.schema-entity"
       ],
       "gaps": [],
-      "nextAction": "Keep the reader domain complete."
+      "nextAction": "No evidence for semantics.schema-completeness in this project."
     },
     {
       "capability": "semantics.schema-entity",
       "platform": "macos",
-      "state": "implemented",
-      "confidence": "high",
+      "state": "unknown",
+      "confidence": "low",
       "evidence": [
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 40,
+          "line": 42,
           "platform": "macos"
         }
       ],
@@ -543,7 +842,7 @@
         "discovery.entity-query"
       ],
       "gaps": [],
-      "nextAction": "Keep semantics.schema-entity covered by tests and extracted metadata."
+      "nextAction": "No evidence for semantics.schema-entity in this project."
     },
     {
       "capability": "semantics.schema-enum",
@@ -560,25 +859,25 @@
     {
       "capability": "semantics.schema-intent",
       "platform": "macos",
-      "state": "implemented",
-      "confidence": "high",
+      "state": "unknown",
+      "confidence": "low",
       "evidence": [
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 98,
+          "line": 120,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 117,
+          "line": 140,
           "platform": "macos"
         },
         {
           "kind": "swift",
           "path": "IntentLaneGenerated.swift",
-          "line": 124,
+          "line": 158,
           "platform": "macos"
         }
       ],
@@ -586,34 +885,113 @@
         "semantics.app-schema"
       ],
       "gaps": [],
-      "nextAction": "Keep semantics.schema-intent covered by tests and extracted metadata."
+      "nextAction": "No evidence for semantics.schema-intent in this project."
     },
     {
       "capability": "semantics.shortcuts-only-schema",
       "platform": "macos",
-      "state": "unknown",
-      "confidence": "low",
-      "evidence": [],
+      "state": "implemented",
+      "confidence": "high",
+      "evidence": [
+        {
+          "kind": "swift",
+          "path": "IntentLaneGenerated.swift",
+          "platform": "macos"
+        }
+      ],
       "requirements": [],
       "gaps": [],
-      "nextAction": "No evidence for semantics.shortcuts-only-schema in this project."
+      "nextAction": "Keep semantics.shortcuts-only-schema covered by tests and extracted metadata."
     }
   ],
   "score": {
-    "version": "1.0",
-    "score": 17,
+    "version": "1.1",
+    "score": 5,
     "band": "early",
-    "points": 14,
-    "maximum": 84,
-    "applicable": 28,
+    "points": 7,
+    "maximum": 153,
+    "applicable": 51,
+    "catalogueVersion": "27.0",
+    "byGroup": [
+      {
+        "group": "cross-app",
+        "points": 0,
+        "maximum": 6,
+        "applicable": 2,
+        "score": 0
+      },
+      {
+        "group": "discovery",
+        "points": 3,
+        "maximum": 18,
+        "applicable": 6,
+        "score": 17
+      },
+      {
+        "group": "entity",
+        "points": 0,
+        "maximum": 18,
+        "applicable": 6,
+        "score": 0
+      },
+      {
+        "group": "execution",
+        "points": 0,
+        "maximum": 15,
+        "applicable": 5,
+        "score": 0
+      },
+      {
+        "group": "foundation",
+        "points": 2,
+        "maximum": 15,
+        "applicable": 5,
+        "score": 13
+      },
+      {
+        "group": "models",
+        "points": 0,
+        "maximum": 30,
+        "applicable": 10,
+        "score": 0
+      },
+      {
+        "group": "parameters",
+        "points": 0,
+        "maximum": 6,
+        "applicable": 2,
+        "score": 0
+      },
+      {
+        "group": "proof",
+        "points": 0,
+        "maximum": 18,
+        "applicable": 6,
+        "score": 0
+      },
+      {
+        "group": "relevance",
+        "points": 0,
+        "maximum": 9,
+        "applicable": 3,
+        "score": 0
+      },
+      {
+        "group": "semantics",
+        "points": 2,
+        "maximum": 18,
+        "applicable": 6,
+        "score": 11
+      }
+    ],
     "counts": {
       "unsupported": 1,
-      "unknown": 20,
-      "detected": 2,
-      "implemented": 6,
+      "unknown": 47,
+      "detected": 1,
+      "implemented": 3,
       "tested": 0,
       "feasible": 0
     },
-    "discovery": "schema-backed"
+    "discovery": "shortcuts-only"
   }
 }

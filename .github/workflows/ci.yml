@@ -120,8 +120,9 @@ jobs:
           assert report["sdk"]["version"], report.get("sdk")
           assert shelf_report["score"]["discovery"] == "shortcuts-only", shelf_report["score"]
           assert report["score"]["discovery"] == "schema-backed", report["score"]
-          assert reader["semantics.schema-completeness"] == "implemented", reader["semantics.schema-completeness"]
-          assert reader_report["score"]["discovery"] == "schema-backed", reader_report["score"]
+          assert reader["semantics.shortcuts-only-schema"] == "implemented", reader["semantics.shortcuts-only-schema"]
+          assert reader["semantics.schema-completeness"] == "unknown", reader["semantics.schema-completeness"]
+          assert reader_report["score"]["discovery"] == "shortcuts-only", reader_report["score"]
           assert report["route"]["route"] == "native", report["route"]
           assert shelf_report["route"]["route"] == "native", shelf_report["route"]
           assert report["data"]["privacy"] == "unknown", report["data"]
