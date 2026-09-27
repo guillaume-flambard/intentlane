@@ -1,0 +1,142 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.cyberduck-pilot
+  name: Cyberduck
+  # Cyberduck registers one URL scheme per file transfer protocol, `sftp`, `ftps`
+  # and the rest, because that is how an `sftp://` link from Mail opens. It has no
+  # application-owned scheme: the grep for a `cy` scheme in `setup/app/Info.plist`
+  # returns nothing. The rule the HandBrake pilot established applies unchanged, so
+  # the scheme is registered by this pilot and is a line in the pull request.
+  #
+  # Registering it is also close to cosmetic here, and saying so is the point: this
+  # pilot's one intent is `system.open` with a native handler, so nothing routes
+  # through a URL. The comment in the record explains which of the two routes the
+  # application offers is the one the contract refuses, and that is the reason a
+  # scheme nobody uses is declared at all.
+  url_scheme: cyberduck
+  # The built bundle declares 12.0. The authored floor was 10.13, in
+  # `core/dylib/build.xml:27` and `osx/build.xml:32`, and Xcode 27 accepts 12.0 to
+  # 27.0. The pilot raised it in the build scripts, which is the fourth application
+  # in this campaign whose checked-in build predates the toolchain.
+  #
+  # The floor is in the Ant scripts and not in the project file, which is a
+  # difference from LuLu: here the property is passed to xcodebuild on the command
+  # line, so an upstream contributor cannot be given a project-file edit as the fix.
+  min_macos: "12.0"
+  # The application ships around forty localizations. This pilot declares en only,
+  # as the other pilots do, because a claim about a localised phrase is a claim
+  # about phrases this pilot does not produce.
+  locales:
+    - en
+
+# One object: a saved connection, which Cyberduck calls a bookmark and stores as one
+# `<uuid>.duck` file per connection.
+#
+# **The entity is readable natively, and the reason is a precedent inside the
+# application rather than a capability of the method.** The model lives in the JVM
+# and the native side has no handle to it: `launcher.m:165` calls `JLI_Launch` with
+# `0, NULL, 0, NULL` for its three out-parameters, so the process hands control to
+# the JVM and never gets a `JavaVM*` back, and the only JNI in the tree is Java
+# calling native. But `osx/spotlight/GetMetadataForFile.m` is a Spotlight metadata
+# importer that already reads these files with `dictionaryWithContentsOfFile:` and
+# exposes `Hostname` and `Nickname`. So reading connections from native code is not
+# an invention of this pilot; it is something the application ships.
+#
+# The store is also the best shaped of the five candidates. `Host.java:262` writes
+# the `UUID` into the file and `AbstractFolderHostCollection.java:72` names the file
+# from the same value, so the identifier is the model's own field rather than an
+# inference from a path, and the filename stem is a cross-check the tests assert.
+#
+# Not a transfer. A transfer is a job in a queue, it is gone when it finishes, and
+# nothing addresses one across a restart.
+#
+# Not a protocol or a provider. Those are a fixed set of a few dozen names, the
+# wrong shape for an entity, and naming a protocol alongside a nickname still
+# narrows a client's storage to one bucket.
+#
+# **The entity has a title and no subtitle, and that is the first entity in this
+# campaign with that shape.** A subtitle is what tells two same-named things apart,
+# and the only field that could do that here is `Hostname`: a server the client's
+# own customers use. A firewall rule's endpoint is the one place the machine talked
+# to; a connection's hostname is third-party infrastructure, so it is the field a
+# reader of a client report should see least. There is no second candidate, so the
+# entity is identified by its title and its uuid, and two connections sharing a
+# nickname are two rows a person has to look at.
+entities:
+  - id: connection
+    title:
+      en: Connection
+    identifier: id
+    # `id` is the normalised field, as in every other pilot. The key behind it is
+    # `UUID`, read out of the file rather than taken from the filename.
+    display:
+      title: nickname
+    query:
+      mode: static
+    # `item_missing` is the easy one on this application, and it is easy for a
+    # reason the other pilots had to argue for: a connection that was deleted is a
+    # file that is not there. `BookmarkCollection.java:36` puts them in
+    # `<support>/Bookmarks` and `AbstractFolderHostCollection.java:45` filters on
+    # `.*\.duck`, so removal is the absence of a file, observed rather than inferred.
+    # The index sync has to follow it anyway, and `RULES_CHANGED`-style notification
+    # does not exist here: the pilot observes the folder.
+    #
+    # `item_not_usable` is a connection that exists and must not be read. The store
+    # makes it real: `Host.java:259-261` writes `Nickname` only when it is non-blank,
+    # so a `.duck` with no nickname is a connection the application can mount and a
+    # title no person ever chose. This is the same condition FSNotes named for an
+    # untitled notebook, and it is here because the writer makes the key optional
+    # rather than because the recipe suggested it.
+    #
+    # `source_disabled` is **not** declared and this is measured: there is no switch
+    # that hides the whole bookmark store, and no preference that turns the store
+    # off. `Preferences.java:533` does have a support-directory preference, but it
+    # chooses a location, it does not disable anything.
+    #
+    # **A gap in the three rules, named rather than forced.** A file in that folder
+    # that is not a readable property list is neither usable nor missing: it is
+    # there, and nothing can make sense of it. None of the three conditions covers
+    # "unreadable", and the pilot skips such a file rather than pretend one of them
+    # fits. That is a gap in the exposure rule set, it is the first one this campaign
+    # has met, and it is written here so the next application with a corruptible
+    # store has somewhere to put it.
+    exposure:
+      rules: [item_not_usable, item_missing]
+
+# One intent, and there is no search, and both facts are in the record.
+#
+# `system.open` hands the connection's own `.duck` file to LaunchServices. The
+# application registers `duck` as a document type (`ch.sudo.cyberduck.bookmark`,
+# `LSHandlerRank Owner`, role `Editor`), so the system resolves the file to
+# Cyberduck, launches it, and `MainController.application_openFile` at line 577 does
+# `"duck".equals(f.getExtension())` and then `newDocument().mount(HostReaderFactory.get().read(f))`.
+# That mounts the exact saved connection, with the credentials the application saved
+# beside it, because it is the file the application itself wrote.
+#
+# **The other route this application offers is refused, and refusing it is the
+# reason the contract is worth reading.** `MainController` also handles an incoming
+# URL: line 1267 parses it with `HostParser.parse(url)`, and lines 1276-1280 reuse
+# an already-mounted browser window for the same host. So `sftp://client.example.com`
+# would open the application on a connection to that host. It would also put a
+# client's customers' hostnames in a Siri utterance, in a Spotlight result and in an
+# index entry, which is the one field this contract exists to keep off the record.
+# Same application, two actions the platform offers, and the difference between them
+# is exactly the difference between the forbidden field and a file path that is read
+# inside the app and never exported. That is the same shape as LuLu's `key` and
+# IINA's `mpvMd5`, and it is the third time.
+#
+# No `system.searchInApp`. The bookmark list is JavaFX inside the JVM and the filter
+# that drives it is not reachable from the native shell, so a search intent would
+# advertise a surface the adapter cannot reach. Declaring it because a firewall or a
+# notebook has one is how a contract ends up promising something its mapping cannot
+# serve.
+intents:
+  - id: open_connection
+    title:
+      en: Open connection
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: connection

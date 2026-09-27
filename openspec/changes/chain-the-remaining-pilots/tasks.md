@@ -492,31 +492,125 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       résolution du chemin sont quand même publiées dans la fiche, avec leur prix,
       parce qu'elles font partie de ce qu'un client achète et pas d'un échec à
       cacher.
-- [ ] 4.3 Si la réponse est oui, exécuter le pilote comme les autres, en répétant
+- [x] 4.3 Si la réponse est oui, exécuter le pilote comme les autres, en répétant
       les étapes 2.2 à 2.6. Vérifié par `verify --strict` qui sort à zéro.
-      **Non commencé, et il est bloqué sur un prérequis d'environnement nommé :** il
-      faut `ant` et un JDK sur la machine, et le `.app` n'est pas assemblé dans le
-      checkout. Rien n'est installé et rien n'est revendiqué. L'installation d'un JDK
-      et d'Ant sur la machine de travail est un décision qui appartient à la
-      personne, comme celle de Transmission pour sa formule Homebrew, alors que le
-      coût de build de HandBrake avait été payé sans la poser. La question est donc
-      posée et non décidée, et elle est la seule chose qui bloque 4.3.
-- [ ] 4.4 Dans les deux cas, écrire ce que ce pilote a appris sur la portabilité
+      **Fait, et c'est le premier pilote certifié sur une pile Java, avec une
+      entité qui vient d'un fichier et non d'un modèle vivant.** `118` vérifications
+      en trois suites (63, 35, 20), chacune écrite avant le fichier qu'elle teste,
+      métadonnées extraites en `toolsVersion 27A266a`, `verify --strict` certifié
+      sur les six revendications.
+
+      **Le build n'était finalement pas le prérequis que 4.1 avait annoncé.** Un JDK
+      était déjà sur la machine et `/usr/libexec/java_home` en annonçait quand même
+      aucun : les `openjdk` et `openjdk@17` de Homebrew sont keg-only et aucun n'est
+      enregistré dans `/Library/Java/JavaVirtualMachines`. L'absence que l'outil
+      signalait était une absence d'enregistrement, pas de Java, et une vérification
+      qui interroge le mauvais outil aurait rapporté cette machine incapable de
+      construire une application Java, pour une raison qui n'était pas celle-là.
+      `ant` et `maven` sont les seules installations, 45 Mo et 11 Mo. `-DskipSign`
+      ne saute pas la signature : l'exécution `run-ant-sign-target` du pom est
+      inconditionnelle et `osx/build.xml:109` garde l'appel codesign avec
+      `unless:true="${env.SKIP_SIGN}"`, une **variable d'environnement** et non une
+      propriété Maven. Le `AGENTS.md` du dépôt demande un JDK 21, ni 17 ni 26 ne le
+      sont, et le build passe quand même, donc le prérequis déclaré était un plancher
+      et pas une contrainte.
+
+      **Quatrième occurrence de la cible de déploiement périmée**, à 10.13 cette
+      fois, dans `core/dylib/build.xml:27` et `osx/build.xml:32`. Quatre applications
+      d'affilée, à 11.0, 10.15, 10.15 et 10.13 : le coût est borné et mécanique à
+      chaque fois, et c'est maintenant **la ligne la plus prévisible du prix**. Une
+      différence à noter : ici la valeur vit dans une propriété Ant passée en ligne
+      de commande, donc on ne peut pas donner une édition de fichier projet à un
+      contributeur amont. C'est une ligne de changement de forme différente, pas de
+      montant différent.
+
+      **L'ouverture est le résultat de ce pilote, et il est contre-intuitif.**
+      L'application offre deux routes et une seule est honnête. La route URL :
+      `MainController` parse une URL entrante avec `HostParser.parse(url)` et
+      réutilise une fenêtre déjà montée sur le même hôte, donc `sftp://client.acme.example`
+      ouvre l'application, et elle a besoin du **nom d'hôte**. La route document :
+      `CFBundleDocumentTypes` déclare `duck` comme `ch.sudo.cyberduck.bookmark` avec
+      `LSHandlerRank Owner`, et `MainController.application_openFile:577` fait
+      `"duck".equals(f.getExtension())` puis
+      `newDocument().mount(HostReaderFactory.get().read(f))`, donc remettre le fichier
+      `.duck` de la connexion à LaunchServices ouvre **exactement cette connexion
+      enregistrée**, identifiants compris, et elle a besoin d'un **chemin de
+      fichier** utilisé à la couture et jamais exporté. Le contrat prend la route
+      document. La route URL aurait mis les noms de serveurs des propres clients de
+      l'acheteur dans une phrase Siri, dans un résultat Spotlight et dans une entrée
+      d'index, et le pilote aurait été juste et inutile.
+
+      **C'est la troisième fois que la même forme apparaît**, et c'est la revendication
+      centrale de la campagne rendue concrète : LuLu identifie une règle par `key`,
+      qui est un chemin ou une identité de signature, et le pilote prend `uuid` ;
+      IINA a `mpvMd5`, stable à travers un changement de titre et pas à travers un
+      déplacement ; ici le chemin est lu dans l'application pour agir et ne franchit
+      jamais l'entité. Trois applications, trois identifiants, une règle : **l'identifiant
+      et ce que le système montre ne peuvent pas être le champ que l'application
+      utilise pour trouver l'objet à l'intérieur.**
+
+      **Pas de `system.searchInApp`.** La liste des signets est en JavaFX et son filtre
+      n'est pas atteignable depuis la couche native, donc un intent de recherche
+      annoncerait une surface que l'adaptateur ne peut pas atteindre. Et il n'y a pas
+      de suite de suppression, pour la raison inverse de LuLu : ici la suppression est
+      un fichier que le pilote peut créer et supprimer, donc il n'y avait rien à
+      construire. La suite d'index supprime un vrai fichier et surveille l'ensemble
+      suivi. C'est plus faible sur un point précis, qui compte : **aucun code de
+      l'application ne s'exécute pour supprimer la connexion.**
+
+      **Un trou dans les règles d'exposition, trouvé et nommé.** Un fichier du dossier
+      qui n'est pas une property list lisible n'est ni inutilisable ni absent : il est
+      là, et rien n'en fait sens. Aucune des trois conditions ne couvre « illisible »,
+      et le pilote saute un tel fichier plutôt que d'en faire semblant. C'est le
+      premier trou de cet ensemble que la campagne rencontre, il est dans le contrat,
+      et c'est une règle que la campagne devrait ajouter plutôt qu'un contournement
+      que le prochain pilote redécouvrirait.
+
+      **Deux fixtures ont échoué et ce sont les fixtures qui ont changé.** L'une
+      mettait deux enregistrements avec le même UUID dans un même magasin, ce que le
+      store ne produit pas, donc elle testait un ordre de tri et pas un renommage.
+      L'autre écrivait des octets non-plist dans le fichier censé être un signet
+      lisible au nom divergent, donc il était compté illisible et pas divergent. C'est
+      le même échec que la suite noyau de LuLu, et le motif vaut d'être nommé : **une
+      fixture qui ne peut pas exister dans le store ne teste rien, et l'assertion qui
+      échoue est celle qui vérifiait la fixture et pas le code.**
+
+      Le résultat, et les deux limites qui en font partie : **une entité sans
+      sous-titre parce que le seul candidat est un nom d'hôte, et un trou dans les
+      règles d'exposition parce que « illisible » est un troisième état qu'aucune des
+      trois conditions ne nomme.**
+- [x] 4.4 Dans les deux cas, écrire ce que ce pilote a appris sur la portabilité
       vers une application qui n'est pas dans la langue de sa couche native.
-      Vérifié par une section dans le document de résultats. **Écrit avant le run,
-      et c'est la partie de la fiche qu'il ne faut pas relire après.** La recette se
-      transfère intacte à une application Java, et la chose qui la fait se transférer
-      n'est **pas** la méthode : c'est que cette application a écrit un lecteur
-      natif de son propre magasin, dans un format lisible par machine, avec
-      l'identifiant dans le nom de fichier. Le cas général est donc deux cas, et un
-      pilote est exactement ce qui les distingue : une application dont le modèle est
-      lisible nativement, directement ou par son propre magasin, prend les mêmes
-      quatre étapes et la langue de la couche native n'a rien à y voir ; une
-      application dont le modèle ne l'est pas demande un pont, qui est un autre
-      travail avec son propre prix, et aucune recette de pilote ne rend ce prix le
-      même. Cette application est dans le premier cas **par chance et non par
-      conception**, et le pilote doit le dire plutôt que de prendre le crédit d'un
-      résultat général qu'il n'a pas.
+      Vérifié par une section dans le document de résultats. **Écrit, et la réponse
+      n'est pas celle que 4.1 prévoyait.** La recette se transfère intacte à une
+      application Java, et la chose qui la fait se transférer n'est **pas** la
+      méthode : c'est que cette application avait déjà écrit un lecteur natif de son
+      propre magasin, dans un format lisible par machine, avec l'identifiant dans le
+      fichier. Le cas général est deux cas, et un pilote est exactement ce qui les
+      distingue : une application dont le modèle est lisible nativement, directement
+      ou par son propre magasin, prend les mêmes quatre étapes et la langue de la
+      couche native n'a rien à y voir ; une application dont le modèle ne l'est pas
+      demande un pont, qui est un autre travail avec son propre prix, et aucune
+      recette de pilote ne rend ce prix le même. Cette application est dans le
+      premier cas **par chance et non par conception**, et le pilote le dit plutôt que
+      de prendre le crédit d'un résultat général qu'il n'a pas.
+
+      Donc la question à poser à un client n'est pas « dans quelle langue votre
+      application est-elle écrite » mais **« existe-t-il un fichier ou un appel natif
+      qui répond déjà à la question que vous voulez poser à Siri »**. C'est une
+      question à laquelle un ingénieur répond en dix minutes en lisant son propre
+      magasin, et c'est la seule chose qu'un pilote ne peut pas répondre pour le code
+      de quelqu'un d'autre.
+
+      Et la deuxième chose que ce pilote a apprise est celle à citer à un client. Le
+      fichier de signets d'un client de transfert contient un nom d'hôte, un nom de
+      connexion, un chemin de clé privée, un certificat et quatre chemins locaux, et
+      la route naïve pour rendre l'une de ses connexions ouvrable à la voix nomme le
+      nom d'hôte. **Avant de chiffrer une intégration App Intents pour un client de
+      transfert de fichiers, comptez ce que contient son fichier de sauvegarde.** Ce
+      n'est pas une préoccupation générale de vie privée : c'est une question
+      précise, vérifiable, de deux minutes, et c'est pour cela que ce pilote valait la
+      peine d'être mené.
 
 ## 5. La revendication observée, au plus une fois
 
