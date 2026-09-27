@@ -25,6 +25,7 @@ What is sold, to whom, and what is proven about the selling.
 | [docs/product/PRD.md](product/PRD.md) | The product authority: what IntentLane is for. |
 | [docs/product/AUDIT-OFFER.md](product/AUDIT-OFFER.md) | The fixed-scope audit as an offer. |
 | [docs/product/AUDIT-GUIDE.md](product/AUDIT-GUIDE.md) | Every `intentlane audit` option, report block and diagnostic code. |
+| [docs/product/AUDIT-REPORT-TEMPLATE.md](product/AUDIT-REPORT-TEMPLATE.md) | The skeleton for the client-facing readiness report built from an audit run. |
 | [docs/product/CLIENT-QUICKSTART.md](product/CLIENT-QUICKSTART.md) | The client-facing integration guide. |
 | [docs/product/CLIENT-READY-V1.md](product/CLIENT-READY-V1.md) | What "client-ready v1" means, with its exit criteria. |
 | [docs/product/COMMERCIAL-READINESS.md](product/COMMERCIAL-READINESS.md) | The claim matrix and the conditions to launch. |
@@ -40,6 +41,14 @@ What is sold, to whom, and what is proven about the selling.
 | [docs/architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) | Repository layout and the role of each package. |
 | [docs/architecture/MIGRATION.md](architecture/MIGRATION.md) | The schema version policy. |
 | [docs/architecture/APP-AGNOSTIC-INTEGRATION-METHOD.md](architecture/APP-AGNOSTIC-INTEGRATION-METHOD.md) | How an app integrates whatever its UI framework. |
+
+## Studio
+
+The macOS environment for App Intents, built on the engine rather than beside it.
+
+| File | What it is |
+|---|---|
+| [docs/studio/M0-ENGINE-PROTOCOL.md](studio/M0-ENGINE-PROTOCOL.md) | The engine contract Studio runs today, written from the shell that exists, and what is deliberately absent before a JSON-RPC layer is justified. |
 
 ## Specification and evidence
 
