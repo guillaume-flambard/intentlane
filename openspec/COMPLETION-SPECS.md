@@ -52,7 +52,7 @@ contradiction, claims non prouvés toujours non publiables et `git diff --check`
 ## C1. Diff de baselines d'audit
 
 Spécification normative :
-[compare-audit-baselines](changes/compare-audit-baselines/proposal.md).
+[compare-audit-baselines](changes/archive/2026-09-27-compare-audit-baselines/proposal.md).
 Implémenter le module profond `audit-diff` et
 `intentlane audit-diff <baseline> <candidate>`, après des fixtures progression,
 régression, ajout, disparition,
@@ -63,7 +63,7 @@ Diagnostics `ILA170` à `ILA172`, sorties texte et JSON, `--fail-on regression`.
 ## C2. Ledger de preuve pilote
 
 Spécification normative :
-[validate-pilot-evidence-ledger](changes/validate-pilot-evidence-ledger/proposal.md).
+[validate-pilot-evidence-ledger](changes/archive/2026-09-27-validate-pilot-evidence-ledger/proposal.md).
 Implémenter un validateur YAML local, sans driver Siri ni interprétation de
 captures. Chaque parcours requiert contrat et build, plus les surfaces
 revendiquées. Une action risquée requiert confirmation, authentification et
