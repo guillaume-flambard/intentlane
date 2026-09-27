@@ -20,11 +20,25 @@ cannot meet one is blocked and named rather than forced.
 1. **The application builds from a clean checkout**, on this machine, with the
    prerequisites that requires. Stage 0 exists for this, and a missing system
    dependency is the person's decision, not the pilot's.
-2. **The previous pilot is certified.** Two uncertified pilots in a row would make
-   a later defect ambiguous between them.
+2. **The previous pilot is certified, or it is blocked by a cause that produced no
+   finding in the application.** Two uncertified pilots in a row would make a
+   later defect ambiguous between them. A block is not a defect: Transmission
+   could not receive generated Swift because no released cmake compiles Swift
+   against Xcode 27, which was proven from source and touches no application code
+   at all, so there is nothing for a later pilot's defect to be confused with. The
+   guard exists to keep a defect from hiding between two pilots, and a block with
+   no finding keeps it just as well as a certification does. **What does not
+   satisfy it is an uncertified pilot that stopped on something it found in the
+   application**, because that is exactly the case where the next pilot inherits
+   an unattributed finding.
 3. **No known defect from an earlier pilot is unfixed in the code being reused.**
    A defect left in place is rediscovered on every pilot that follows, and each
    rediscovery is more expensive to diagnose because it arrives among new code.
+
+Condition 2 has a consequence worth stating plainly: a pilot blocked by a tool
+limit does not stop the campaign, but a pilot that fails on the application does,
+and the difference is whether a finding was made. Recording the block with its
+measurement, as Transmission's record does, is what makes it usable here.
 
 When a defect is found on one stack, check the certified pilots for it before
 starting the next one. The same defect on two stacks is a defect of the method,

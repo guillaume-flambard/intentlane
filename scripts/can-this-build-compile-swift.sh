@@ -46,7 +46,12 @@ if [ -f "$FORK/CMakeLists.txt" ]; then
   else
     project="does-not-declare-SWIFT"
   fi
-elif [ -f "$FORK/$FORK.xcodeproj/project.pbxproj" ] || compgen -G "$FORK/*.xcodeproj" > /dev/null; then
+elif [ -f "$FORK/$FORK.xcodeproj/project.pbxproj" ] || compgen -G "$FORK/*.xcodeproj" > /dev/null \
+  || compgen -G "$FORK/*.xcworkspace" > /dev/null; then
+  # A workspace is as much an Xcode build as a project, and some applications
+  # ship only the workspace. LuLu does, and this check answered "unknown" until
+  # it was fixed, which is the failure a guard should never have: a real
+  # candidate that the guard could not classify.
   project="xcode-project"
 fi
 
