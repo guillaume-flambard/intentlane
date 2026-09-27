@@ -153,9 +153,19 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 
 ## 2. Transmission, troisième pilote
 
-- [ ] 2.1 Appliquer les conditions d'entrée : compiler depuis un clone propre,
+- [x] 2.1 Appliquer les conditions d'entrée : compiler depuis un clone propre,
       FSNotes certifié, aucun défaut connu non corrigé. Vérifié par la liste des
-      conditions cochée dans la fiche du pilote.
+      conditions cochée dans la fiche du pilote. **Fait et mesuré.** Stage 0
+      complet : `gtkmm3` 3.24.11 était la seule formule manquante, clone
+      récursif des 17 sous-modules, `cmake -B build -G Ninja` à 0 puis
+      `cmake --build build -t transmission-mac` à `502/502` sans une erreur, et
+      l'app produite est un vrai Mach-O arm64 qui s'ouvre. Trois liens `ld:
+      warning` notés, Homebrew construisant `gettext` et `libevent` pour macOS
+      26.0 alors que le bundle déclare 11.0. La fiche note aussi que
+      l'installation a fait passer `glib` de 2.88.3 à 2.90.0 sur la machine.
+      La condition 2 est remplie au dossier et **non rejouable** : les copies de
+      travail de FSNotes et HandBrake ont disparu de la machine, donc la
+      certification est une foi écrite ici et non un test rejoué.
 - [ ] 2.2 Lire le modèle avant d'écrire, choisir l'objet, et écrire le contrat avec
       la raison de l'exclusion de ce que l'application ne sait pas faire. Vérifié
       par `validate` qui sort à zéro et par la relecture de la raison.
