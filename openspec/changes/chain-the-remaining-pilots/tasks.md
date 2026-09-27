@@ -202,8 +202,42 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       erreurs étaient des règles enfreintes par un contrat qui se Cromait
       raisonnable : `IL1301` exige un `handler` sur un intent natif sans cible,
       `IL1401` interdit à un `system.searchInApp` de nommer une entité cible.
-- [ ] 2.3 Générer, ajouter les sources à la cible avec le script du projet, et
+- [ ] 2.3 Générer,       ajouter les sources à la cible avec le script du projet, et
       construire. Vérifié par `generate --check` et par `BUILD SUCCEEDED`.
+      **Généré et vérifié, et l'ajout à la cible est bloqué, mesuré.** La
+      génération passe et `generate --check` sort à 0 : le fichier produit bien
+      une `IntentLaneTorrentEntity` `AppEntity` et `IndexedEntity`, une requête
+      qui réindexe, et les deux intents aux bons schémas.
+
+      Mais **`project(transmission)` ne déclare que C et CXX**, donc un `.swift`
+      ajouté à `target_sources` n'est pas une erreur : configure sort à 0,
+      build sort à 0, et **aucun objet Swift n'est produit**. Reproduit dans un
+      projet de six lignes hors Transmission. C'est précisément le défaut que les
+      tâches 0.4 et 0.5 de cette campagne existent pour empêcher : lu tel quel,
+      `BUILD SUCCEEDED` aurait certifié un build qui n'a jamais compilé une
+      ligne d'App Intents. Activer Swift dans ce build échoue aussi, le CMake de
+      Homebrew ne connaissant pas l'extension `.swift` : c'est un défaut
+      d'environnement, pas de Transmission, et il tient quelle que soit la
+      modification du projet.
+
+      Le projet Xcode embarqué n'est pas un repli : il déclare
+      `MACOSX_DEPLOYMENT_TARGET = 11.0` en trois endroits et Xcode 27 n'accepte
+      que 12.0 à 27.0. Passé à 12.0, l'erreur part, puis la cible `dht`
+      échoue au Libtool avec zéro entrée après un `PrelinkedObjectLink` vide,
+      alors que ses bibliothèques sœurs se construisent. Quatre tentatives
+      `xcodebuild`, puis arrêt de la réparation. L'une des quatre était mon
+      erreur et elle est notée : CMake et Xcode écrivaient tous deux dans
+      `build/`.
+
+      **Ce que ça dit de la méthode** : la table des déviations prédisait ce
+      pilote par « amend: same as HandBrake », parce que le défaut est bien celui
+      de HandBrake, une cible Objective-C sans Swift. La prédiction est fausse,
+      et c'est la règle de la recette qui l'attrape : le même défaut sur deux
+      piles est un défaut de la méthode. HandBrake est construit par
+      `xcodebuild`, Transmission par CMake, et là la même instruction donne un
+      build vert sans Swift. L'amendement n'est pas « s'attendre à une cible
+      sans Swift » mais « **vérifier que le build du projet sait compiler du
+      Swift avant de prévoir d'en ajouter** ».
 - [ ] 2.4 Écrire les trois suites, test-first, dont le négatif exact. Vérifié par
       le premier run rouge puis le run vert.
 - [ ] 2.5 Extraire les métadonnées et certifier les six revendications. Vérifié

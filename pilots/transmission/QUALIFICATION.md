@@ -178,9 +178,67 @@ rules this contract had broken by being reasonable:
   first draft pointed `search_torrents` at `torrent`, which reads as more
   specific than a search is.
 
-## Next action
+## Why 2.3 is not done: the build that works cannot compile Swift
 
-Task 2.3: generate, add the sources to the app target, and build. The target is
-Objective-C++ with no Swift, so the generated files are added to a target that
-contains no other Swift, and that is the first time this method meets a target
-whose every existing file is `.mm`.
+Generation itself is done and `generate --check` exits 0. The generated file is
+what the contract asks for: an `IntentLaneTorrentEntity` conforming to
+`AppEntity` and `IndexedEntity`, a query that reindexes into
+`dev.memolabs.intentlane.transmission-pilot.torrent`, and two intents carrying
+`system.open` and `system.searchInApp`.
+
+Adding it to the application target is blocked, and the blocker is measured
+rather than inferred.
+
+**The project's own build silently ignores the file.** `project(transmission)`
+declares no languages beyond C and CXX, so a `.swift` source added to
+`target_sources` is not an error: configure exits 0, build exits 0, and no Swift
+object is produced. Reproduced in a six-line project outside Transmission:
+
+```
+configure exit=0
+build     exit=0
+find build -name '*.o' | grep -i swift   # nothing
+```
+
+That is the failure this campaign's tasks 0.4 and 0.5 exist to prevent. Had the
+pilot added the file and read `BUILD SUCCEEDED`, it would have certified a build
+that never compiled a line of App Intents, and the claim would have been a lie
+with a green command behind it.
+
+**Enabling Swift in that build fails on this machine.** `enable_language(SWIFT)`
+is rejected by the Homebrew CMake:
+
+```
+CMake Error at CMakeTestSWIFTCompiler.cmake:31 (try_compile):
+  Unknown extension ".swift" for file .../main.swift
+```
+
+So it is an environment defect, not a Transmission defect, and it holds however
+the project is edited.
+
+**The IDE project is stale for Xcode 27, and that is not a fallback.**
+`Transmission.xcodeproj` is 375 KB of project file declaring
+`MACOSX_DEPLOYMENT_TARGET = 11.0` in three places, and Xcode 27 accepts 12.0 to
+27.0. Raising those three to 12.0 removed that error. The build then fails in
+the vendored `dht` target at the Libtool step, which receives zero inputs after
+an empty `PrelinkedObjectLink`, while its sibling libraries build fine. That
+target has no dependency of its own, and forcing `ARCHS=arm64` changes nothing.
+Four `xcodebuild` attempts, then the repair stopped.
+
+One of those four was my own error and it is recorded because it would bite the
+next pilot too: the CMake build and the Xcode build were both writing into
+`build/`, because `xcodebuild` defaults its roots there too, so the two polluted
+each other. Separating `SYMROOT` and `OBJROOT` made the second failure legible.
+
+**What this says about the method.** The deviation log predicted this pilot as
+"amend: same as HandBrake", because the defect is the one HandBrake had: an
+Objective-C target with no Swift. The prediction is wrong, and the recipe's own
+rule is what caught it: the same defect on two stacks is a defect of the method.
+HandBrake is built by `xcodebuild`, so "add Swift to the target" works there.
+Transmission is built by CMake, and there the same instruction produces a green
+build and no Swift. The amendment the recipe needs is not "expect a target with
+no Swift" but "**check that the project's own build can compile Swift before
+planning to add any**".
+
+The two counts in the log are also corrected by measurement: the target is 88
+`.mm` and `.m` files, Objective-C++, not 81 plain `.m`.
