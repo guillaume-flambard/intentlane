@@ -259,7 +259,47 @@ this pilot and a line in the pull request, exactly as the HandBrake pilot
 established. A contract must not declare a scheme the application does not
 handle.
 
-## The pattern, and what it actually is
+## The generated code is inside the application, and compiled
+
+This is the first pilot to reach the step Transmission could not.
+
+`scripts/add-intentlane-sources.rb` adds the generated file to the app target
+with the `xcodeproj` gem, because a classic PBXGroup project does not compile a
+file it has not been told about. It is idempotent, and that was verified by
+running it twice: the second run reports `added: none` and `nothing to do`. The
+FSNotes record names a script for this that no longer exists in the repository,
+since that pilot's working copy is gone, so it is written here rather than
+copied from a dangling reference.
+
+**It also sets `SWIFT_VERSION`, and that is not an extra.** A target that had no
+Swift declares no `SWIFT_VERSION`, and Xcode rejects an empty one the moment a
+Swift file joins it: `error: SWIFT_VERSION '' is unsupported`. The HandBrake
+record already lists missing Swift build settings as its own deviation, separate
+from the missing file, so the script does both. "Add Swift to a target that has
+none" is one operation and it recurs for every Objective-C application.
+
+Then the build, adhoc-signed, with the roots separated:
+
+```
+** BUILD SUCCEEDED **        exit 0
+```
+
+**And the object exists, which is the check that matters.** A build that is told
+about a Swift file and never compiles it is exactly what the Transmission
+investigation found, and it is why the exit code alone is not accepted here:
+
+```
+/tmp/lulu-obj4/.../Objects-normal/arm64/IntentLaneGenerated.o    317.8K
+/tmp/lulu-obj4/.../Objects-normal/x86_64/IntentLaneGenerated.o
+LuLu.swiftmodule                                                   produced
+```
+
+Three independent facts rather than one log line: the exit code is zero, the
+Swift object is 317.8 KB in both architectures, and the target produced a
+`.swiftmodule`, which only a target containing Swift does.
+
+The metadata has not been extracted yet, so nothing here claims registration.
+The build claim is what this section establishes.
 
 Three pilots in, and one of them is a false pattern, which is worth as much as
 the two that are real.
@@ -289,6 +329,37 @@ borrowed that from the Homebrew case, where the question is only whether to
 install a package, and it does not transfer to a binary the pilot can build
 itself. The recipe asks for a running application, and a pilot that stops because
 adapting the application is work is a pilot that stopped before doing the job.
+
+## The pattern, and what it actually is
+
+Three pilots in, and one of them was a false pattern, which is worth as much as
+the two that are real.
+
+| Pilot | Stopped by | Real? |
+|---|---|---|
+| Transmission | no released cmake compiles Swift against Xcode 27 | yes, proven from source |
+| LuLu | a prebuilt binary the repository did not contain | **no, the pilot builds it** |
+| both | a checked-in project older than the toolchain | yes, three times now |
+
+**The honest cost is the stale deployment target, not the missing binaries.** It
+appeared in Transmission at 11.0, in LuLu at 10.15 in six places, and in
+Netiquette at 10.10 and then 10.15. Xcode 27 accepts 12.0 and up, and it reports
+one offending value per build, so a project with two different stale targets
+costs two builds to find both. That is a small, bounded, mechanical adaptation,
+and a pilot does it.
+
+What is genuinely unbounded so far is one thing: a build system that cannot
+compile the language the integration is written in. Transmission's is that, and
+no published cmake fixes it, so no adaptation of Transmission is available. A
+client whose application builds with cmake is a client this method cannot
+deliver on today, and that belongs in the offer's scope, not in a pilot's notes.
+
+**The correction that produced this table.** I first wrote the LuLu condition as
+blocked, on the reasoning that a missing prerequisite is the owner's decision. I
+borrowed that from the Homebrew case, where the question is only whether to
+install a package, and it does not transfer to a binary the pilot can build
+itself. The recipe asks for a running application, and a pilot that stops
+because adapting the application is work has stopped before doing the job.
 
 ## What is deliberately not written yet
 
