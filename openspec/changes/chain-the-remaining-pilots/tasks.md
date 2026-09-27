@@ -409,17 +409,114 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 
 ## 4. Cyberduck, cinquième pilote
 
-- [ ] 4.1 Établir d'abord si le shell natif porte App Intents par le même chemin
+- [x] 4.1 Établir d'abord si le shell natif porte App Intents par le même chemin
       que les autres cibles, sans écrire de mapping. Vérifié par une réponse
-      documentée, dans les deux sens.
+      documentée, dans les deux sens. **Fait, et la réponse a été oui sur le build,
+      oui sur la lecture, non sur l'ouverture. Aucun mapping n'a été écrit.**
+      Le natif n'a aucun handle JVM, et c'est aussi grave que ça en a l'air :
+      `main.m` ne fait qu'appeler `launch`, et `launcher.m:145-168` résout le runtime
+      embarqué puis appelle `JLI_Launch` avec `0, NULL, 0, NULL` pour ses trois
+      out-params, donc la main ne revient jamais avec un `JavaVM*`. Le grep de
+      `JavaVM`, `GetJavaVM` et `AttachCurrentThread` dans l'arbre natif ne rend
+      **rien**, et le seul JNI du dépôt est du Java qui appelle du natif, le mauvais
+      sens pour un système qui pose une question à un moment que l'application n'a
+      pas choisi.
+
+      **Et pourtant l'application lit déjà ses connexions en natif.**
+      `osx/spotlight/GetMetadataForFile.m` est un importateur Spotlight et son corps
+      entier est un `[NSDictionary dictionaryWithContentsOfFile:]` qui lit
+      `Hostname` et `Nickname`. La revendication que j'allais faire, qu'un adaptateur
+      natif devrait inventer un lecteur, était fausse : il en écrirait un qui
+      existe déjà, dans une application qui le livre. Et le magasin est taillé pour :
+      `AbstractFolderHostCollection.java:45` filtre sur `.*\.duck` et `:72` nomme
+      chaque fichier `String.format("%s.duck", bookmark.getUuid())`, donc
+      **l'identifiant est la tige du nom de fichier**, il survit à un renommage du
+      surnom parce que le surnom n'est pas dans le nom, et une connexion supprimée
+      est un fichier absent, ce qui rend `item_missing` observable et non inféré.
+      `BookmarkCollection.java:36` les met dans `<support>/Bookmarks`, et `.duck`
+      est un type de document enregistré (`ch.sudo.cyberduck.bookmark`).
+
+      Le build est la partie facile : `can-this-build-compile-swift.sh` répond
+      `xcode-project` et `compiles-Swift`, la cible `app` est 6 fichiers `.m` sans
+      Swift, la forme exacte de LuLu, et le projet n'est même pas hostile à Swift
+      puisqu'il a déjà une cible `docktile` qui compile `main.swift`. Une seule
+      nuance : `GetMetadataForFile.m` n'est dans **aucune** cible Xcode, les quatre
+      étant `app`, `libcore`, `cli` et `docktile`, parce que c'est la construction
+      Ant qui l'assemble. Le précédent existe donc dans du code que le pilote peut
+      lire et imiter, pas dans une cible qu'il peut étendre.
+
+      **Le build n'est pas fait et c'est un prérequis d'environnement.** `ant` n'est
+      pas installé, il n'y a pas de JDK sur cette machine (`java_home -V` ne trouve
+      aucun runtime), et le `.app` n'est pas assemblé dans le checkout. Cyberduck
+      n'est **pas** sandboxé (`com.apple.security.app-sandbox` est absent de
+      `setup/app/Info.plist`), donc une fois construit l'application lit son propre
+      dossier de support sans travail d'entitlement. C'est la même catégorie de coût
+      que le build HandBrake, que la campagne a déjà évalué à « adaptable », et c'est
+      écrit comme un prérequis, pas comme un résultat.
+
+      **L'ouverture est un non, et c'est la partie intéressante.** La liste des
+      connexions est en JavaFX, donc il n'y a pas de ligne native à sélectionner. Il
+      n'y a pas non plus d'URL qui atteigne un signet : `setup/app/Info.plist`
+      déclare un schéma par **protocole de transfert** (`sftp`, `ftps` et les
+      autres), parce que c'est ainsi qu'un lien `sftp://` du Courrier s'ouvre, et
+      il n'y a ni `cy://` ni schéma appartenant à l'application. Le `system.open` le
+      plus honnête est donc « lance Cyberduck », et prétendre qu'une connexion cible
+      est sélectionnée serait une revendication sur une table JavaFX que l'adaptateur
+      ne peut pas voir. C'est la première fois que l'**action** est plus faible que
+      la **lecture**, ce qui inverse la forme des quatre pilotes d'avant.
+
+      **Le dossier à lire est choisi à l'exécution, et c'est un coût mesuré.**
+      `Preferences.java:533` fixe
+      `factory.supportdirectoryfinder.class = TemporarySupportDirectoryFinder`, une
+      préférence d'exécution dont le défaut est le dossier **temporaire**, celui du
+      build portable. `Preferences.java:502-509` fait de même pour le sérialiseur et
+      pour les lecteurs et écrivains de profils, transferts et hôtes, donc le
+      *format* du fichier `.duck` est aussi une préférence d'exécution. Un pilote peut
+      lire le chemin ordinaire et noter la limite ; une intégration livrée ne peut
+      pas le figer, et le seul code qui le résout correctement est dans la JVM, ce
+      qui ramène la frontière d'où le pilote est parti. Donc : **le lecteur natif
+      fonctionne, et résoudre quoi lire est la partie qui demande encore
+      l'application.**
+
+      La classification de sensibilité est dans la fiche, avec le champ que cette
+      application ajoute aux trois autres : `Credentials`. Un `.duck` est une
+      connexion enregistrée et les connexions enregistrées portent des identifiants,
+      parfois un mot de passe, parfois un chemin de clé privée. Le pilote lit deux
+      clés et n'ouvre jamais les champs d'identifiants, et la fiche le dit, parce
+      qu'un pilote qui dit « nous n'avons pas lu les mots de passe » fait une
+      revendication qu'un client vérifiera.
 - [ ] 4.2 Si la réponse est non, publier le résultat comme limite de la méthode,
       nommer ce qui a échoué, et ne pas rétrécir le jeu de revendications pour la
-      masquer. Vérifié par la relecture du document de résultats.
+      masquer. Vérifié par la relecture du document de résultats. **Sans objet sur
+      le pilote** : la réponse est oui. La limite d'ouverture et la limite de
+      résolution du chemin sont quand même publiées dans la fiche, avec leur prix,
+      parce qu'elles font partie de ce qu'un client achète et pas d'un échec à
+      cacher.
 - [ ] 4.3 Si la réponse est oui, exécuter le pilote comme les autres, en répétant
       les étapes 2.2 à 2.6. Vérifié par `verify --strict` qui sort à zéro.
+      **Non commencé, et il est bloqué sur un prérequis d'environnement nommé :** il
+      faut `ant` et un JDK sur la machine, et le `.app` n'est pas assemblé dans le
+      checkout. Rien n'est installé et rien n'est revendiqué. L'installation d'un JDK
+      et d'Ant sur la machine de travail est un décision qui appartient à la
+      personne, comme celle de Transmission pour sa formule Homebrew, alors que le
+      coût de build de HandBrake avait été payé sans la poser. La question est donc
+      posée et non décidée, et elle est la seule chose qui bloque 4.3.
 - [ ] 4.4 Dans les deux cas, écrire ce que ce pilote a appris sur la portabilité
       vers une application qui n'est pas dans la langue de sa couche native.
-      Vérifié par une section dans le document de résultats.
+      Vérifié par une section dans le document de résultats. **Écrit avant le run,
+      et c'est la partie de la fiche qu'il ne faut pas relire après.** La recette se
+      transfère intacte à une application Java, et la chose qui la fait se transférer
+      n'est **pas** la méthode : c'est que cette application a écrit un lecteur
+      natif de son propre magasin, dans un format lisible par machine, avec
+      l'identifiant dans le nom de fichier. Le cas général est donc deux cas, et un
+      pilote est exactement ce qui les distingue : une application dont le modèle est
+      lisible nativement, directement ou par son propre magasin, prend les mêmes
+      quatre étapes et la langue de la couche native n'a rien à y voir ; une
+      application dont le modèle ne l'est pas demande un pont, qui est un autre
+      travail avec son propre prix, et aucune recette de pilote ne rend ce prix le
+      même. Cette application est dans le premier cas **par chance et non par
+      conception**, et le pilote doit le dire plutôt que de prendre le crédit d'un
+      résultat général qu'il n'a pas.
 
 ## 5. La revendication observée, au plus une fois
 
