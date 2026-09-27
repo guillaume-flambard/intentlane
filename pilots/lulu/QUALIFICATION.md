@@ -40,16 +40,104 @@ there is nothing here to misattribute. A pilot that had stopped on something it
 found in the application would still block the next one, and that is the case the
 condition was written for.
 
-## The object, and why not the others
+## The sensitivity classification, before any contract
 
-Not yet chosen, and deliberately. Task 3.1 is to classify sensitivity first and
-to write what the object's names may carry, and the object follows from that
-reading rather than preceding it. A firewall has rules, extensions, a log and a
-set of blocked connections, and they do not have the same lifecycle: a rule is
-written by the person, a log entry is transient, a connection is gone the moment
-it ends.
+Task 3.1 is to classify first, so the contract can be adjusted deliberately
+rather than discovered later. Read in `LuLu/Shared/Rule.h` and `Rule.m`.
+
+### What a rule is, and the three kinds
+
+A `Rule` is the firewall's decision about one process or endpoint. The class
+carries, among others:
+
+- `uuid`, a `NSUUID` string generated once at creation, and `key`
+- `name`, the display name
+- `path`, the process binary, and `isGlobal` when the path is the wildcard
+- `endpointAddr` and `endpointHost`, matched exactly, by regex, or by CIDR
+- `action` allow or deny, and `scope` process or endpoint
+- `isDisabled`, `expiration`, and `isTemporary`, which the header defines as
+  "duration is set to process lifetime (e.g. has a pid)"
+
+So there are three kinds of rule, and they do not share a lifecycle: a permanent
+user rule, a rule that expires, and a temporary rule that dies with the process
+that caused it.
+
+### What the names may carry, which is the question the classification exists for
+
+**This application's own identifier is a filesystem path.** `generateKey` in
+`Rule.m` prefers a code-signing identifier, and falls back to exactly this:
+
+```objc
+if(0 == key.length)
+{
+    key = self.path;
+}
+```
+
+That is the finding, and it is the reason this pilot is classified separately
+from the three before it. A path on a developer's machine carries their user
+name, their build directory and their project's name. A `DevID` signing
+identity, the other branch, names an **organisation**, which for a client is a
+legal entity. Neither belongs in a client report, and the first one is also what
+the application itself uses to deduplicate rules.
+
+**Therefore the identifier for this pilot is `uuid` and never `key`**, and this
+is not a stylistic preference: `key` is the field the application considers
+canonical, so exposing it would export the application's own notion of identity
+along with a path.
+
+What each field may carry, and therefore what may be exposed:
+
+| Field | May carry | Verdict |
+|---|---|---|
+| `uuid` | nothing a person wrote | the identifier |
+| `name` | anything the person types, including a client or project name | **not** an identifier, per the rule that already excluded a user preset and a torrent name |
+| `path` | user name, build directory, project name | **not exposed** |
+| `endpointAddr`, `endpointHost` | internal hostnames, infrastructure, a client's own servers | **not exposed** |
+| `csInfo` | the signing organisation, a legal entity | **not exposed** |
+| `action` | allow or deny | exposed as the subtitle |
+| `isDisabled` | nothing | exposed, and it drives an exposure condition |
+
+The three previous pilots were classified by one field, the person-written name.
+LuLu adds a class the method has not met: **fields that name other people's
+infrastructure**. A torrent name is the user's own content and a notebook name is
+the user's own text, so excluding them is a privacy choice about the user. A
+firewall rule's endpoint and path are a record of what the user's machine talked
+to and what ran on it, which is a different kind of thing to put in a report
+someone else reads.
+
+### The exposure conditions, and the prediction this makes
+
+The three rules the schema offers map onto the three states the code already
+tracks, which is why the mapping is not a guess:
+
+- **`source_disabled`**: `isDisabled` exists and `RulesWindowController.m` reads
+  it to render a rule in the disabled colour. A disabled rule is the application
+  saying it will not act on it, which is a source turned off.
+- **`item_not_usable`**: a rule whose `expiration` has passed, or that is
+  `isTemporary` and whose process has gone. The rule object is still in memory
+  and still in the list, and it can no longer do anything.
+- **`item_missing`**: not used. Nothing removes a rule from the application's
+  store in a way this pilot has observed, and a condition asserted without an
+  observation is a condition that can be wrong.
+
+**What the classification predicts, for task 3.4 to check.** Because the object
+is named by `uuid` while the application names it by path, the contract will
+have to bind two different identifiers, and the tests will have to prove that a
+rule's `uuid` survives a rename of its `name` and a move of its `path`. If the
+classification is right, that is where the work is. If the contract turns out to
+need something the classification did not anticipate, the classification was
+incomplete and it is the classification that has to be amended, not the pilot.
+
+### The object is not chosen here, and why
+
+A rule is the obvious candidate and a block/allow decision is the obvious
+action, but both are held back until the entry conditions are applied, because
+the object choice should be made knowing the pilot can build at all. What the
+classification does settle is the field policy above, and that policy does not
+change if the object ends up being a rule or something narrower.
 
 ## What is deliberately not written yet
 
 The contract, the generated sources and the three suites belong to tasks 3.2 and
-later. Nothing is written before the classification.
+later. Nothing is written before the entry conditions are applied.
