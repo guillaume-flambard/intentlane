@@ -4,7 +4,7 @@
 
 Make IntentLane a truthful audit and implementation system for schema-backed
 Siri and Apple Intelligence journeys in existing macOS 27 and iOS 27 apps. This
-supplements the historical [ROADMAP.md](ROADMAP.md). The Apple source inventory
+supplements the historical [ROADMAP.md](../../ROADMAP.md). The Apple source inventory
 is [APPLE-27-APP-INTENTS-RESEARCH.md](APPLE-27-APP-INTENTS-RESEARCH.md).
 
 ## Rules
@@ -18,7 +18,7 @@ is [APPLE-27-APP-INTENTS-RESEARCH.md](APPLE-27-APP-INTENTS-RESEARCH.md).
 
 Deliver `intentlane audit`, a versioned catalogue, text/JSON/SARIF output,
 fixtures and stable `ILA` diagnostics as specified in
-[AUDITOR-SPEC.md](AUDITOR-SPEC.md). Do not build auto-remediation, a dashboard,
+[AUDITOR-SPEC.md](../spec/AUDITOR-SPEC.md). Do not build auto-remediation, a dashboard,
 a hosted scanner or source upload.
 
 **Gate:** proceed only when an independently maintained public macOS app has a
@@ -71,7 +71,7 @@ unit tests, system test and platform matrix:
 Publish an audit template, statement of work, engagement checklist, pricing
 hypothesis, claims matrix and two public case studies. Every claim must map to
 pilot evidence. The rules are in
-[COMMERCIAL-READINESS.md](COMMERCIAL-READINESS.md).
+[COMMERCIAL-READINESS.md](../product/COMMERCIAL-READINESS.md).
 
 ## Pull request definition of done
 

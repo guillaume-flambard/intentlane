@@ -189,6 +189,6 @@ over data selection, navigation, authorisation and any sensitive action.
 ## IINA second-pilot record
 
 IINA is the selected second pilot. Its discovery and acceptance contract are
-recorded in [PILOT-IINA-DISCOVERY.md](PILOT-IINA-DISCOVERY.md). The scope is a
+recorded in [PILOT-IINA-DISCOVERY.md](../pilots/PILOT-IINA-DISCOVERY.md). The scope is a
 user-controlled local playback history, with no filesystem-path disclosure. It
 remains a local pilot until IINA's requested design proposal is accepted.

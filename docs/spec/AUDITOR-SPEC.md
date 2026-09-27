@@ -11,7 +11,7 @@ It is the service entry point. A generic App Intent can expose an action in
 Shortcuts and Spotlight, but schema-backed Siri and Apple Intelligence journeys
 need the relevant App Schema, entities, queries and real app implementation.
 The capability inventory and Apple sources live in
-[APPLE-27-APP-INTENTS-RESEARCH.md](APPLE-27-APP-INTENTS-RESEARCH.md).
+[APPLE-27-APP-INTENTS-RESEARCH.md](../apple/APPLE-27-APP-INTENTS-RESEARCH.md).
 
 ## Boundaries
 
@@ -120,4 +120,4 @@ metadata exists. Only the pilot evidence ledger can mark a journey `verified`.
 6. The audited worktree remains unchanged.
 7. `pnpm test`, `pnpm build` and audit fixture tests pass.
 
-Phase sequencing is normative in [SIRI-27-ROADMAP.md](SIRI-27-ROADMAP.md).
+Phase sequencing is normative in [SIRI-27-ROADMAP.md](../apple/SIRI-27-ROADMAP.md).

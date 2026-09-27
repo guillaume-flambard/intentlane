@@ -7,7 +7,7 @@ IntentLane compiles a versioned YAML contract into Apple App Intents for Expo ap
 - **Pilot reports.** Run the quickstart on an app you already ship and report what broke, what the contract could not express, and what you had to write by hand. The Phase 3 gate needs five pilots, two of them existing apps. Use the [pilot report form](.github/ISSUE_TEMPLATE/pilot-report.yml) so the report carries the details below.
 - **Contract gaps.** If an intent, a parameter type or an execution mode cannot be declared in `0.1`, open an issue with the YAML you wish worked.
 - **Diagnostics.** A confusing message, a missing code, or a case that should be rejected and is not.
-- **Docs.** Anything in [README.md](README.md), [SPEC.md](SPEC.md) or [ARCHITECTURE.md](ARCHITECTURE.md) that does not match what the code does.
+- **Docs.** Anything in [README.md](README.md), [SPEC.md](SPEC.md) or [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) that does not match what the code does.
 - **Adapters.** Not yet. Android, Flutter and Capacitor are deliberate non-goals until the Apple path has pilots.
 
 ## Before you open an issue
@@ -38,7 +38,7 @@ npx expo prebuild --platform ios
 npx expo run:ios
 ```
 
-The repository layout and the role of each package are in [ARCHITECTURE.md](ARCHITECTURE.md).
+The repository layout and the role of each package are in [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ## Rules the code follows
 
@@ -57,7 +57,7 @@ These are not style preferences, they are the properties the project sells. A ch
 
 ## Repository readiness
 
-[OPEN-CORE-READINESS.md](OPEN-CORE-READINESS.md) records the contributor and
+[OPEN-CORE-READINESS.md](docs/product/OPEN-CORE-READINESS.md) records the contributor and
 maintainer inventory with the evidence behind every claim, and the choices that
 still need an owner decision before a policy is written.
 

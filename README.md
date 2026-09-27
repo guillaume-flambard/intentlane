@@ -1,6 +1,14 @@
 # IntentLane
 
-IntentLane is a deterministic compiler from a versioned YAML contract to Apple App Intents. No model runs in the build path: the same YAML always produces the same Swift. The generated Swift is not platform-specific: it compiles for iOS and for macOS, and the Xcode toolchain extracts the same App Intents metadata from either. Expo is the first integration path, because an Expo app regenerates its native directory on every prebuild and needs a plugin to put the Swift back; a plain Swift target just commits the generated file. See [macOS](#macos).
+IntentLane tells an iOS or macOS team which Siri and Apple Intelligence journeys its app can actually support, then delivers the native integration with evidence.
+
+The entry offer is a fixed-scope compatibility audit for one existing app, one target platform, and up to three named user journeys. It maps feasible App Intents, entities, and schemas, identifies implementation and safety gaps, and produces a bounded plan with acceptance evidence. When the audit justifies the work, an implementation engagement delivers customer-owned adapters, generated Swift, tests, metadata checks, and a final evidence ledger.
+
+IntentLane is built for founders, product leads, and Apple platform teams that need to make a reliable integration decision before committing a sprint. It does not promise universal voice control or guaranteed natural-language behavior. A green build, extracted metadata, and a journey observed in Siri are three different claims, and IntentLane records them separately.
+
+Under the hood, IntentLane is a deterministic compiler and read-only auditor. No model runs in the build or verification path: the same versioned YAML contract produces the same Swift and the same repository evidence produces the same audit report. The generated Swift compiles for iOS and macOS. Expo is one integration route; a native Swift target can commit the generated file directly. See [macOS](#macos).
+
+See [COMMERCIAL-READINESS.md](docs/product/COMMERCIAL-READINESS.md) for the permitted claims and offers, [AUDIT-OFFER.md](docs/product/AUDIT-OFFER.md) for the audit deliverable, and [.agents/product-marketing.md](.agents/product-marketing.md) for the buyer, positioning, objections, and language.
 
 ## Status
 
@@ -12,9 +20,9 @@ Phase 3 is complete on paper: primitive and enum parameters, static App Entities
 
 Still out of scope: endpoint entity queries, HTTP execution, enum schema conformances, localization of the generated Swift beyond the default locale, deep-link routing inside the app, and EAS project configuration. IntentLane does not write `eas.json`; [Running on a device](#running-on-a-device) covers the build itself.
 
-For product scoping, read [the complete Apple schema reference](APPLE-SCHEMA-REFERENCE.md),
-the [application-agnostic integration method](APP-AGNOSTIC-INTEGRATION-METHOD.md),
-and the [NetNewsWire pilot backlog](NETNEWSWIRE-ACTION-BACKLOG.md). They distinguish
+For product scoping, read [the complete Apple schema reference](docs/apple/APPLE-SCHEMA-REFERENCE.md),
+the [application-agnostic integration method](docs/architecture/APP-AGNOSTIC-INTEGRATION-METHOD.md),
+and the [NetNewsWire pilot backlog](docs/pilots/NETNEWSWIRE-ACTION-BACKLOG.md). They distinguish
 Apple system journeys from custom automation and record the required proof for each.
 
 ## Quickstart
@@ -88,7 +96,7 @@ Runs the release gates for one client integration: valid contract, fresh
 generated source, an application-owned test command, extracted App Intents
 metadata and optional pilot evidence. It deliberately reports live Siri and
 Spotlight evidence separately from a green build. See
-[AUTOMATED-VERIFICATION.md](AUTOMATED-VERIFICATION.md) for the command and
+[AUTOMATED-VERIFICATION.md](docs/spec/AUTOMATED-VERIFICATION.md) for the command and
 the client test contract.
 
 `intentlane audit [directory]`
@@ -101,7 +109,7 @@ the client test contract.
 - `--sdk-path <path>`: read the installed SDK's `SDKSettings.json`, record its version in the report, and mark a capability `unsupported` when the SDK is older than the version that capability needs.
 - `--strict`: exit non-zero when a high-confidence blocker was found. A capability the target platform does not ship (`ILA100`) is informational and never blocks, so `--strict` stays usable on a clean macOS project; an SDK older than the capability needs (`ILA160`) does block.
 
-[AUDIT-GUIDE.md](AUDIT-GUIDE.md) is the reading companion for that output: every option, every report block, the diagnostic codes and the recipe for baselining a pilot candidate.
+[AUDIT-GUIDE.md](docs/product/AUDIT-GUIDE.md) is the reading companion for that output: every option, every report block, the diagnostic codes and the recipe for baselining a pilot candidate.
 
 `audit` analyses a project read-only and never writes to it. Every capability comes out as `unsupported`, `unknown`, `detected`, `implemented`, `tested` or `feasible`, with the evidence it used and the next action. A project that only declares an `AppShortcutsProvider` stays `implemented` for Shortcuts and `unknown` for Siri discovery: shortcuts alone never prove schema-backed Siri or Apple Intelligence. The auditor's diagnostics are prefixed `ILA`.
 
@@ -132,7 +140,7 @@ TODOs for stable-ID lookup, approved records, registration and the Spotlight
 index/update/delete lifecycle. A later run refuses to overwrite it unless
 `--overwrite-adapter` is explicit. The template deliberately contains no App
 Shortcuts registration. See
-[the macOS 27 implementation research](APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md)
+[the macOS 27 implementation research](docs/apple/APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md)
 for the Apple sources and the required positive, negative and reindex tests.
 
 The report also qualifies the integration route, because the same work costs a different amount depending on how the app is built. It prints `route <route> (<confidence>)`, and the JSON output adds a `route` object with the evidence and a next action. `native` means a Swift or Xcode target carries the code, `bridged` means a cross-platform framework does (Expo, React Native, Capacitor, Flutter, Tauri) and the native target comes out of its build, `ineligible` means a web-only project that can carry App Intents only through a native target or a bridge, and `unknown` means nothing recognizable was found. A bridge whose native target is not generated yet is `bridged` with medium confidence rather than a guess.
@@ -466,7 +474,7 @@ IntentLane is at the pilot stage, so the most useful thing you can do is run it 
 
 [CONTRIBUTING.md](CONTRIBUTING.md) says what helps most, what to include in a bug report, and the rules the code follows. The short version: a new capability starts in the schema with tests that reject the invalid shapes, generation stays deterministic and offline, and every Swift emission has a golden snapshot.
 
-This project is MIT licensed. See [LICENSE](LICENSE). The schema version policy and the future `intentlane migrate` command are described in [MIGRATION.md](MIGRATION.md).
+This project is MIT licensed. See [LICENSE](LICENSE). The schema version policy and the future `intentlane migrate` command are described in [MIGRATION.md](docs/architecture/MIGRATION.md).
 
 ## Open risks
 

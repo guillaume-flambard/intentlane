@@ -164,5 +164,5 @@ objet ou exposer une donnée privée.
 Le pilote NetNewsWire reste le test de référence actuel. Son plan
 AppIntentsTesting fournit la partie `--app-test`; le bundle de résultat et les
 métadonnées du build alimentent les portes automatiques. Les parcours visibles
-restent documentés dans [MANUAL-SIRI-ACCEPTANCE.md](MANUAL-SIRI-ACCEPTANCE.md)
+restent documentés dans [MANUAL-SIRI-ACCEPTANCE.md](../pilots/MANUAL-SIRI-ACCEPTANCE.md)
 et le ledger ne peut passer à `verified` sans une seconde reproduction.

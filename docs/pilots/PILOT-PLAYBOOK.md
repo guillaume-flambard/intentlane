@@ -1,8 +1,8 @@
 # IntentLane pilot playbook
 
 This playbook is the operational counterpart of the
-[application-agnostic integration method](APP-AGNOSTIC-INTEGRATION-METHOD.md).
-Use [the Apple schema reference](APPLE-SCHEMA-REFERENCE.md) to enumerate
+[application-agnostic integration method](../architecture/APP-AGNOSTIC-INTEGRATION-METHOD.md).
+Use [the Apple schema reference](../apple/APPLE-SCHEMA-REFERENCE.md) to enumerate
 candidate actions, then select only the ones whose client-side business
 contract and evidence can be established.
 
@@ -18,7 +18,7 @@ build, or a Shortcuts-only schema for the desired ASRi action.
 Record upstream revision, licence, target and deployment floor, Xcode and OS
 build, device or simulator, selected domain, selected journeys and schema fit.
 
-[AUDIT-GUIDE.md](AUDIT-GUIDE.md) documents the baseline recipe: run the audit on
+[AUDIT-GUIDE.md](../product/AUDIT-GUIDE.md) documents the baseline recipe: run the audit on
 the pinned revision in all three formats, keep the JSON next to the evidence
 ledger, and compare the delta after the implementation.
 

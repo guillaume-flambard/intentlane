@@ -39,6 +39,6 @@ reproduction:
   by: pending-second-reviewer
   status: fail
 artifacts:
-  notes: ./PILOT-NETNEWSWIRE.md
+  notes: ./docs/pilots/PILOT-NETNEWSWIRE.md
   baseline: ./audit-baseline.json
   delta: ./audit-delta.json

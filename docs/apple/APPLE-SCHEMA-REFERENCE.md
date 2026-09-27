@@ -2,7 +2,7 @@
 
 Portée : macOS/iOS 27, catalogue Xcode connu par IntentLane au 23 septembre
 2026. Ce document est exhaustif pour les références reconnues dans
-[`packages/core/src/app-schemas.ts`](packages/core/src/app-schemas.ts), mais il
+[`packages/core/src/app-schemas.ts`](../../packages/core/src/app-schemas.ts), mais il
 ne prétend pas que chaque ligne est utilisable par chaque application. Une
 action exige son objet métier, son contrat Apple exact, les autorisations et
 une preuve réelle.

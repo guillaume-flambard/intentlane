@@ -32,7 +32,7 @@ techniques : contrat, génération, test métier de l'application et métadonné
 extraites du build. Elle garde l'observation Siri/Spotlight comme une porte
 distincte, afin qu'un build vert ne soit jamais présenté comme une expérience
 conversationnelle validée. Le détail du protocole est dans
-[AUTOMATED-VERIFICATION.md](AUTOMATED-VERIFICATION.md).
+[AUTOMATED-VERIFICATION.md](../spec/AUTOMATED-VERIFICATION.md).
 
 ## Contrat universel pour un objet ouvrable
 

@@ -17,11 +17,11 @@ pour décrire un outil ou une comparaison, jamais la cible du produit.
 Pour les tâches d'audit d'applications existantes, App Schemas, Siri, Apple
 Intelligence, macOS 27, iOS 27, pilotes externes ou mise sur le marché, lire :
 
-1. `APPLE-27-APP-INTENTS-RESEARCH.md`
-2. `AUDITOR-SPEC.md`
-3. `SIRI-27-ROADMAP.md`
-4. `PILOT-PLAYBOOK.md`
-5. `COMMERCIAL-READINESS.md`
+1. `docs/apple/APPLE-27-APP-INTENTS-RESEARCH.md`
+2. `docs/spec/AUDITOR-SPEC.md`
+3. `docs/apple/SIRI-27-ROADMAP.md`
+4. `docs/pilots/PILOT-PLAYBOOK.md`
+5. `docs/product/COMMERCIAL-READINESS.md`
 
 Ce programme complète le MVP Expo historique ci-dessous. Il vise d'abord les
 applications macOS et iOS existantes et les App Schemas validés par Apple.
@@ -43,7 +43,7 @@ Construire la plus petite tranche verticale permettant à une app Expo d'exposer
 
 ## Ordre de travail
 
-1. Lire `PRD.md`, `SPEC.md`, `ARCHITECTURE.md`, puis `ROADMAP.md`.
+1. Lire `docs/product/PRD.md`, `SPEC.md`, `docs/architecture/ARCHITECTURE.md`, puis `ROADMAP.md`. Tout document hors racine se trouve dans `docs/INDEX.md`.
 2. Créer le monorepo décrit sans ajouter de services.
 3. Implémenter le schéma minimal de l'exemple.
 4. Écrire les tests de parsing et diagnostics avant le générateur.

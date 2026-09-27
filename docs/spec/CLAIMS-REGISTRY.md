@@ -1,7 +1,7 @@
 # Claims registry
 
 Every public statement IntentLane makes, the level it belongs to in
-[COMMERCIAL-READINESS.md](COMMERCIAL-READINESS.md), the platform and version it
+[COMMERCIAL-READINESS.md](../product/COMMERCIAL-READINESS.md), the platform and version it
 names, the evidence behind it and its status. A claim is only publishable at or
 below its status.
 

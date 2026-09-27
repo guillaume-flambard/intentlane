@@ -6,8 +6,8 @@ is missing. It reads a repository and never writes to it, so it is safe to run
 on a fork, a checkout or a pilot candidate.
 
 This guide is the reading companion for the audit output. The pilot process
-around it lives in [PILOT-PLAYBOOK.md](PILOT-PLAYBOOK.md), and the specification
-of the auditor itself is [AUDITOR-SPEC.md](AUDITOR-SPEC.md).
+around it lives in [PILOT-PLAYBOOK.md](../pilots/PILOT-PLAYBOOK.md), and the specification
+of the auditor itself is [AUDITOR-SPEC.md](../spec/AUDITOR-SPEC.md).
 
 ## Run the audit
 
