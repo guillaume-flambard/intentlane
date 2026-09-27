@@ -107,7 +107,17 @@ echo "toolchain: $toolchain${note:+ ($note)}"
 
 case "$project:$toolchain" in
   *:cannot-enable-Swift)
-    echo "verdict:   NO. Replacing the build tool is a decision for the person who owns the machine."
+    # Measured on Xcode 27: this is not a packaging problem and replacing the
+    # build tool does not fix it. Homebrew's cmake 4.4.3 ships the Swift
+    # documentation and not the module, and the official CMake.app of the same
+    # version ships the module and still fails, with "Unknown extension .swift"
+    # raised from CMakeTestSWIFTCompiler while SWIFT is listed as enabled.
+    # 4.4.3 is the latest release, so no published cmake compiles Swift against
+    # Xcode 27's swiftc. Do not send the next pilot looking for a newer build
+    # tool; there is not one to find.
+    echo "verdict:   NO. No released cmake compiles Swift against this toolchain."
+    echo "           Replacing the build tool does not help: 4.4.3 is the latest release and both"
+    echo "           packagings fail. A pilot whose project builds with cmake is blocked here."
     ;;
   does-not-declare-SWIFT:*)
     echo "verdict:   NO. The project never enabled Swift, so a generated source would be accepted and silently skipped."

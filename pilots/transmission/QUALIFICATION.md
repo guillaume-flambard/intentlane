@@ -280,26 +280,45 @@ treat the `NO` as the finding rather than looking for a way around it.
 ## The decision this leaves open
 
 Stage 2.3 asks for the generated sources to be added to the target, and the
-stage's exit criterion is `BUILD SUCCEEDED`. On this machine that cannot happen
-for Transmission: the project's current build cannot compile Swift, and its IDE
-project does not build on Xcode 27. So the choice is between two honest-looking
-options and they are not equivalent.
+stage's exit criterion is `BUILD SUCCEEDED`. Three routes were weighed.
 
-**Add a separate test target that compiles the generated Swift** and leave
-Transmission's own build alone. It is cheap and it proves the generated code
-compiles and that its seams behave. It does **not** prove the code is inside the
-real application, and stage 2.3 says "add the sources to the target", so under
-this option the stage is not finished and must not be ticked. This is the
-HandBrake integration pattern, and it is a weaker claim than the recipe asks for.
+**Replacing the build tool. Tried, and it is dead.** The obvious idea was that
+Homebrew's cmake 4.4.3 simply omits the Swift module, since
+`/opt/homebrew/share/cmake/Modules/` has the Swift documentation and not
+`CMakeSwiftInformation.cmake`. The official CMake.app of the same version was
+installed to test it: it does ship the module, and it still fails, with
+`Unknown extension ".swift"` raised from `CMakeTestSWIFTCompiler` while `SWIFT`
+is listed among the enabled languages. Passing `CMAKE_SWIFT_COMPILER` explicitly
+does not help. 4.4.3 is the latest published release, so this is not a packaging
+gap and not a stale install: **no released cmake compiles Swift against Xcode
+27's `swiftc`.** The cask was uninstalled and the machine is as it was.
 
-**Repair the Xcode project until it builds** with the generated Swift inside the
-real target. It satisfies 2.3 as written. It is a repair of a third party's
-stale project file, it already needed a deployment-target change that alters
-what the app supports, and the vendored `dht` failure is not understood well
-enough to promise it lands.
+That closes the route and widens the finding. This is not Transmission's
+particular problem. It is true of every application whose current build is cmake,
+and it will be true for the next one too.
 
-The second is the only one that closes 2.3 honestly. The first is what a pilot
-would be tempted to do, and the reason it is written down here rather than just
-done is that it would produce a green pilot and a claim the build does not
-support. Replacing Homebrew's cmake, which is the third possibility, is a change
-to the machine and therefore the owner's decision.
+**A separate test target that compiles the generated Swift.** Cheap, certain,
+and it is the HandBrake integration pattern. It proves the generated code
+compiles and that its seams behave. It does **not** put the code in the real
+application, and stage 2.3 says "add the sources to the target", so under this
+route the stage is not finished and must not be ticked. Choosing it is how a
+pilot ends up green with a claim the build does not support.
+
+**Repairing the Xcode project until it builds** with the generated Swift in the
+real target. It is the only route that closes 2.3 as written. It is a repair of a
+third party's abandoned project file, it already required raising a deployment
+target that changes what the app supports, and the vendored `dht` Libtool
+failure is not diagnosed. Even if it landed, it would prove the code compiles in
+a build system the project no longer uses.
+
+**Decision: 2.3 is recorded as blocked, with the cause named, and the pilot does
+not certify its build claim.** That is what the recipe's stage 0 already says to
+do when a prerequisite is missing, and the missing prerequisite here is a
+released cmake that does not exist. The alternative is to claim a build that
+never compiled a line of App Intents, which is the exact failure tasks 0.4 and
+0.5 of this campaign were written to prevent.
+
+What would unblock it, in order of cost: a cmake built with Swift support, a
+pilot whose application builds with Xcode, or an upstream fix. The first is a
+machine change and therefore the owner's decision, and the second is a choice of
+pilot. Neither is mine to take silently, so the state is written down instead.

@@ -238,6 +238,27 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       build vert sans Swift. L'amendement n'est pas « s'attendre à une cible
       sans Swift » mais « **vérifier que le build du projet sait compiler du
       Swift avant de prévoir d'en ajouter** ».
+
+      **La route du remplacement de l'outil de build est morte, et ça élargit le
+      constat.** L'idée était que le cmake.app officiel de la même version 4.4.3
+      embarque le module que celui de Homebrew n'a pas. Testé : il l'embarque
+      bien et **échoue quand même**, avec `Unknown extension ".swift"` levée
+      depuis `CMakeTestSWIFTCompiler` alors que `SWIFT` est listé parmi les
+      langages activés ; passer `CMAKE_SWIFT_COMPILER` explicitement ne change
+      rien. 4.4.3 est la dernière version publiée, donc **aucun cmake publié ne
+      compile du Swift contre le `swiftc` d'Xcode 27**. Ce n'est donc pas un
+      problème propre à Transmission : c'est vrai de toute application dont le
+      build actuel est cmake, et ce sera vrai du prochain aussi. Le cask a été
+      désinstallé et la machine est revenue à son état.
+
+      **Décision : 2.3 est enregistrée comme bloquée, avec la cause nommée, et le
+      pilote ne certifie pas sa revendication de build.** C'est ce que le stage 0
+      de la recette dit déjà de faire quand un prérequis manque, et le prérequis
+      qui manque est un cmake publié qui n'existe pas. L'autre option aurait été
+      de revendiquer un build qui n'a jamais compilé une ligne d'App Intents, ce
+      qui est précisément l'échec que les tâches 0.4 et 0.5 ont été écrites pour
+      empêcher. Ce qui débloquerait, par coût croissant : un cmake compilé avec
+      le support Swift, ou un pilote dont l'application se construit avec Xcode.
 - [ ] 2.4 Écrire les trois suites, test-first, dont le négatif exact. Vérifié par
       le premier run rouge puis le run vert.
 - [ ] 2.5 Extraire les métadonnées et certifier les six revendications. Vérifié

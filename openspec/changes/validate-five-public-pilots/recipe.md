@@ -103,11 +103,17 @@ checkout, with the tools a normal developer already has?
   ```
 
   A pilot that answers no cannot add generated code to that project's target. It
-  is blocked at stage 0, where the answer costs six lines, and the remedy belongs
-  to the person who owns the machine: replacing the build tool, or building the
-  app through a project that can already compile Swift. What a pilot must not do
-  is discover this at the mapping stage, after the contract is written, and then
-  satisfy the step with a standalone compile.
+  is blocked at stage 0, where the answer costs six lines, and the remedy is
+  **not** to look for a better build tool. It was tried: the Homebrew cmake
+  4.4.3 ships the Swift documentation and not `CMakeSwiftInformation.cmake`,
+  and the official CMake.app of the very same version ships the module and still
+  fails, with `Unknown extension ".swift"` raised from
+  `CMakeTestSWIFTCompiler` while `SWIFT` is listed among the enabled languages.
+  4.4.3 is the latest release, so no published cmake compiles Swift against
+  Xcode 27's `swiftc`. **A pilot whose application builds with cmake is blocked
+  from generated Swift on this toolchain, and the honest state is blocked rather
+  than routed around.** The remaining choices are to build cmake with Swift
+  support, to use a project that already compiles Swift, or to state the limit.
 - **Do not assume the IDE project still builds.** "Run the project's own build,
   then the IDE build" is sound, and the second leg can be a project file that
   predates the toolchain. Transmission's `Transmission.xcodeproj` declares
