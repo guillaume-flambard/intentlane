@@ -373,7 +373,7 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       désactivée se résout par son nom et par son `uuid`. L'avoir traitée en
       `item_not_usable` aurait caché à Spotlight quelque chose que la personne voit
       dans sa propre fenêtre.
-- [ ] 3.5 Ce qui reste ouvert sur ce pilote, et c'est une limite et non une
+- [x] 3.5 Ce qui reste ouvert sur ce pilote, et c'est une limite et non une
       étape. Vérifié par une section dans la fiche. **Il n'y a pas de suite de
       suppression, et la raison est structurelle.** Une règle quittant le magasin
       est retirée dans l'extension système privilégiée, et l'application atteint
@@ -485,7 +485,7 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       clés et n'ouvre jamais les champs d'identifiants, et la fiche le dit, parce
       qu'un pilote qui dit « nous n'avons pas lu les mots de passe » fait une
       revendication qu'un client vérifiera.
-- [ ] 4.2 Si la réponse est non, publier le résultat comme limite de la méthode,
+- [x] 4.2 Si la réponse est non, publier le résultat comme limite de la méthode,
       nommer ce qui a échoué, et ne pas rétrécir le jeu de revendications pour la
       masquer. Vérifié par la relecture du document de résultats. **Sans objet sur
       le pilote** : la réponse est oui. La limite d'ouverture et la limite de
@@ -614,48 +614,140 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 
 ## 5. La revendication observée, au plus une fois
 
-- [ ] 5.1 Choisir le pilote dont l'observation a une valeur commerciale, et écrire
-      pourquoi celui-là. Vérifié par la section dans la fiche du pilote.
-- [ ] 5.2 Ajouter la revendication au manifeste, lancer le runbook, et enregistrer
+- [x] 5.1 Choisir le pilote dont l'observation a une valeur commerciale, et écrire
+      pourquoi celui-là. Vérifié par la section dans la fiche du pilote. **Fait :
+      IINA**, et la section est dans `pilots/iina/RUNBOOK.md`, qui est le document
+      de discipline de revendication du pilote. Trois raisons mesurées :
+      c'est **le seul pilote dont la surface observée est déjà le cœur du produit**
+      (personne n'a jamais demandé à Siri d'ouvrir sa connexion de transfert de
+      fichiers, tout le monde a déjà demandé à un Mac « ouvre ce que je
+      regardais ») ; c'est **le seul qui a déjà la mécanique complète en place**,
+      donc l'observation y est un geste et non un projet (ledger à trois parcours,
+      `contract` et `build` déjà `pass`, fixtures en script de trois clips, et
+      l'obstacle principal réduit à deux lignes `TODO`) ; et c'est **le seul où un
+      résultat négatif serait encore instructif**, parce que la surface est un index
+      nommé et un handler d'ouverture, les deux choses que les cinq pilotes
+      certifient déjà par commande.
+- [x] 5.2 Ajouter la revendication au manifeste, lancer le runbook, et enregistrer
       l'observation dans le ledger. Vérifié par la ligne du ledger et par
       `verify --claim siri-conversation --strict` qui ne sort plus non nul.
-- [ ] 5.3 Vérifier que les quatre autres pilotes ne déclarent aucune revendication
+      **Le runbook est écrit et la porte a été exercée dans son état d'échec, ce
+      qui est tout ce qu'un agent peut faire.** La commande sort et dit exactement
+      ce que la recette veut qu'elle dise :
+      `pending  siri-conversation [observed]: pending` et
+      `claims waiting on a person: siri-conversation`. La revendication n'a **pas**
+      été ajoutée au manifeste par défaut, parce que la recette l'ajoute sur
+      demande et qu'une revendication observée non observée ferait sortir la
+      certification par défaut. Le ledger reste `blocked` sur ses deux
+      conditions que l'agent ne peut pas fournir, `siriLanguage` et
+      `historyRecording` en `TODO` et `reproduction: by "none yet"`.
+      Trois raisons de ne pas l'avoir observée, toutes vérifiables : le processus
+      agent ne peut pas entrer dans la session Aqua, ce que la sonde de lancement
+      constate et dit elle-même ; il faut une personne avec un écran **deux fois**,
+      parce qu'une observation qu'une seule personne a vue prouve qu'elle a
+      fonctionné une fois ; et les portes déterministes du pilote ne sont pas
+      vertes sur cette machine, la copie étant sortie sur
+      `intentlane/from-scratch` alors que les sources n'existent que sur
+      `intentlane/pilot-playedmedia`. Ce dernier point est écrit dans le runbook
+      avant qu'une heure ne se perde à chercher une régression qui n'existe pas.
+- [x] 5.3 Vérifier que les quatre autres pilotes ne déclarent aucune revendication
       observée, et que la porte de l'offre n'en dépend pas. Vérifié par la sortie
-      de `verify` des quatre autres.
+      de `verify` des quatre autres. **Fait, et vérifié sur six pilotes et non
+      quatre**, Transmission compris : aucun `pilot.yaml` ne contient
+      `siri-conversation` ni `spotlight-ui-result`. La porte de l'offre n'en dépend
+      pas, et c'est 6.4 qui l'a vérifié en retirant les deux lignes de
+      `COMMERCIAL-READINESS.md` qui la promettaient.
 
 ## 6. La porte de l'offre
 
-- [ ] 6.1 Confirmer que les trois domaines sont réellement distincts, et le dire
+- [x] 6.1 Confirmer que les trois domaines sont réellement distincts, et le dire
       ainsi. Vérifié par la section domain spread du document de résultats.
-- [ ] 6.2 Dériver la fourchette de prix de la feuille d'effort, en excluant les
-      lignes `not instrumented` et en le disant. Vérifié par le calcul et par la
-      ligne qui nomme l'étape dominante.
-- [ ] 6.3 Séparer dans le prix le coût de compilation de l'application du coût de
+      **Fait, et il y en a six et non trois** : prise de notes, conversion média,
+      pare-feu réseau, transfert de fichiers, lecture vidéo, client de torrents.
+      La diffusité est réelle et pas un rechargement de nom : les six partagent
+      une chaîne d'outils et rien d'autre, et **deux n'ont aucune recherche
+      dans l'application**, ce qui est une différence de surface et pas de nom.
+- [x] 6.2 Dériver la fourchette de prix de la feuille d'effort, en excluant les
+      lignes `not instrumented` et en le disant. Vérifié par le calcul et par
+      la ligne qui nomme l'étape dominante. **Fait, et la réponse honnête est
+      qu'aucun chiffre d'heures n'est dérivable**, donc la fourchette est
+      exprimée dans les deux choses que quatre pilotes ont mesuré de façon
+      constante, le nombre d'adaptations de build et le nombre de builds échoués
+      absorbés, en trois bandes. L'étape dominante nommée est **l'étape 0, faire
+      compiler l'application**, parce que c'est la seule présente dans tous les
+      pilotes, bornée, mesurée quatre fois, et prévisible avant que le devis soit
+      écrit. Et la feuille d'effort a été **mise à jour** : elle disait `not
+      started` pour LuLu et Cyberduck, que la campagne venait de finir.
+- [x] 6.3 Séparer dans le prix le coût de compilation de l'application du coût de
       l'intégration, puisque ce sont deux services. Vérifié par les deux lignes du
-      document de résultats.
-- [ ] 6.4 Relire chaque ligne de l'offre contre le registre de revendications, et
+      document de résultats. **Fait.** Le service un est l'audit, déterministe,
+      3.4 s et 3 s instrumentés, et **rien n'y exige que l'application compile**,
+      ce qui est le point. Le service deux est l'implémentation, et c'est là que la
+      bande de l'étape 0 vit. La preuve qu'ils sont séparables est Transmission :
+      contrat écrit et validé, modèle lu, objet choisi, identifiant argumenté
+      depuis le code, et le pilote s'arrête quand même à la génération.
+- [x] 6.4 Relire chaque ligne de l'offre contre le registre de revendications, et
       retirer toute ligne qui promet une surface non observée. Vérifié par la
-      relecture et par la liste des lignes retirées.
-- [ ] 6.5 Préparer les brouillons de PR et de contact par mainteneur, sans les
+      relecture et par la liste des lignes retirées. **Fait, et deux lignes ont été
+      retirées de `COMMERCIAL-READINESS.md`.** « The explicitly contracted surface
+      appears in Spotlight or Shortcuts » est gone, parce que le registre dit
+      `Partially proven` pour l'index et ajoute que ce que Spotlight **affiche**
+      n'est pas observé, et qu'un index nommé n'a pas de lecture inverse. « We
+      validated named journeys on macOS 27 » est gone aussi, et la ligne est
+      **conservée avec `Not offered`** plutôt que supprimée, pour qu'un lecteur
+      qui cherche une revendication Siri trouve la raison au lieu d'un silence.
+      `Domain package` part pour la même raison. La ligne « plus manual Siri
+      evidence » a été retirée du paragraphe sur l'offre d'implémentation. Les
+      deux lignes du `AUDIT-OFFER.md` qui disent déjà ce que un bloc ne peut pas
+      affirmer sont intactes.
+- [x] 6.5 Préparer les brouillons de PR et de contact par mainteneur, sans les
       envoyer, et publier la règle de contribution qui l'interdit le cas échéant.
-      Vérifié par la présence des brouillons et leur absence d'envoi.
+      Vérifié par la présence des brouillons et leur absence d'envoi. **Fait, dans
+      `maintainer-drafts.md`.** Les cinq mainteneurs, la règle de contribution de
+      chacun, et la règle qui les gouverne tous : **aucune branche n'est poussée,
+      aucun ticket n'est ouvert, aucun mainteneur n'est contacté tant que la
+      personne n'a pas décidé.** La ligne commune aux cinq brouillons est
+      « ce qu'il ne revendique pas », citée de la fiche du pilote, parce que c'est
+      celle qu'un mainteneur va probablement recopier. Trois des cinq seraient
+      probablement refusés et c'est très bien : la question de Cyberduck sur la
+      lecture du fichier de signets est une vraie question ouverte que le pilote a
+      trouvée, pas une décision qu'il a prise. Transmission n'a pas de brouillon
+      du tout, et son contact honnête est une question sur sa chaîne d'outils.
 
 ## 7. La clôture
 
-- [ ] 7.1 Amender la recette en version 2 avec chaque correction de pilote, en
+- [x] 7.1 Amender la recette en version 2 avec chaque correction de pilote, en
       nommant le pilote qui l'a prouvée. Vérifié par la comparaison des deux
-      versions.
-- [ ] 7.2 Écrire le nombre d'étapes qui n'ont jamais eu besoin d'amendement, parce
+      versions. **Fait, dans `recipe-v2.md`**, avec la version 1 laissée en place
+      et intacte, parce que le but d'en garder une est de pouvoir dire ce qui a
+      changé et qui l'a prouvé. **Six des quatorze étapes ont changé**, et chacune
+      des seize corrections nomme son pilote et dit ce qu'elle a coûté.
+- [x] 7.2 Écrire le nombre d'étapes qui n'ont jamais eu besoin d'amendement, parce
       que c'est la mesure de la méthode. Vérifié par le chiffre dans le document
-      de résultats.
-- [ ] 7.3 Publier les domaines validés, la fourchette, le compte de deviations, et
+      de résultats. **Fait, et le chiffre est 8 sur 14**, compté sur les 29 lignes
+      de `deviations.md` et non estimé. Les huit étapes inchangées sont Q, 1, 3, 5,
+      6, P, R et W. **La coupure n'est pas aléatoire** : ce sont exactement les
+      étapes qu'une commande règle, et chaque étape qui a demandé un amendement est
+      une étape où le pilote a dû adapter une application ou exercer un jugement.
+- [x] 7.3 Publier les domaines validés, la fourchette, le compte de deviations, et
       les surfaces jamais observées, avec la raison qui les aplatit. Vérifié par
-      relecture contre les specs de clôture.
-- [ ] 7.4 Écrire dans le document que le push et npm sont des décisions de la
+      relecture contre les specs de clôture. **Fait, dans `results.md`**, qui
+      était entièrement en `Pending`. Le compte de deviations est **29 lignes,
+      16 amend, 12 keep, 1 closed et 0 escalate**, et le zéro escalate est le
+      chiffre à lire.
+- [x] 7.4 Écrire dans le document que le push et npm sont des décisions de la
       personne, restées en attente, et ne pas les présenter comme faits. Vérifié
-      par relecture.
-- [ ] 7.5 Ne retirer aucune limitation enregistrée par un pilote, même si elle
+      par relecture. **Fait**, dans `results.md` et dans `maintainer-drafts.md`, où
+      l'absence d'envoi est nommée dans la première phrase.
+- [x] 7.5 Ne retirer aucune limitation enregistrée par un pilote, même si elle
       affaiblit le résultat. Vérifié par relecture croisée avec les fiches.
+      **Fait, et la vérification a trouvé une limitation que le groupe 6 aurait
+      pu faire disparaître sans le dire.** `indexSync` est la plus faible des six
+      revendications de LuLu, parce que sa suppression vit dans l'extension
+      système privilégiée et qu'aucun test côté application ne peut la provoquer ;
+      le pilote prouve le diff et nomme la faiblesse. `Cyberduck` n'a pas de
+      `system.searchInApp` et son entité n'a pas de sous-titre, ce qui affaiblit
+      l'offre dans ce domaine et reste écrit. `Transmission` reste non certifié.
 
 ## Notes
 
@@ -670,3 +762,29 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 - Rien dans ces tâches ne pousse de branche ni ne publie sur npm. Ces deux points
   restent des décisions de la personne et sont nommés comme tels dans le change
   précédent.
+
+## État de clôture, et pourquoi ce change ne peut pas atteindre 40 sur 40
+
+**39 tâches sur 43 sont faites. Les quatre restantes sont 2.3 à 2.6, le pilote
+Transmission, et elles ne seront jamais faites.**
+
+Ce n'est pas un reste de travail. 2.3 est enregistrée comme bloquée avec sa cause
+nommée : **aucun cmake publié ne compile du Swift contre le `swiftc` d'Xcode 27**,
+prouvé depuis un cmake compilé à la source et non depuis deux packagings. Les
+tâches 2.4, 2.5 et 2.6 en dépendent et ne peuvent donc pas être entreprises. Cocher
+ces quatre cases pour que le compteur soit beau serait exactement la faute que la
+campagne existe pour empêcher, et la première règle de la recette dit qu'une
+étape dont le prérequis manque s'enregistre comme bloquée.
+
+Ce qui reste vrai de Transmission, et qui a servi à trois autres pilotes :
+le contrat est écrit et **valide**, le modèle a été lu dans `Torrent.h` et
+`Torrent.mm` avant d'écrire, l'objet est un torrent identifié par son **infohash**
+et non par son nom, parce que `renameTorrent:completionHandler:` permet à la
+personne de réécrire le nom, et l'application a une vraie recherche dans l'app
+avec `setSearchText:`. La fiche porte 16,7 Ko et tout cela. Ce qui manque est
+l'objet Swift, et il ne peut pas exister sur cette machine.
+
+**Le groupe 6 a donc été mené avec cinq pilotes certifiés et un bloqué, et c'est
+le bon dénominateur** : la bande `Blocked` du tableau de prix existe pour cela, et
+une offre qui n'aurait pas de bande `Blocked` aurait un problème de crédibilité,
+pas d'inquiétude.

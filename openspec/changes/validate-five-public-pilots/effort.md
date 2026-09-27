@@ -57,19 +57,19 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | HandBrake `e9398f3` | P | 0.6 s to the launch probe's decision, 12 checks on the probe itself, all under 1 s | `/usr/bin/time -p`, shell | the probe decides in under a second because it refuses early, and the 12 checks are what stand in for a launch this machine will not perform. The end-to-end launch is **not instrumented and not run**, because the agent process may not spawn into the Aqua session; the effort sheet says so rather than quoting a number from a run that did not happen |
 | FSNotes `450619b` | P | 12 checks on the probe, all under 1 s | shell | same shape as HandBrake's, plus one check that the two probes carry the same three disclaimers, which is the test that makes this one probe reused rather than two |
 | LuLu `7d2669e` | Q | not instrumented | manual | done before this sheet existed |
-| LuLu `7d2669e` | 0 | not started | | |
-| LuLu `7d2669e` | 1 | not started | | |
-| LuLu `7d2669e` | 2 | not started | | |
-| LuLu `7d2669e` | 3 | not started | | |
-| LuLu `7d2669e` | 4 | not started | | |
-| LuLu `7d2669e` | 5 | not started | | |
-| LuLu `7d2669e` | 6 | not started | | |
-| LuLu `7d2669e` | 7 | not started | | |
-| LuLu `7d2669e` | 8 | not started | | |
+| LuLu `7d2669e` | 0 | 1 extra clone, 3 builds of a second project, 1 build of LuLu, then BUILD SUCCEEDED at exit 0 | shell, four `xcodebuild` runs | `Netiquette.app` is in `.gitignore` and produced by nothing, so the pilot built it; its deployment target was 10.10 then 10.15, which means two builds to find both. LuLu's own was 10.15 in six places |
+| LuLu `7d2669e` | 1 | not instrumented | manual | the audit was not re-run for this pilot |
+| LuLu `7d2669e` | 2 | not instrumented, authoring | manual | the classification is the cost here, and it was written before the contract by task 3.1 |
+| LuLu `7d2669e` | 3 | 0.85 s for `generate --check` | `/usr/bin/time -p` on the check | fourth pilot in a row where generation is free once the contract is right |
+| LuLu `7d2669e` | 4 | 45 core, 46 integration, 22 index checks, written before the implementation | shell, three runs | the field set is read back with `Mirror` and compared to the six classified fields, because this application's canonical identifier is a filesystem path |
+| LuLu `7d2669e` | 5 | core 1.46 s, integration 3.68 s, index 2.32 s | `/usr/bin/time -p` on each suite | the suites are the gate, so their cost is counted once |
+| LuLu `7d2669e` | 6 | 3 failed builds, then BUILD SUCCEEDED | shell, four `xcodebuild` runs | a missing `OSLog` import, then `os_log_info` and `os_log_with_type` which are macros in `os/log.h` and have no Swift symbol, then a real error and a 0. The `pid_t` cast was the fourth |
+| LuLu `7d2669e` | 7 | 1.18 s compile, plus the processor | `/usr/bin/time -p` on the compile | the module name is `LuLu`, and a different one produces a plausible-looking bundle with the wrong name in it |
+| LuLu `7d2669e` | 8 | under 1 s plus the gate suites, and **certified on the second run** | `/usr/bin/time -p` | the first run failed `generated` because the two copies of the generated file had drifted, and only the copy in `out/` is compared |
 | Transmission `48835c6` | Q | not instrumented | manual | done before this sheet existed |
-| Transmission `48835c6` | 0 | not started | | |
+| Transmission `48835c6` | 0 | not started, and the pilot does not build | | recorded as blocked at task 2.3 with the cause named: no released cmake compiles Swift against Xcode 27 |
 | Transmission `48835c6` | 1 | not started | | |
-| Transmission `48835c6` | 2 | not started | | |
+| Transmission `48835c6` | 2 | not started, authoring | manual | the contract is written and validates; the pilot stopped at generation because the build cannot receive the generated Swift |
 | Transmission `48835c6` | 3 | not started | | |
 | Transmission `48835c6` | 4 | not started | | |
 | Transmission `48835c6` | 5 | not started | | |
@@ -77,12 +77,12 @@ The eight stages of `recipe.md`, plus the qualification that precedes them.
 | Transmission `48835c6` | 7 | not started | | |
 | Transmission `48835c6` | 8 | not started | | |
 | Cyberduck `fc0d437` | Q | not instrumented | manual | done before this sheet existed |
-| Cyberduck `fc0d437` | 0 | not started | | |
-| Cyberduck `fc0d437` | 1 | not started | | |
-| Cyberduck `fc0d437` | 2 | not started | | |
-| Cyberduck `fc0d437` | 3 | not started | | |
-| Cyberduck `fc0d437` | 4 | not started | | |
-| Cyberduck `fc0d437` | 5 | not started | | |
-| Cyberduck `fc0d437` | 6 | not started | | |
-| Cyberduck `fc0d437` | 7 | not started | | |
-| Cyberduck `fc0d437` | 8 | not started | | |
+| Cyberduck `fc0d437` | 0 | `brew install ant maven` at 45 MB and 11 MB, then `mvn verify -DskipTests -Drevision=0` at **BUILD SUCCESS in 54.688 s**, after raising the deployment target in two Ant files | `brew`, Maven's own `Total time` | the JDK was already installed and `java_home` reported none, because Homebrew's is keg-only and unregistered. `-DskipSign` does not skip signing: the guard is the environment variable `SKIP_SIGN` |
+| Cyberduck `fc0d437` | 1 | not instrumented | manual | the audit was not re-run for this pilot |
+| Cyberduck `fc0d437` | 2 | not instrumented, authoring | manual | the classification found the field this application is about, and it was written before the contract |
+| Cyberduck `fc0d437` | 3 | not instrumented separately | | `generate --check` was run and exited 0; the clock was not taken, so the cell says so rather than quoting a neighbouring pilot's number |
+| Cyberduck `fc0d437` | 4 | 63 core, 35 integration, 20 index checks, written before the implementation | shell, three runs | the core suite writes a real `.duck` file carrying all thirteen keys `Host.serialize` can write and asserts the record that comes back renders none of the sensitive ones |
+| Cyberduck `fc0d437` | 5 | core 1.09 s, integration 3.31 s, index 3.28 s | `/usr/bin/time -p` on each suite | the suites are the gate, so their cost is counted once |
+| Cyberduck `fc0d437` | 6 | 2 failed builds of the `app` target, then BUILD SUCCEEDED | shell, three `xcodebuild` runs | the first failed because the generated file had not been added to the target, the second on a missing `OSLog` import. Five objects and a `Cyberduck.swiftmodule` in both architectures, checked rather than trusted |
+| Cyberduck `fc0d437` | 7 | not instrumented separately | | the metadata extracted on the first run with no failed round, the only pilot for which that is true |
+| Cyberduck `fc0d437` | 8 | under 1 s plus the gate suites, and **certified on the first run** | `/usr/bin/time -p` | the only pilot to certify on its first run |
