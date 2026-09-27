@@ -2,7 +2,8 @@
 
 ## ADDED Requirements
 
-### Requirement: The capability map is a pure derivation of the audit report
+### Requirement: The capability map SHALL be a pure derivation of the audit report
+The mapping SHALL be a pure function from an `AuditReport` to a `CapabilityNode` tree.
 
 The mapping from an `AuditReport` to a `CapabilityNode` tree is a pure function
 with no filesystem, no subprocess and no model call. The same report always
@@ -27,7 +28,8 @@ produces the same tree.
 - **WHEN** a finding has `evidence: []`
 - **THEN** the node carries no evidence reference and none is invented.
 
-### Requirement: The map renders the report's states and no others
+### Requirement: The map SHALL render the report's states and no others
+Each node SHALL carry the finding's own state verbatim, and no state SHALL be declared that the report does not produce.
 
 The report carries six states
 (`unsupported`, `unknown`, `detected`, `implemented`, `tested`, `feasible`). The
@@ -40,7 +42,8 @@ map's states are those six, and no `verified` state is declared by this map.
 - **THEN** every node renders without a mapping failure and the map's state for
   a finding equals the finding's own state, verbatim.
 
-### Requirement: The inspector names the findings row, verbatim
+### Requirement: The inspector SHALL name the findings row, verbatim
+The inspector SHALL render the original finding rather than a summary of it.
 
 The inspector renders the original finding's `capability`, `state`, `confidence`,
 `gaps`, `evidence` and `nextAction`. The user must be able to reach the original
