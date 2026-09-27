@@ -1,0 +1,75 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.netnewswire-pilot
+  name: NetNewsWire
+  url_scheme: netnewswire
+  min_macos: "27.0"
+  locales:
+    - en
+
+# One entity type: an article feed item. Articles are the primary content object
+# in NetNewsWire. Exposed fields are the stable identifier, the title, and the
+# feed name. Article bodies and URLs are deliberately not exposed — the body is
+# the sensitive payload, and the URL is the action target, not a display field.
+#
+# The exposure rules: when a feed has never synced (source_disabled) or the item
+# has been removed from the data store (item_missing), the entity is not offered.
+entities:
+  - id: article
+    title:
+      en: Article
+    identifier: id
+    display:
+      title: title
+      subtitle: feed
+    query:
+      mode: static
+    exposure:
+      rules: [source_disabled, item_missing]
+
+intents:
+  # Opens one article in the reader pane. Receives the resolved IndexedEntity
+  # target via system.open and navigates to the article.
+  - id: open_article
+    title:
+      en: Open article
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: article
+
+  # Lands in NetNewsWire's own search field, filtered by the requested term.
+  # Does NOT pick an arbitrary article — it routes the search query string into
+  # the app's internal search, letting the user refine from there.
+  - id: search_articles
+    title:
+      en: Search articles
+    description:
+      en: Search articles in NetNewsWire
+    parameters: []
+    execution:
+      mode: native
+      handler: SearchArticlesHandler
+    schema: system.searchInApp
+
+  # Marks an article as read. This is NOT a Siri AI primary schema — it's a
+  # custom automation action. It stays in the contract for training depth but
+  # is never claimed as Siri AI.
+  - id: mark_article_read
+    title:
+      en: Mark article read
+    description:
+      en: Mark an article as read
+    parameters:
+      - id: article_id
+        type: string
+        required: true
+    execution:
+      mode: native
+      handler: MarkArticleReadHandler
+    risk:
+      level: write
+      confirmation: always
+      authentication: none
