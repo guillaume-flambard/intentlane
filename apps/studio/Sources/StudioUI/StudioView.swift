@@ -29,8 +29,10 @@ public struct StudioView: View {
             }
             // The window fills its frame, and so does every renderer that draws this
             // view, so a snapshot is the screen and not a screen floating in a
-            // letterboxed rectangle.
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // letterboxed rectangle. Content taller than the frame is anchored at
+            // the top, because a window shows the beginning of its content and a
+            // centre crop would hide the header of a long screen.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .frame(minWidth: 1000, minHeight: 700)
         }
     }
@@ -40,6 +42,8 @@ public struct StudioView: View {
         switch model.stage {
         case .project:
             ProjectScreen(model: model, choose: chooseRepository)
+        case .capabilities:
+            CapabilitiesScreen(model: model)
         case .goal:
             GoalScreen(model: model)
         case .plan:

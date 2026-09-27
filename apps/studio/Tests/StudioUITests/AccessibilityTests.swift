@@ -18,6 +18,7 @@ struct KeyboardAndAccessibilityTests {
         // spells them. If a label changes, this fails rather than drifting.
         let expected: [(StudioStage, String)] = [
             (.project, "Continue"),
+            (.capabilities, "Back to project"),
             (.goal, "Continue"),
             (.plan, "Build this integration"),
             (.plan, "Back"),

@@ -29,7 +29,7 @@ enum Snapshot {
     static func write(_ view: some View, name: String, scheme: ColorScheme, size: CGSize, scale: CGFloat = 2) -> URL? {
         let renderer = ImageRenderer(
             content: view
-                .frame(width: size.width, height: size.height)
+                .frame(width: size.width, height: size.height, alignment: .top)
                 .environment(\.colorScheme, scheme)
                 .environment(\.intentLaneScreenScrolls, false)
                 .preferredColorScheme(scheme)
@@ -87,6 +87,22 @@ enum RealPilotState {
         return try? JournalReader.read(data)
     }
 
+    /// The FSNotes audit the shell is given for the capability map, read from the
+    /// one committed copy in `packages/studio-protocol/fixtures`. It is a real
+    /// report, so the map it draws is a real map rather than a layout of invented
+    /// findings.
+    static var realAudit: AuditReportMirror? {
+        let fixture = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // StudioUITests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // apps/studio
+            .deletingLastPathComponent()   // apps
+            .deletingLastPathComponent()   // repository root
+            .appendingPathComponent("packages/studio-protocol/fixtures/fsnotes-audit.json")
+        guard let data = try? Data(contentsOf: fixture) else { return nil }
+        return AuditReportParser.parse(data)
+    }
+
     static func inspection() -> ProjectInspection {
         ProjectInspection(
             facts: facts,
@@ -138,6 +154,14 @@ enum RealPilotState {
                 journal: journal, report: report
             ))
         }
+
+        // The capability map, drawn from the real FSNotes audit, and drawn again
+        // with no audit at all: the second state is what a run without a report on
+        // disk reaches, and it has to say so rather than show a fixture.
+        if let audit = realAudit {
+            draw("07-capabilities", StudioView.fixture(stage: .capabilities, inspection: inspection(), audit: audit))
+        }
+        draw("08-capabilities-empty", StudioView.fixture(stage: .capabilities, inspection: inspection()))
         return drawn
     }
 }
@@ -173,7 +197,8 @@ extension StudioView {
         selectedGoalID: String? = nil,
         plan: [PlanNode]? = nil,
         journal: RunJournal? = nil,
-        report: RunReport? = nil
+        report: RunReport? = nil,
+        audit: AuditReportMirror? = nil
     ) -> StudioView {
         let model = StudioModel()
         model.applyFixture(
@@ -182,7 +207,8 @@ extension StudioView {
             selectedGoalID: selectedGoalID,
             plan: plan,
             journal: journal,
-            report: report
+            report: report,
+            audit: audit
         )
         return StudioView(model: model)
     }

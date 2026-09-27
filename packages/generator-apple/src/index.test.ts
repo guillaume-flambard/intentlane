@@ -705,7 +705,7 @@ describe("results and snippets", () => {
     expect(result.diagnostics).toEqual([]);
 
     const swift = generateSwift(result.ir!);
-    expect(swift).toContain("@available(macOS 27.0, *)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
+    expect(swift).toContain("@available(macOS 27.0, *)\n@AppEntity(exposureCondition: .sourceDisabled)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
     expect(swift).toMatchSnapshot();
   });
 

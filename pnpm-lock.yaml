@@ -69,6 +69,8 @@ importers:
 
   packages/schema: {}
 
+  packages/studio-protocol: {}
+
 packages:
 
   '@0no-co/graphql.web@1.3.4':

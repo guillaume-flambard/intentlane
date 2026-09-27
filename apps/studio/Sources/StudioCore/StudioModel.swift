@@ -32,6 +32,72 @@ public final class StudioModel {
 
     public init() {}
 
+    /// The capability tree the Capabilities screen renders, derived from an audit
+    /// that has already been collected. This window presents it; it never calls
+    /// the engine to build the tree itself, because the mapping is a pure
+    /// function shared with the TypeScript side.
+    public internal(set) var audit: AuditReportMirror?
+    /// Whether an audit is being read right now, so the screen can say it is
+    /// waiting instead of explaining an absence that has not finished happening.
+    public internal(set) var isAuditing = false
+
+    public var capabilityTree: CapabilityTree? {
+        audit.map(CapabilityMapper.map)
+    }
+
+    /// What the Capabilities screen renders, decided here once so the screen and
+    /// its tests cannot disagree about why a tree is absent. An absence is always
+    /// stated: a screen that shows nothing looks like a project with nothing in it.
+    public var capabilityScreen: CapabilityScreenMode {
+        if let tree = capabilityTree { return .tree(tree) }
+        if isAuditing { return .reading }
+        return .empty(capabilityEmptyReason)
+    }
+
+    /// Why there is no tree. The first condition that holds is the one shown, and
+    /// each is a fact about this model rather than a guess about the machine.
+    public var capabilityEmptyReason: String {
+        if facts == nil { return "Choose a project first: the map is derived from that project's own audit." }
+        if !engineAvailable { return "The engine is not available on this machine, so there is no report to map." }
+        if scope() == nil { return "The isolated worktree does not exist yet. Run the journey once, then read its capability map." }
+        return "No report came back from the engine. Read the map again to retry."
+    }
+
+    /// Whether asking for an audit can do anything at all right now. The screen
+    /// shows its button only under this condition, so a control that does nothing
+    /// is never offered.
+    public var canReadCapabilityAudit: Bool {
+        scope() != nil && engineAvailable
+    }
+
+    /// Opens the capability map and reads the audit it renders. The audit is
+    /// read-only: nothing is transformed, and a report the model already holds is
+    /// never read a second time.
+    ///
+    /// The run directory's own `audit.json` wins when the run already wrote one,
+    /// because a report on disk is a report a person can point at. The engine is
+    /// asked only when there is none.
+    public func openCapabilities() {
+        stage = .capabilities
+        guard audit == nil, !isAuditing else { return }
+
+        if let existing = RealAuditReader.read(repositoryPath: ProcessInfo.processInfo.environment["INTENTLANE_STUDIO_REPO"]) {
+            audit = existing
+            return
+        }
+
+        guard let scope = scope(), engineAvailable else { return }
+        isAuditing = true
+        let executor = AuditExecutor()
+        Task { @MainActor in
+            let report = await Task.detached(priority: .userInitiated) {
+                executor.runAudit(scope: scope).report
+            }.value
+            self.audit = report
+            self.isAuditing = false
+        }
+    }
+
     /// Places the model in a state without running anything, so a screen can be drawn
     /// for a journal that already exists. It never fabricates a verdict: the verdict
     /// is still derived from the journal it is handed.
@@ -41,7 +107,8 @@ public final class StudioModel {
         selectedGoalID: String? = nil,
         plan: [PlanNode]? = nil,
         journal: RunJournal? = nil,
-        report: RunReport? = nil
+        report: RunReport? = nil,
+        audit: AuditReportMirror? = nil
     ) {
         self.inspection = inspection
         self.selectedGoalID = selectedGoalID
@@ -58,6 +125,7 @@ public final class StudioModel {
                 unverifiedByAHuman: ["the demonstrated journey"]
             )
         }
+        self.audit = audit
         self.stage = stage
     }
 
@@ -81,6 +149,11 @@ public final class StudioModel {
     public var worktreePath: String {
         guard let repository else { return ".worktrees/studio" }
         return repository.appendingPathComponent(".worktrees/studio").lastPathComponent
+    }
+
+    /// The worktree as a URL, for evidence paths the report wrote relative to it.
+    public var worktreeURL: URL? {
+        repository?.appendingPathComponent(".worktrees/studio")
     }
 
     public func inspect(_ repository: URL) {

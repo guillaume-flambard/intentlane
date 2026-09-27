@@ -61,6 +61,10 @@ public struct ProjectScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
+            Button("Capability map") { model.openCapabilities() }
+                .controlSize(.large)
+                .disabled(model.facts == nil)
+                .help("Read the engine's audit of this project and show what Apple can already do with it.")
             Button("Continue") { model.advanceToGoal() }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)

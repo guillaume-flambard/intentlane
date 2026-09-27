@@ -6,6 +6,7 @@ import StudioCore
 /// before the project and no settings after the result.
 public enum StudioStage: Int, CaseIterable, Sendable, Equatable {
     case project
+    case capabilities
     case goal
     case plan
     case run
@@ -14,6 +15,7 @@ public enum StudioStage: Int, CaseIterable, Sendable, Equatable {
     public var label: String {
         switch self {
         case .project: "Project"
+        case .capabilities: "Capability map"
         case .goal: "Goal"
         case .plan: "Plan"
         case .run: "Work"
