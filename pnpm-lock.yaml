@@ -52,6 +52,9 @@ importers:
         specifier: 0.81.5
         version: 0.81.5(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.1.17)(react@19.1.0)(supports-color@8.1.1)
     devDependencies:
+      '@memolabs-apps/intentlane':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/react':
         specifier: ~19.1.0
         version: 19.1.17

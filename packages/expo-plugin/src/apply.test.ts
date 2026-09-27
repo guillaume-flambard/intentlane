@@ -23,13 +23,13 @@ describe("resolveGeneratorInvocation", () => {
   it("builds a portable invocation rooted in the app project", async () => {
     const projectRoot = await projectWithConfig();
     const cliRoot = await mkdtemp(join(tmpdir(), "intentlane-cli-"));
-    const packageFile = join(cliRoot, "@intentlane", "cli", "package.json");
-    const bundle = join(cliRoot, "@intentlane", "cli", "dist", "index.cjs");
+    const packageFile = join(cliRoot, "@memolabs-apps", "intentlane", "package.json");
+    const bundle = join(cliRoot, "@memolabs-apps", "intentlane", "dist", "index.cjs");
     await mkdir(dirname(bundle), { recursive: true });
     await writeFile(packageFile, "{}", "utf8");
     await writeFile(bundle, "", "utf8");
     const resolveModule = (request: string): string =>
-      request === "@intentlane/cli/package.json" ? packageFile : `/x/${request}`;
+      request === "@memolabs-apps/intentlane/package.json" ? packageFile : `/x/${request}`;
 
     const invocation = resolveGeneratorInvocation({
       projectRoot,
@@ -55,11 +55,11 @@ describe("resolveGeneratorInvocation", () => {
   it("fails with an actionable message when the CLI bundle is missing", async () => {
     const projectRoot = await projectWithConfig();
     const cliRoot = await mkdtemp(join(tmpdir(), "intentlane-cli-"));
-    const packageFile = join(cliRoot, "@intentlane", "cli", "package.json");
+    const packageFile = join(cliRoot, "@memolabs-apps", "intentlane", "package.json");
     await mkdir(dirname(packageFile), { recursive: true });
     await writeFile(packageFile, "{}", "utf8");
     const resolveModule = (request: string): string =>
-      request === "@intentlane/cli/package.json" ? packageFile : `/x/${request}`;
+      request === "@memolabs-apps/intentlane/package.json" ? packageFile : `/x/${request}`;
 
     expect(() =>
       resolveGeneratorInvocation({
@@ -91,11 +91,11 @@ describe("resolveGeneratorInvocation", () => {
         configFile: "intentlane.yaml",
         outputDirectory: "/app/ios/Example/IntentLaneGenerated",
         resolveModule: (request) => {
-          if (request.startsWith("@intentlane/cli")) throw new Error("module not found");
+          if (request.startsWith("@memolabs-apps/intentlane")) throw new Error("module not found");
           return `/x/${request}`;
         }
       })
-    ).toThrow(/npm install --save-dev @intentlane\/cli/);
+    ).toThrow(/npm install --save-dev @memolabs-apps\/intentlane/);
   });
 });
 

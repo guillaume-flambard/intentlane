@@ -4,7 +4,7 @@ const { execFileSync } = require("node:child_process");
 const { existsSync, readFileSync } = require("node:fs");
 const { dirname, join, resolve } = require("node:path");
 
-const CLI_PACKAGE = "@intentlane/cli";
+const CLI_PACKAGE = "@memolabs-apps/intentlane";
 const GENERATED_SOURCE = "IntentLaneGenerated.swift";
 const GENERATED_GROUP = "IntentLaneGenerated";
 const MANIFEST_FILE = "intentlane.manifest.json";
