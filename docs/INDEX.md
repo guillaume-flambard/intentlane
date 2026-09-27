@@ -58,6 +58,10 @@ The macOS environment for App Intents, built on the engine rather than beside it
 | [docs/spec/CLAIMS-REGISTRY.md](spec/CLAIMS-REGISTRY.md) | Every public claim, its target platform and its proof. |
 | [docs/spec/AUTOMATED-VERIFICATION.md](spec/AUTOMATED-VERIFICATION.md) | Which verification is automated and which is manual. |
 
+`openspec/specs/` is the requirement contract: one directory per capability, each
+with the requirements that are already true of the product. `openspec/changes/`
+is the work in flight, and `openspec/changes/archive/` is the work that landed.
+
 ## Apple 27
 
 Read the SDK before trusting any of this. It records what was verified, and
