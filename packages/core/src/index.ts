@@ -89,6 +89,7 @@ export type EntityIR = Readonly<{
   identifier: string;
   displayTitle: string;
   displaySubtitle?: string;
+  exposure?: { readonly rules: readonly string[] };
 }>;
 export type ConfigIR = Readonly<{
   schemaVersion: "0.1";
@@ -332,7 +333,8 @@ export function parseConfig(value: unknown): ParseResult {
       title: entity.title,
       identifier: entity.identifier,
       displayTitle: entity.display.title,
-      ...(entity.display.subtitle ? { displaySubtitle: entity.display.subtitle } : {})
+      ...(entity.display.subtitle ? { displaySubtitle: entity.display.subtitle } : {}),
+      ...(entity.exposure ? { exposure: entity.exposure } : {})
     })),
     intents: parsed.data.intents.map((intent) => ({
       id: intent.id,

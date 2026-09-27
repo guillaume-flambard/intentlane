@@ -136,6 +136,9 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
   }).join("\n");
   const searchableTitle = "";
   const annotation = conformed ? `@AppEntity(schema: .${entity.schema})\n` : "";
+  const exposureRuleToSwift = (rule: string) => rule.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const exposureConditionBlock = !conformed && entity.exposure ? `\n  static let exposureCondition = Exposure(rules: [${entity.exposure.rules.map((rule) => "." + exposureRuleToSwift(rule)).join(", ")}])` : "";
+
   const conformance = targeted ? "AppEntity, IndexedEntity" : "AppEntity";
   const typeDisplay = conformed
     ? ""
@@ -162,7 +165,7 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
   const stringResolverRequirement = targeted
     ? `\n  func ${camelName}Entities(matching string: String) async throws -> [${typeName}]`
     : "";
-  return `${availability}${annotation}struct ${typeName}: ${conformance} {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}${searchableTitle}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\n${availability}protocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]${stringResolverRequirement}\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\n${availability}struct ${queryName}: ${queryConformance} {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }${stringResolution}\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }${reindexing}\n}`;
+  return `${availability}${annotation}struct ${typeName}: ${conformance} {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}${searchableTitle}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }${exposureConditionBlock}\n}\n\n${availability}protocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]${stringResolverRequirement}\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\n${availability}struct ${queryName}: ${queryConformance} {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }${stringResolution}\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }${reindexing}\n}`;
 }
 
 function entityDeclarations(ir: ConfigIR, locale: string): string {
