@@ -63,24 +63,60 @@ entities:
     # comment above says why it is not `key`.
     display:
       title: name
+      # `action` is the subtitle, and the subtitle is the decision alone: `deny` or
+      # `allow`, from `RULE_STATE_BLOCK` and `RULE_STATE_ALLOW`. Reading the code
+      # showed that the application's own cell composes three more things into that
+      # same value, and the pilot takes none of them:
+      #
+      # - `(pid: N)`, which RulesWindowController.m adds for any rule with a pid, so
+      #   the subtitle would carry a process identifier of a binary the
+      #   classification already refuses to name.
+      # - `(until: <date>)`, which it adds for a rule with an expiration, so the
+      #   subtitle would carry a timestamp the person never typed and the system has
+      #   no use for.
+      # - `+kids`, which it appends for `ACTION_SCOPE_PROCESS_TREE`, so the
+      #   subtitle would carry a structural property rather than the decision.
+      #
+      # This is the same split the classification already made for the other fields,
+      # applied to the one the code had folded them into. It is also why the
+      # classification needed no amendment for this: `action` was scoped as "allow
+      # or deny" from the start, and the code confirmed the scope rather than
+      # widening it.
       subtitle: action
     query:
       mode: static
     # `source_disabled` is a rule the application will not act on:
     # `Rule.isDisabled` exists and RulesWindowController.m reads it to render the
     # row in the disabled colour, so the application is saying the source is off.
+    # The rule stays in the list and stays addressable, which is why this is a
+    # source condition and not `item_not_usable`.
     #
     # `item_not_usable` is a rule that can no longer do anything even though it is
     # still in the list: one whose `expiration` has passed, or one that
     # `isTemporary` and whose process has gone, which Rule.h defines as a rule
-    # whose duration is process lifetime.
+    # whose duration is process lifetime. This is a real window and not a
+    # hypothetical one, because the cleanup that ends it runs on the extension's
+    # timer rather than at the moment the condition becomes true.
     #
-    # `item_missing` is **not** declared, and that is the same measured choice the
-    # Transmission pilot made rather than a copied one: nothing was observed
-    # removing a rule from the application's store, and a condition asserted
-    # without an observation is a condition that can be wrong.
+    # `item_missing` **is** declared, and the first version of this contract
+    # declined to declare it on a reason that reading the code then falsified.
+    # The claim was that nothing was observed removing a rule from the store.
+    # `LuLu/Extension/Rules.m` removes three kinds on a timer: a rule whose path no
+    # longer exists (:1692), a temporary rule whose process has exited (:1706), and
+    # a rule whose expiration has passed (:1720), then calls
+    # `[self delete:rule.key rule:rule.uuid]` (:1748). The removal is real and it is
+    # keyed by the same `uuid` this contract identifies rules by, so the index has
+    # to follow it.
+    #
+    # What cannot be driven from a test, and is therefore verified by review and by
+    # the reconcile diff rather than by a deletion suite: that cleanup runs inside
+    # the privileged system extension, and the application reaches the same rules
+    # over XPC through `xpcDaemonClient`. No app-side test can make the extension
+    # delete a rule. The two earlier pilots each had a deletion suite for exactly
+    # this reason, so their absence here is a limit of this pilot and is named as
+    # one rather than left to be discovered.
     exposure:
-      rules: [source_disabled, item_not_usable]
+      rules: [source_disabled, item_not_usable, item_missing]
 
 # Two surfaces, and both are ones this application really has.
 #

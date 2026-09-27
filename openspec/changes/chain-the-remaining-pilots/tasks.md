@@ -273,16 +273,139 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
 
 ## 3. LuLu, quatrième pilote
 
-- [ ] 3.1 Classer la sensibilité avant le contrat, et écrire ce que les noms
+- [x] 3.1 Classer la sensibilité avant le contrat, et écrire ce que les noms
       d'objets peuvent porter. Vérifié par la section de classification dans la
-      fiche.
+      fiche. **Fait, et c'est la classification qui a eu besoin d'être amendée.**
+      Le point qui n'existait dans aucun pilote précédent : l'identifiant
+      canonique de l'application est un chemin. `generateKey` dans `Rule.m`
+      préfère une identité de signature de code, et sinon fait exactement
+      `key = self.path`. Un chemin sur la machine d'un développeur porte son nom
+      d'utilisateur, son dossier de build et le nom de son projet ; une identité
+      `DevID` nomme une **organisation**, donc une entité morale. L'identifiant
+      est donc `uuid` et jamais `key`, et ce n'est pas un goût : `key` est le champ
+      que l'application considère canonique, l'exposer exporterait sa notion
+      d'identité avec un chemin attaché. Le champ titre reste `name`, qui est écrit
+      par la personne, donc un titre et jamais un identifiant.
 - [x] 3.2 Appliquer les conditions d'entrée, avec Transmission certifié. Vérifié
       par la liste cochée.
-- [ ] 3.3 Contrat, génération, construction, trois suites, métadonnées,
+- [x] 3.3 Contrat, génération, construction, trois suites, métadonnées,
       certification. Vérifié par les mêmes commandes que pour Transmission.
-- [ ] 3.4 Écrire si l'ajustement du contrat était prévu par la classification, ce
+      **Fait, et c'est le premier pilote à aller au bout.** `BUILD SUCCEEDED`
+      avec les cinq objets Swift présents dans les deux architectures et un
+      `LuLu.swiftmodule` produit, `113` vérifications en trois suites (45, 46, 22),
+      chacune écrite avant le fichier qu'elle teste et vue rouge d'abord sur le
+      fichier manquant, métadonnées extraites avec `toolsVersion 27A266a` et
+      `verify --strict` qui sort certifié sur les six revendications.
+
+      **Le pont ObjC est le coût réel de cette application, et il n'était pas dans
+      la recette.** LuLu est Objective-C, donc le Swift qui appelle l'application a
+      besoin de ses classes : `IntentLane-Bridging-Header.h` importe cinq en-têtes
+      LuLu, redéclare le global `xpcDaemonClient` que chaque fichier LuLu déclare
+      `extern` séparément, et déclare les trois méthodes privées du tableau des
+      règles, parce que le filtre de l'application est privé et que l'appeler est
+      précisément le but. `scripts/add-intentlane-sources.rb` a grandi d'un emploi :
+      il règle maintenant `SWIFT_OBJC_BRIDGING_HEADER` quand un `.h` est nommé, et
+      garde l'en-tête hors de la phase de compilation. Deux refus en sont sortis,
+      tous deux moins chers à refuser qu'à réparer plus tard : un second en-tête de
+      pont dans un même passage, et un en-tête déjà réglé sur un autre chemin.
+
+      **Deux API de log Swift n'existent pas**, et le premier build a échoué sur
+      chacune à tour de rôle : `os_log_info` et `os_log_with_type` sont des macros
+      de `os/log.h`, donc aucun symbole à importer. `Logger` est la forme Swift
+      native, et chaque valeur est interpolée `privacy: .public` parce qu'une
+      interpolation os_log est privée sauf mention contraire, et un nom d'index
+      expurgé laisserait la sonde incapable de rapporter le nom que le système
+      tient. Le préfixe est un littéral statique, vérifié avec `strings` sur le
+      binaire construit.
+
+      **Le chemin d'ouverture a dû être réécrit contre l'outline.** La ligne 1646 de
+      `RulesWindowController.m`, `-findRowForItem:`, parcourt les lignes réelles de
+      l'outline et compare par `path`. La couture fait pareil et compare par
+      `uuid`. Le numéro de ligne n'a de sens qu'après reconstruction du tableau,
+      donc le tableau est reconstruit puis la bonne ligne sélectionnée. Chaque ligne
+      est un tableau de règles, une règle d'arbre de processus étant un parent avec
+      des enfants, donc un `uuid` présent quelque part dans une ligne sélectionne
+      cette ligne et une règle dans un arbre reste atteignable.
+
+      **`CFBundleURLTypes` est maintenant dans l'`Info.plist`.** Le contrat déclare
+      `lulu` et un contrat ne doit pas déclarer un schéma que l'application ne gère
+      pas ; les deux intents sont natifs et rien ne passe par une URL, donc le
+      schéma est une déclaration et non un mécanisme, et la ligne est dans la
+      demande de tirage.
+- [x] 3.4 Écrire si l'ajustement du contrat était prévu par la classification, ce
       qui est le but de la classification. Vérifié par une ligne qui relie les
-      deux.
+      deux. **Fait, et l'ajustement a été le `item_missing`, donc c'est la
+      classification qui a été amendée, comme la méthode l'exige.** La première
+      version du contrat déclarait deux conditions et expliquait que
+      `item_missing` n'était **pas** déclaré parce que « rien n'a été observé
+      retirer une règle du magasin ». Puis le pilote a lu
+      `LuLu/Extension/Rules.m` et la raison était fausse : l'extension retire trois
+      genres de règles sur un minuteur, un chemin disparu (`:1692`), une règle
+      temporaire dont le processus est mort (`:1706`), une règle expirée (`:1720`),
+      puis appelle `[self delete:rule.key rule:rule.uuid]` (`:1748`). La suppression
+      est réelle et elle est indexée par le même `uuid` que le contrat.
+
+      Ce n'était pas de la prudence, c'était de la non-lecture : la première
+      version affirmait une absence d'observation comme si l'absence de lecture
+      était la même chose. C'est l'échec que cette campagne existe pour supprimer,
+      et **c'est la même phrase qui avait été copiée de Transmission** deux
+      pilotes plus tôt, sans que le code soit lu. Le pilote précédent l'a écrite
+      pour son `item_missing` et ce pilote l'a recopiée en la confirmant, ce qui
+      veut dire que la règle de la recette « une affirmation sans observation est
+      une affirmation qui peut être fausse » s'applique aussi à une observation
+      copiée.
+
+      Les deux conditions sont vraies, des mêmes règles, à des moments différents.
+      Le nettoyage tourne sur un minuteur, donc entre le moment où l'expiration est
+      dépassée et le moment de la suppression, la règle est dans la liste et ne peut
+      plus agir : c'est `item_not_usable`, et c'est réel. Après, c'est
+      `item_missing`. Déclarer seulement la seconde promettrait une garantie tenue
+      entre deux lancements ; déclarer seulement la première promettrait un magasin
+      qui ne perd rien.
+
+      **La troisième condition, relue contre les exemples de la spec.**
+      `source_disabled` est « la personne a éteint la source », et l'exemple de la
+      spec est l'enregistrement d'historique de IINA, une coupure de source
+      entière. Une règle de pare-feu désactivée est une coupure par élément, et
+      c'est autre chose : l'application affiche la ligne dans la couleur désactivée
+      au lieu de la retirer, donc la règle reste listée, adressable et ouvrable. Le
+      pilote la garde comme entité, et deux tests tiennent cette ligne : une règle
+      désactivée se résout par son nom et par son `uuid`. L'avoir traitée en
+      `item_not_usable` aurait caché à Spotlight quelque chose que la personne voit
+      dans sa propre fenêtre.
+- [ ] 3.5 Ce qui reste ouvert sur ce pilote, et c'est une limite et non une
+      étape. Vérifié par une section dans la fiche. **Il n'y a pas de suite de
+      suppression, et la raison est structurelle.** Une règle quittant le magasin
+      est retirée dans l'extension système privilégiée, et l'application atteint
+      les mêmes règles en XPC : aucun test côté app ne peut faire supprimer une
+      règle par l'extension. Les deux pilotes certifiés avant ont chacun une suite
+      de suppression, et leurs fiches disent pourquoi la seule suite d'index ne
+      suffisait pas : `indexSync` a été certifié une fois pendant qu'un objet
+      supprimé restait trouvable.
+
+      Ce que ce pilote prouve à la place est le diff qui suit la suppression. La
+      suite d'index provoque une disparition sur la source et vérifie que l'ensemble
+      suivi perd le `uuid`, qu'un **renommage** ne le perd pas, et qu'une règle
+      désactivée non plus, ce qui est ce qui distingue les trois. C'est un
+      affaiblissement réel de la revendication `indexSync` par rapport aux deux
+      pilotes d'avant, et il est écrit comme tel plutôt que masqué : le câblage est
+      vérifié par relecture de `Rules.m` et par le diff, et la suppression réelle de
+      l'application n'est pas rejouée. `siri-conversation` et `spotlight-ui-result`
+      restent non revendiquées, comme dans tous les pilotes.
+
+      **Un `verify` rouge a aussi attrapé une dérive entre deux copies.** La
+      première exécution a échoué sur `generated`, et la cause n'était pas
+      l'amendement du contrat : générer depuis le contrat d'avant et depuis le
+      contrat amendé donne du Swift **identique octet pour octet**, parce que les
+      conditions d'exposition modifient le contrat et pas l'entité générée. La
+      vraie cause est que les deux copies du fichier produit avaient
+      divergé, celle dans `pilots/lulu/out/` et celle dans le clone LuLu, et
+      `verify` ne compare que la première. C'est le contrôle qui est le résultat, pas
+      le fichier : `generate --check` n'avait jamais tourné contre
+      `pilots/lulu/out/`, et une porte écrite dans `pilot.yaml` mais jamais exécutée
+      avant la certification est une porte qui n'a pas été testée. C'est la
+      deuxième fois dans cette campagne qu'un contrôle supposé exécuté ne l'avait
+      pas été.
 
 ## 4. Cyberduck, cinquième pilote
 
