@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-09-27
+# This change moves a pilot's contract file and adds the gates that prove it, and
+# changes no requirement of any capability. The contract convention it adopts is
+# already specified by `validate-five-public-pilots`, and this change adopts it
+# rather than writing a delta, so there is nothing to delta against. Claiming a
+# delta here would be a second, weaker statement of a rule that already exists.
+skip_specs: true

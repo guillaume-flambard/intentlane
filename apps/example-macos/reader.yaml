@@ -20,6 +20,11 @@ entities:
     query:
       mode: static
     schema: reader.page
+    # A page is a location in the book, and the book can be closed or removed, so a
+    # page that no longer resolves is item_missing. Nothing here is conditional in
+    # any other way.
+    exposure:
+      rules: [item_missing]
 
 intents:
   - id: open_page

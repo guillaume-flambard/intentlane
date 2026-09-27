@@ -17,6 +17,11 @@ entities:
       subtitle: status
     query:
       mode: static
+    # An idea can be deleted, and this example has a `delete_idea` intent, so an
+    # idea that is no longer in the list is item_missing. There is no switch that
+    # hides the whole list and no state in which an idea exists but must not be read.
+    exposure:
+      rules: [item_missing]
 
 intents:
   - id: open_inbox

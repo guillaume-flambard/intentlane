@@ -20,6 +20,12 @@ entities:
       subtitle: tag
     query:
       mode: static
+    # A saved link can be deleted, and the example has a `delete_link` intent that
+    # does it, so a link that is no longer on the shelf is the item_missing case and
+    # nothing else here is conditional: there is no switch that hides the whole
+    # shelf and no state in which a link exists but must not be read.
+    exposure:
+      rules: [item_missing]
 
 intents:
   - id: open_shelf

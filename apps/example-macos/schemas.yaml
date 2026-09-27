@@ -20,6 +20,12 @@ entities:
     query:
       mode: static
     schema: audio.ambientSound
+    # An ambient sound is something the machine offers, and the person can remove
+    # it, so a sound that is no longer installed is item_missing. There is no switch
+    # that hides the whole catalogue and no state in which a sound is installed but
+    # must not be read.
+    exposure:
+      rules: [item_missing]
 
 intents:
   - id: stop_capture
