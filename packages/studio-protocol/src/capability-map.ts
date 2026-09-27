@@ -1,11 +1,12 @@
 import type {
   AuditEvidence,
+  AuditEvidenceKind,
   AuditFinding,
   AuditGap,
   AuditPlatform,
   AuditReport,
-  AuditState,
-} from "../../../core/src/audit.js";
+  AuditState
+} from "../../core/src/audit.js";
 
 // The ten groups the catalogue publishes. The list is copied from the catalogue
 // rather than redeclared, because inventing a group in the map would let a
@@ -29,9 +30,17 @@ type NodeState = AuditState;
 
 type NodeConfidence = "low" | "medium" | "high";
 
-export type CapabilityEvidenceRef = Readonly<
-  Pick<AuditEvidence, "kind" | "path" | "line" | "platform">
->;
+export type CapabilityEvidenceRef = Readonly<{
+  /** The finding's own evidence kind, verbatim. */
+  kind: AuditEvidenceKind;
+  /** The finding's own path, verbatim. */
+  path: string;
+  /** The finding's own line, verbatim. Absent stays absent: the map never invents
+   * a line, and `number | undefined` is the honest type for "may not be there". */
+  line: number | undefined;
+  /** The finding's own platform, verbatim. */
+  platform: AuditPlatform | undefined;
+}>;
 
 export type CapabilityNode = Readonly<{
   /** The finding's own capability id, verbatim. */

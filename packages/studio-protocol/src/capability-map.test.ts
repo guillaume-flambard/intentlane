@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { capabilityTree } from "./capability-map.js";
-import type { AuditFinding, AuditReport } from "../../../core/src/audit.js";
+import type { AuditFinding, AuditReport } from "../../core/src/audit.js";
 
 const version = "1.0";
 
@@ -51,7 +51,7 @@ describe("capability map", () => {
     expect(tree.platform).toBe("macos");
     expect(tree.groups).toHaveLength(1);
 
-    const [bucket] = tree.groups;
+    const bucket = tree.groups[0]!;
     expect(bucket.id).toBe("discovery");
     expect(bucket.nodes).toEqual([
       expect.objectContaining({
@@ -70,7 +70,7 @@ describe("capability map", () => {
     const tree = capabilityTree(report([first, second]));
 
     expect(tree.groups).toHaveLength(1);
-    expect(tree.groups[0].nodes.map((node) => node.id)).toEqual([
+    expect(tree.groups[0]!.nodes.map((node) => node.id)).toEqual([
       "discovery.entity-query",
       "discovery.indexed-entity"
     ]);
@@ -85,14 +85,14 @@ describe("capability map", () => {
     // comes after the known ones, and the finding it carries is unchanged.
     const ids = tree.groups.map((group) => group.id);
     expect(ids).toEqual(["discovery", "other"]);
-    expect(tree.groups[1].nodes.map((node) => node.id)).toEqual(["unlisted.thing"]);
+    expect(tree.groups[1]!.nodes.map((node) => node.id)).toEqual(["unlisted.thing"]);
   });
 
   it("a finding with no evidence produces a node with no evidence, and none is invented", () => {
     const empty = finding({ capability: "proof.metadata", evidence: [] as never });
     const tree = capabilityTree(report([empty]));
 
-    expect(tree.groups[0].nodes[0].evidence).toEqual([]);
+    expect(tree.groups[0]!.nodes[0]!.evidence).toEqual([]);
   });
 
   it("every audit state maps verbatim, and nothing else appears", () => {
@@ -101,9 +101,9 @@ describe("capability map", () => {
       report(states.map((state) => finding({ capability: "proof.app-intents-testing", state })))
     );
 
-    const rendered = new Set(tree.groups[0].nodes.map((node) => node.state));
+    const rendered = new Set(tree.groups[0]!.nodes.map((node) => node.state));
     expect([...rendered]).toHaveLength(states.length);
-    for (const node of tree.groups[0].nodes) {
+    for (const node of tree.groups[0]!.nodes) {
       expect(states).toContain(node.state);
     }
   });
@@ -111,8 +111,8 @@ describe("capability map", () => {
   it("a finding without a dot still lands in the group whose head it names", () => {
     const bare = finding({ capability: "foundation" });
     const tree = capabilityTree(report([bare]));
-    expect(tree.groups[0].id).toBe("foundation");
-    expect(tree.groups[0].nodes[0].id).toBe("foundation");
+    expect(tree.groups[0]!.id).toBe("foundation");
+    expect(tree.groups[0]!.nodes[0]!.id).toBe("foundation");
   });
 
   it("no group the catalogue does not know can appear as a named group", () => {

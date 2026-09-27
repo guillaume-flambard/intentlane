@@ -33,7 +33,7 @@ public struct StudioView: View {
             // the top, because a window shows the beginning of its content and a
             // centre crop would hide the header of a long screen.
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .frame(minWidth: 1000, minHeight: 700)
+            .frame(minWidth: 1000, minHeight: 700, alignment: .top)
         }
     }
 
