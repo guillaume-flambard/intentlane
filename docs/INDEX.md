@@ -48,6 +48,7 @@ The macOS environment for App Intents, built on the engine rather than beside it
 
 | File | What it is |
 |---|---|
+| [docs/studio/STUDIO-CHAIN.md](studio/STUDIO-CHAIN.md) | The M0 to M8 sequence, reconstructed from the objects the repository holds, with each milestone's gate and what is already closed. |
 | [docs/studio/M0-ENGINE-PROTOCOL.md](studio/M0-ENGINE-PROTOCOL.md) | The engine contract Studio runs today, written from the shell that exists, and what is deliberately absent before a JSON-RPC layer is justified. |
 
 ## Specification and evidence
