@@ -1,0 +1,125 @@
+schema: "0.1"
+
+app:
+  id: dev.memolabs.intentlane.transmission-pilot
+  name: Transmission
+  # The built bundle declares LSMinimumSystemVersion 11.0, resolved from
+  # CMAKE_OSX_DEPLOYMENT_TARGET at configure time and read back from the built
+  # Info.plist rather than from the template. App Intents requires macOS 27, so
+  # the availability guard comes from the system schema, not from this floor.
+  min_macos: "11.0"
+  # The scheme the app actually declares is `magnet`, read from
+  # CFBundleURLSchemes in macosx/Info.plist.in. Transmission also handles
+  # .torrent files and the old `transmission:` scheme in places, but the one the
+  # bundle registers for the system is magnet, and a contract must not declare a
+  # scheme the app does not register.
+  url_scheme: magnet
+  # The app ships twenty-four localizations. This pilot declares en only, as the
+  # other pilots do, because a claim about a localized phrase is a claim about
+  # phrases this pilot does not produce.
+  locales:
+    - en
+
+# One object: a torrent, which is a transfer the user is in the middle of.
+#
+# Not a tracker. `allTrackersFlat` is a list of strings inside a torrent, and the
+# application has no list of trackers of its own: a tracker is a field, not a
+# row, and it has no lifecycle to remove.
+#
+# Not a peer. Peers are per-announce addresses, they change every time the
+# torrent re-announces, and nothing persists them, so there is no object a user
+# could name and no identifier that survives a restart.
+#
+# Not a completed download. That is `isComplete` on a torrent, a filter over the
+# same list, not a second object. Offering both would be two entities for one
+# thing, and the identifier would have to agree between them.
+#
+# Exposed fields: the torrent name, and its state as the subtitle, so a person
+# choosing between two transfers can tell a stalled one from a finished one.
+# The infohash is the identifier, not the name, and that is the whole reason the
+# rest of this comment exists: `renameTorrent:completionHandler:` lets the user
+# rewrite the name, and the name is also what the in-app search matches. A
+# user-written name is not an identifier, it can carry a client or a project
+# name, and the same rule that excluded a user preset in the HandBrake pilot and
+# an encrypted notebook in the FSNotes pilot excludes it here. The infohash is
+# the one field the application derives and the user cannot write.
+entities:
+  - id: torrent
+    title:
+      en: Torrent
+    identifier: id
+    # `id` is the normalized field, as in every other pilot. The application's
+    # own field behind it is `Torrent.hashString`, the infohash, and the pilot's
+    # tests bind the two. The comment above says why that field and not `name`.
+    # `isMagnet` is defined in Torrent.mm as `!tr_torrentHasMetadata`, so a
+    # magnet that has not fetched its metadata yet has no name and no file list:
+    # there is nothing for a phrase to resolve to. That is `item_not_usable`.
+    #
+    # `item_missing` is not declared here and that is a measured choice, not an
+    # omission. The index lifecycle question is real and Transmission answers it
+    # twice over, with `closeRemoveTorrent:` and with
+    # `renameTorrent:completionHandler:`, but the pilot's own test is whether the
+    # identifier survives a removal, and the entity's own exposure is a different
+    # question. Writing both down as one rule would claim a guarantee the app
+    # does not make about its data files.
+    exposure:
+      rules: [item_not_usable]
+    display:
+      title: name
+      subtitle: stateString
+    query:
+      mode: static
+
+# Two surfaces, and both of them are the ones this application really has.
+#
+# `system.open` selects the torrent in the list, which is exactly what the
+# application's own list control does. It changes which transfer is on screen and
+# nothing on disk.
+#
+# `system.searchInApp` is here because Transmission has a real in-app search to
+# route into, which HandBrake did not. `FilterBarController` declares
+# `setSearchText:`, keeps the typed terms in `searchStrings`, and applies them to
+# the torrent list by name or by tracker, alongside the status and group
+# filters. Declaring the surface would have been a guess on HandBrake and is a
+# fact here.
+#
+# What is deliberately absent, with the reason from the code rather than from the
+# stack:
+#
+# - Adding a torrent. The input is a URL or a file the person supplies from
+#   outside, and a list that cannot resolve anything from a cold start is not a
+#   searchable thing.
+# - Removing a torrent. `closeRemoveTorrent:` takes a `trashFiles:` flag, so the
+#   action can destroy the downloaded data. It is a write with a destructive
+#   branch, and this pilot claims navigation, not destruction.
+# - Pausing and resuming. `startTransfer` and `stopTransfer` are real, but they
+#   change the state of a running transfer, which is a write. A claim about
+#   opening content does not need it, and adding it would widen the risk surface
+#   without adding a single piece of proof.
+# - Renaming. It is a write, and it would invalidate the field the in-app search
+#   matches on. The infohash survives it, which is the reason the identifier is
+#   the infohash.
+intents:
+  - id: open_torrent
+    title:
+      en: Open torrent
+    parameters: []
+    execution:
+      mode: native
+    schema: system.open
+    target: torrent
+  - id: search_torrents
+    title:
+      en: Search torrents
+    description:
+      en: Search torrents in Transmission
+    parameters: []
+    execution:
+      mode: native
+      # A search intent names no target entity, because a system search resolves
+      # inside the application rather than at one row, so the rule that requires a
+      # handler for a targetless intent applies here. The validator enforces
+      # both halves: IL1301 for the missing handler, IL1401 for a target that
+      # must not be there.
+      handler: SearchTorrentsHandler
+    schema: system.searchInApp

@@ -166,9 +166,42 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       La condition 2 est remplie au dossier et **non rejouable** : les copies de
       travail de FSNotes et HandBrake ont disparu de la machine, donc la
       certification est une foi écrite ici et non un test rejoué.
-- [ ] 2.2 Lire le modèle avant d'écrire, choisir l'objet, et écrire le contrat avec
+- [x] 2.2 Lire le modèle avant d'écrire, choisir l'objet, et écrire le contrat avec
       la raison de l'exclusion de ce que l'application ne sait pas faire. Vérifié
-      par `validate` qui sort à zéro et par la relecture de la raison.
+      par `validate` qui sort à zéro et par la relecture de la raison. **Fait.**
+      Lu dans `Torrent.h` et `Torrent.mm` avant d'écrire, pas deviné. L'objet est
+      **un torrent**, exposé par son `name`, sous-titré par son `stateString`, et
+      **identifié par son infohash**. La liste est le `fTorrents` du contrôleur,
+      donc la requête est `static` et lit la liste que l'application tient déjà.
+      L'infohash et non le nom, parce que `renameTorrent:completionHandler:`
+      permet à la personne de réécrire le nom et que `setSearchText:` fait que le
+      nom est aussi ce que la recherche.matches : un champ écrit par la personne
+      n'est pas un identifiant, et il peut porter le nom d'un projet client.
+
+      Trois objets écartés, pour des raisons dans le code et non par goût : le
+      **tracker** est un `NSArray<NSString*>` à l'intérieur d'un torrent, donc un
+      champ et pas une ligne ; le **pair** est reconstruit à chaque announce et
+      rien ne le persiste ; un **téléchargement terminé** est `isComplete` sur un
+      torrent, un filtre et pas un second objet.
+
+      La règle d'exposition est `item_not_usable`, et `Torrent.mm:400` dit
+      pourquoi : `isMagnet` vaut `!tr_torrentHasMetadata`, donc un aimant sans
+      métadonnées n'a ni nom ni liste de fichiers. `item_missing` est
+      **absent, délibérément** : Transmission répond deux fois à la question du
+      cycle de vie, avec `closeRemoveTorrent:trashFiles:` et `renameTorrent:`,
+      mais l'exposition de l'entité est une autre question que le cycle de vie de
+      l'index, et écrire les deux comme une seule règle revendiquerait une
+      garantie que l'application ne fait pas sur ses fichiers.
+
+      `system.searchInApp` est ici **parce que Transmission a une vraie recherche
+      dans l'app**, l'inverse de HandBrake où la même surface a dû être omise :
+      `FilterBarController` déclare `setSearchText:`, garde les termes dans
+      `searchStrings` et les applique à la liste par nom ou par tracker.
+
+      `validate` a sorti non-zéro deux fois avant de sortir à zéro, et les deux
+      erreurs étaient des règles enfreintes par un contrat qui se Cromait
+      raisonnable : `IL1301` exige un `handler` sur un intent natif sans cible,
+      `IL1401` interdit à un `system.searchInApp` de nommer une entité cible.
 - [ ] 2.3 Générer, ajouter les sources à la cible avec le script du projet, et
       construire. Vérifié par `generate --check` et par `BUILD SUCCEEDED`.
 - [ ] 2.4 Écrire les trois suites, test-first, dont le négatif exact. Vérifié par

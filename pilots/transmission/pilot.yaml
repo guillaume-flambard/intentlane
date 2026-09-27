@@ -1,0 +1,36 @@
+# IntentLane Transmission pilot: what this integration claims, and what proves each claim.
+#
+# Paths and gate commands resolve from this file's own directory, so the manifest
+# is self-contained wherever the repository is checked out. The Transmission
+# working copy is located by the test scripts through TRANSMISSION_DIR.
+#
+# The claim set is the default one: six claims a command settles, and no claim
+# that would need a person. The Siri conversation and the Spotlight result are
+# deliberately NOT claimed. To claim one, run:
+#
+#   intentlane verify --pilot pilots/transmission/pilot.yaml --claim siri-conversation
+#
+# which then requires an evidence ledger, because no public API can settle it.
+#
+# The contract declares two intents on one object, a torrent, identified by its
+# infohash rather than by its name. The name is user-writable and is also what
+# the in-app search matches, so it cannot be the identifier.
+
+version: intentlane-pilot/1.0
+
+contract: contract.yaml
+generated: out
+metadata: out/metadata/Metadata.appintents
+
+claims:
+  - contract
+  - generated
+  - applicationTests
+  - integrationTests
+  - metadata
+  - indexSync
+
+gates:
+  applicationTests: bash tests/run-all-tests.sh
+  integrationTests: bash tests/run-integration-tests.sh
+  indexSync: bash tests/run-index-tests.sh

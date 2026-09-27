@@ -95,22 +95,92 @@ recipe notes why the others are unaffected. It stays open here as a known fact
 rather than a blocker, and it is the first thing to re-check if a later pilot
 reports the same symptom.
 
-## What is deliberately not written yet
+## The object, and why not the others
 
-The contract, the generated sources and the three suites belong to tasks 2.2
-and later. Task 2.2 says to read the model before writing, and the object this
-pilot would expose is not chosen: a torrent, a tracker, a transfer, and a
-completed download are four different objects with four different lifecycles,
-and choosing one from the outside is exactly the guess the recipe forbids.
+Read in `macosx/Torrent.h` and `Torrent.mm` before writing, not guessed.
+
+**A torrent.** Exposed by its `name`, subtitled by its `stateString`, and
+identified by its infohash. The list is `Controller.mm`'s `fTorrents`, an
+in-process `NSMutableArray<Torrent*>`, so the query is `static` and reads the
+list the application already keeps.
+
+The infohash is the identifier because the name cannot be. `Torrent.h:124`
+declares `renameTorrent:completionHandler:`, so the person can rewrite the name
+at any moment, and `FilterBarController.h` declares `setSearchText:`, so the
+name is also what the in-app search matches. A field the user writes is not an
+identifier, and it can carry a client's project name. The same rule that excluded
+a user preset in the HandBrake pilot and an encrypted notebook in the FSNotes
+pilot excludes it here, and the infohash is the one field the application derives
+and the user cannot.
+
+Three objects were rejected for reasons in the code, not for taste:
+
+- **A tracker.** `allTrackersFlat` is `NSArray<NSString*>` inside a torrent. The
+  application has no list of trackers of its own, so a tracker is a field, not a
+  row, and it has no lifecycle to remove.
+- **A peer.** `peers` is rebuilt on every announce and nothing persists it, so
+  there is no name a person could use and no identifier that survives a restart.
+- **A completed download.** That is `isComplete` on a torrent, a filter over the
+  same list. Two entities for one thing would have to agree on the identifier.
+
+## What the exposure rule is, and why the other one is absent
+
+`item_not_usable`, and `Torrent.mm:400` says why: `isMagnet` is defined as
+`!tr_torrentHasMetadata(self.fHandle)`. A magnet that has not fetched its
+metadata has no name and no file list, so there is nothing for a phrase to
+resolve to. That is the definition of a conditional entity, and the schema
+refuses a contract that leaves it out.
+
+`item_missing` is **not** declared, and that is a measured choice rather than an
+oversight. Transmission answers the lifecycle question twice over, with
+`closeRemoveTorrent:trashFiles:` and with `renameTorrent:`. But the entity's
+exposure is a different question from the index's lifecycle: the pilot's own
+test is whether the identifier survives a removal, which is task 2.4 and 2.5's
+work, and writing both down as one rule would claim a guarantee the application
+does not make about its data files.
+
+## The surfaces, and what was left out
+
+Two intents, and both are surfaces the application really has.
+
+`system.open` selects the torrent in the list, which is what the application's
+own list control does. It changes what is on screen and nothing on disk.
+
+`system.searchInApp` is here **because Transmission has a real in-app search**,
+which is the opposite of HandBrake, where the same surface had to be left out.
+`FilterBarController` declares `setSearchText:`, holds the typed terms in
+`searchStrings`, and applies them to the torrent list by name or by tracker,
+alongside status and group filters. On HandBrake the surface would have been a
+guess; here it is a fact read out of the class.
+
+Four things are deliberately absent, each for a reason found in the code:
+
+- **Adding a torrent.** The input is a URL or a file supplied from outside, so
+  a list that cannot resolve anything from a cold start is not a searchable thing.
+- **Removing a torrent.** `closeRemoveTorrent:` takes a `trashFiles:` flag, so
+  the action can destroy the downloaded data. This pilot claims navigation, not
+  destruction.
+- **Pausing and resuming.** `startTransfer` and `stopTransfer` are real, but
+  they mutate a running transfer. A claim about opening content does not need
+  it, and adding it would widen the risk surface without adding one piece of
+  proof.
+- **Renaming.** A write, and it would invalidate the field the search matches on.
+
+## Two rules the validator taught rather than the document
+
+`validate` exited non-zero twice before it exited zero, and both errors were
+rules this contract had broken by being reasonable:
+
+- `IL1301`: a targetless native intent must name the handler, so
+  `search_torrents` needs `SearchTorrentsHandler`. `open_torrent` needs none,
+  because it carries a target and the resolution is the system's.
+- `IL1401`: a `system.searchInApp` intent must **not** name a target entity. The
+  first draft pointed `search_torrents` at `torrent`, which reads as more
+  specific than a search is.
 
 ## Next action
 
-Stage 0 is done: the checkout builds and the application runs. Task 2.2 reads
-the model before writing, which for this pilot means choosing the object, and
-the choice is open between a torrent, a tracker, a transfer and a completed
-download. Nothing is written before that read.
-
-One thing to carry into the contract: the licence is copyleft, and the generated
-App Intents code goes *into* the application target. HandBrake is GPLv2 and set
-the precedent, so this is not a new question here, but it is recorded rather
-than assumed.
+Task 2.3: generate, add the sources to the app target, and build. The target is
+Objective-C++ with no Swift, so the generated files are added to a target that
+contains no other Swift, and that is the first time this method meets a target
+whose every existing file is `.mm`.
