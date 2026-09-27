@@ -137,7 +137,96 @@ the object choice should be made knowing the pilot can build at all. What the
 classification does settle is the field policy above, and that policy does not
 change if the object ends up being a rule or something narrower.
 
+## The entry conditions, applied
+
+### 1. The application builds from a clean checkout
+
+**Not met, and the missing prerequisite is a binary, not a package.**
+
+The application target copies a prebuilt helper that the repository does not
+contain and does not build:
+
+```
+CpResource .../LuLu.app/Contents/Resources/Netiquette.app \
+    ~/projects/intentlane-lulu/LuLu/Binaries/Netiquette.app
+```
+
+`LuLu/Binaries/` is the last line of `.gitignore`, there is no `Netiquette`
+directory in the checkout, no `.gitmodules`, and nothing in the repository
+produces the file. Netiquette is a **separate application**,
+`objective-see/Netiquette`, last pushed 2024-10-05. It has to be built and placed
+there before LuLu will build at all.
+
+That is the same class as HandBrake's `external` target, which its own autotools
+build feeds, and the recipe already carries that row. The difference is that
+HandBrake's dependency is in the repository and Netiquette's is not, so the
+build cannot be started from a clean checkout without first obtaining a second
+project. Installing a Homebrew formula is the person's decision and so is this:
+obtaining and building another application is a larger version of the same
+decision.
+
+Two errors were cleared before this one, and both are recorded because they will
+return:
+
+- `MACOSX_DEPLOYMENT_TARGET = 10.15` in six places, and Xcode 27 accepts 12.0 to
+  27.0. Raised to 12.0, the minimum Xcode 27 takes. This is the third pilot where
+  the checked-in project predates the toolchain, after Transmission's 11.0.
+- **Code signing.** `DEVELOPMENT_TEAM = VBG97UB4TA` and
+  `No profile for team 'VBG97UB4TA' matching 'LuLu Application' found`. This one
+  is not a toolchain limit and I did not work around it: the application is
+  signed with a real developer identity, there are no provisioning profiles on
+  this machine, and impersonating an identity is not a thing an agent does. It is
+  recorded as the missing prerequisite it is. Building with signing disabled
+  clears it, and that would prove the target compiles while proving nothing about
+  running, which is why it was not used to tick this condition.
+
+**The condition is not ticked.** LuLu is a firewall: it needs a privileged
+helper and a system extension, neither of which can run unsigned, so a
+compile-only build would leave the recipe's "produce a running app" unanswered.
+
+### 2. The previous pilot is certified
+
+**Met, by the amendment, and the amendment is doing real work here.** Transmission
+is not certified. It satisfies the amended condition because its block produced no
+finding in an application at all: a toolchain limit proven from source, with no
+line of LuLu, Transmission or anything else involved. Had Transmission stopped on
+something it found in an application, this condition would be unmet and LuLu
+would be blocked.
+
+### 3. No known defect from an earlier pilot is unfixed in the reused code
+
+**Met, with one open defect recorded rather than hidden.** The netnewswire
+contract's misplaced `confirmation` key is now held as work in flight in
+`openspec/changes/migrate-netnewswire-to-the-contract/`, out of `pilots/`, so it
+cannot be read as a shipped pilot. No code is reused between the pilots: each
+integrates into its own application, and the reused thing is the generator, which
+has no open defect from these pilots.
+
+## What this pilot has produced, and it is not the integration
+
+Three pilots in, the pattern is no longer anecdotal. Every pilot has been stopped
+by a **prerequisite**, not by the App Intents work:
+
+| Pilot | Stopped by |
+|---|---|
+| Transmission | no released cmake compiles Swift against Xcode 27 |
+| LuLu | a prebuilt helper that the repository neither contains nor builds |
+| both | a checked-in project older than the toolchain |
+
+The cost of this method is currently being paid entirely at entry conditions,
+and the recipe's stage 0 is where it shows up. That is the finding to carry into
+the effort sheet, because it is a cost a client pays too: a fixed-scope audit
+quoted per application has to survive its prerequisites, and so far none of the
+three applications has been ready on the day.
+
 ## What is deliberately not written yet
 
-The contract, the generated sources and the three suites belong to tasks 3.2 and
-later. Nothing is written before the entry conditions are applied.
+The contract, the generated sources and the three suites belong to the tasks
+after the entry conditions, and the first condition is not met. Nothing is
+written before it is.
+
+**What would unblock it, in order of cost**: build `objective-see/Netiquette`
+and place the app in `LuLu/Binaries/`, and have the signing identity available
+for the team `VBG97UB4TA`. The first is a second application to obtain and
+build; the second is an Apple Developer account and its profiles, which is
+strictly the owner's and not a step to work around.

@@ -94,6 +94,24 @@ checkout, with the tools a normal developer already has?
   this machine HandBrake's `configure` stops at `autoconf not found`. Installing a
   system dependency is a decision for the person who owns the machine, not a step
   an agent takes quietly.
+- **Check that every binary the application target copies into its bundle exists
+  in the repository, or is produced by something in it.** A missing prebuilt
+  dependency stops the build before a line of the application's own code is
+  compiled, and nothing in the log says which project has to be obtained.
+  LuLu's app target copies `LuLu/Binaries/Netiquette.app`, that directory is the
+  last line of its `.gitignore`, there is no submodule, and nothing in the
+  repository builds it. Netiquette is a separate application. The check is the
+  cheapest there is: list what the build copies, and ask where each file comes
+  from. It is in this stage rather than at the mapping stage because a build that
+  cannot start is not a pilot that turned out to be hard, it is a pilot that
+  never started, and the two are billed differently.
+- **Do not work around a signing requirement.** LuLu is signed with the real
+  team `VBG97UB4TA` and this machine has no provisioning profile for it. Building
+  with `CODE_SIGNING_ALLOWED=NO` clears the error and proves the target compiles,
+  which for a firewall is close to proving nothing: it needs a privileged helper
+  and a system extension, and neither runs unsigned. A missing Apple Developer
+  identity is the owner's, it is not a prerequisite to install quietly, and an
+  agent does not impersonate a signing identity.
 - If the app cannot be built, the pilot cannot certify its build claim, and the
   honest state is blocked with the missing prerequisite named. Do not certify the
   parts that happen to compile standalone and call the pilot done: for HandBrake
