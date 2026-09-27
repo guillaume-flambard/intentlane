@@ -161,6 +161,7 @@ struct IntentLaneIdeaEntity: AppEntity {
       subtitle: status.map { LocalizedStringResource(stringLiteral: $0) }
     )
   }
+  static let exposureCondition = Exposure(rules: [.sourceDisabled])
 }
 
 protocol IntentLaneIdeaResolver: Sendable {
@@ -196,6 +197,7 @@ struct IntentLaneTagEntity: AppEntity {
       title: LocalizedStringResource(stringLiteral: name)
     )
   }
+  static let exposureCondition = Exposure(rules: [.sourceDisabled])
 }
 
 protocol IntentLaneTagResolver: Sendable {
@@ -538,6 +540,7 @@ struct IntentLaneNoteEntity: AppEntity {
       subtitle: status.map { LocalizedStringResource(stringLiteral: $0) }
     )
   }
+  static let exposureCondition = Exposure(rules: [.sourceDisabled])
 }
 
 protocol IntentLaneNoteResolver: Sendable {
@@ -678,6 +681,7 @@ struct IntentLaneNotebookEntity: AppEntity, IndexedEntity {
       title: LocalizedStringResource(stringLiteral: title)
     )
   }
+  static let exposureCondition = Exposure(rules: [.sourceDisabled])
 }
 
 @available(macOS 27.0, *)
