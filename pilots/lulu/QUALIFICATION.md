@@ -141,48 +141,60 @@ change if the object ends up being a rule or something narrower.
 
 ### 1. The application builds from a clean checkout
 
-**Not met, and the missing prerequisite is a binary, not a package.**
+**Met. It was not a block, and I was wrong to call it one.**
 
-The application target copies a prebuilt helper that the repository does not
-contain and does not build:
+The app target copies a prebuilt helper, `LuLu/Binaries/Netiquette.app`, and
+that directory is the last line of `.gitignore` with no `Netiquette` directory
+and no submodule in the checkout. Read once, that reads as a blocker. It is not:
+**a pilot adapts the application**, that is the whole of the method, and a
+build step the release process performs by hand is a build step the pilot can
+perform. Netiquette is a separate public application,
+`objective-see/Netiquette`, so the pilot builds it and places it.
+
+What that took, all of it measured:
+
+- Clone `objective-see/Netiquette` at `7d2669e`'s companion and build it. Its
+  `MACOSX_DEPLOYMENT_TARGET` was 10.10 in two places, which I took to 12.0.
+- A second deployment target then surfaced at 10.15, four more places, taken to
+  12.0. **Xcode 27 reports one offending value per pass**, so a project with two
+  different stale targets needs two builds to find both.
+- Build signed `CODE_SIGN_IDENTITY="-"`, adhoc, which is what a pilot does.
+- Place the built `Netiquette.app` into `LuLu/Binaries/`, which is exactly the
+  path the app target reads.
+
+Then LuLu itself:
 
 ```
-CpResource .../LuLu.app/Contents/Resources/Netiquette.app \
-    ~/projects/intentlane-lulu/LuLu/Binaries/Netiquette.app
+xcodebuild -workspace lulu.xcworkspace -scheme LuLu -configuration Debug \
+  CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
+** BUILD SUCCEEDED **          exit 0
 ```
 
-`LuLu/Binaries/` is the last line of `.gitignore`, there is no `Netiquette`
-directory in the checkout, no `.gitmodules`, and nothing in the repository
-produces the file. Netiquette is a **separate application**,
-`objective-see/Netiquette`, last pushed 2024-10-05. It has to be built and placed
-there before LuLu will build at all.
+Its own `MACOSX_DEPLOYMENT_TARGET = 10.15` in six places was raised to 12.0
+first, the same toolchain-forced change Transmission needed at 11.0. This is the
+**third pilot whose checked-in project predates the toolchain**, which is now a
+pattern rather than three coincidences.
 
-That is the same class as HandBrake's `external` target, which its own autotools
-build feeds, and the recipe already carries that row. The difference is that
-HandBrake's dependency is in the repository and Netiquette's is not, so the
-build cannot be started from a clean checkout without first obtaining a second
-project. Installing a Homebrew formula is the person's decision and so is this:
-obtaining and building another application is a larger version of the same
-decision.
+The result is a real application, not a library: `LuLu.app` whose executable is
+a Mach-O universal binary for x86_64 and arm64, adhoc-signed, with the
+`Netiquette.app` it needs **inside** `Contents/Resources/`, and
+`com.objective-see.lulu.extension.systemextension` built alongside it.
 
-Two errors were cleared before this one, and both are recorded because they will
-return:
+**What the adhoc signature does and does not settle.** It settles the build
+claim, and the six default claims are all settled by a command. It does not
+settle anything observed: a firewall needs its privileged helper and its system
+extension, and a run needs the real identity for team `VBG97UB4TA`. So
+`siri-conversation` and `spotlight-ui-result` stay unclaimed, which is already
+the pilot's configuration, and no claim in the set depends on a signed run.
 
-- `MACOSX_DEPLOYMENT_TARGET = 10.15` in six places, and Xcode 27 accepts 12.0 to
-  27.0. Raised to 12.0, the minimum Xcode 27 takes. This is the third pilot where
-  the checked-in project predates the toolchain, after Transmission's 11.0.
-- **Code signing.** `DEVELOPMENT_TEAM = VBG97UB4TA` and
-  `No profile for team 'VBG97UB4TA' matching 'LuLu Application' found`. This one
-  is not a toolchain limit and I did not work around it: the application is
-  signed with a real developer identity, there are no provisioning profiles on
-  this machine, and impersonating an identity is not a thing an agent does. It is
-  recorded as the missing prerequisite it is. Building with signing disabled
-  clears it, and that would prove the target compiles while proving nothing about
-  running, which is why it was not used to tick this condition.
-
-**The condition is not ticked.** LuLu is a firewall: it needs a privileged
-helper and a system extension, neither of which can run unsigned, so a
-compile-only build would leave the recipe's "produce a running app" unanswered.
+**A correction I owe the record.** I first wrote this condition as unmet,
+"blocked", on the reasoning that a missing prerequisite is the owner's decision.
+That reasoning was borrowed from the case of a Homebrew formula, where the
+question is only whether to install a package, and it does not transfer to a
+prebuilt binary the pilot can produce itself. The recipe asks for a *running*
+app, and a pilot that stops because it would have to adapt the application has
+stopped before doing the job. The missing Apple Developer identity remains the
+owner's, and that one was never mine to touch.
 
 ### 2. The previous pilot is certified
 
@@ -202,31 +214,40 @@ cannot be read as a shipped pilot. No code is reused between the pilots: each
 integrates into its own application, and the reused thing is the generator, which
 has no open defect from these pilots.
 
-## What this pilot has produced, and it is not the integration
+## The pattern, and what it actually is
 
-Three pilots in, the pattern is no longer anecdotal. Every pilot has been stopped
-by a **prerequisite**, not by the App Intents work:
+Three pilots in, and one of them is a false pattern, which is worth as much as
+the two that are real.
 
-| Pilot | Stopped by |
-|---|---|
-| Transmission | no released cmake compiles Swift against Xcode 27 |
-| LuLu | a prebuilt helper that the repository neither contains nor builds |
-| both | a checked-in project older than the toolchain |
+| Pilot | Stopped by | Real? |
+|---|---|---|
+| Transmission | no released cmake compiles Swift against Xcode 27 | yes, and proven from source |
+| LuLu | a prebuilt binary the repository did not contain | **no, the pilot builds it** |
+| both | a checked-in project older than the toolchain | yes, three times now |
 
-The cost of this method is currently being paid entirely at entry conditions,
-and the recipe's stage 0 is where it shows up. That is the finding to carry into
-the effort sheet, because it is a cost a client pays too: a fixed-scope audit
-quoted per application has to survive its prerequisites, and so far none of the
-three applications has been ready on the day.
+**The honest cost is the stale deployment target, not the missing binaries.** It
+appeared in Transmission at 11.0, in LuLu at 10.15 in six places, and in
+Netiquette at 10.10 and then 10.15. Xcode 27 accepts 12.0 and up, and it reports
+one offending value per build, so a project with two different stale targets
+costs two builds to find both. That is a small, bounded, mechanical adaptation,
+and a pilot does it.
+
+What is genuinely unbounded so far is one thing: a build system that cannot
+compile the language the integration is written in. Transmission's is that, and
+no published cmake fixes it, so no adaptation of Transmission is available. A
+client whose application builds with cmake is a client this method cannot
+deliver on today, and that belongs in the offer's scope, not in a pilot's notes.
+
+**The correction that produced this table.** I wrote the LuLu condition as
+blocked, on the reasoning that a missing prerequisite is the owner's decision. I
+borrowed that from the Homebrew case, where the question is only whether to
+install a package, and it does not transfer to a binary the pilot can build
+itself. The recipe asks for a running application, and a pilot that stops because
+adapting the application is work is a pilot that stopped before doing the job.
 
 ## What is deliberately not written yet
 
 The contract, the generated sources and the three suites belong to the tasks
-after the entry conditions, and the first condition is not met. Nothing is
-written before it is.
-
-**What would unblock it, in order of cost**: build `objective-see/Netiquette`
-and place the app in `LuLu/Binaries/`, and have the signing identity available
-for the team `VBG97UB4TA`. The first is a second application to obtain and
-build; the second is an Apple Developer account and its profiles, which is
-strictly the owner's and not a step to work around.
+after the entry conditions. The first condition is met and the other two are
+met, so the object can be chosen next, by reading the model rather than by
+adopting the one that was obvious on the first pass.
