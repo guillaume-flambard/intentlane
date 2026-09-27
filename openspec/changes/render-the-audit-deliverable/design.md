@@ -72,7 +72,31 @@ and the renderer writes the heading and nothing under it. A generated document
 that filled that section would be claiming an observation nobody made. Accepting
 a human observation as input is a later change, and a deliberately separate one.
 
-**5. Unreadable input is refused, never rendered around.**
+**5. The window shows the document, it does not compose it.**
+
+The Studio shell gains a Deliverable stage. It asks the engine for the rendered
+text, the way `openCapabilities()` already asks the engine for the audit, and it
+displays that text character for character with a save control.
+
+Considered: rendering the deliverable in Swift. Rejected, and it is the one
+alternative that would have been tempting. `capability-map.ts` and
+`CapabilityMap.swift` are already two implementations of the same derivation,
+guarded by a test that compares them. A Swift renderer for the deliverable
+would be a second, larger instance of that: two documents that a client could
+receive, disagreeing about a score. The window already knows how to be honest
+about an artifact it did not compute, since `ResultScreen` reports
+`unverifiedByAHuman`, so displaying is the role it already has.
+
+Considered: no screen at all, the operator opening the Markdown in an editor.
+Rejected: the deliverable is reviewed where the report and the proof are, and
+the milestone is an offer sent from this tool.
+
+Where the text comes from: the window launches the engine's deliverable command
+and keeps what it printed, rather than reading a file a previous run happened
+to leave. A file on disk is stale the moment the report changes, and a stale
+document that looks complete is the failure this change exists to prevent.
+
+**6. Unreadable input is refused, never rendered around.**
 
 A report that does not parse exits non-zero, names the file, and writes
 nothing. A partial deliverable that looks complete is worse than a failure,
@@ -99,6 +123,10 @@ because a client cannot tell the difference.
 - [The renderer becomes a second audit engine] → It reads parsed reports and
   derives nothing but ordering and wording. The test suite pins that: no finding
   disappears, no state is invented, no count is recomputed.
+- [The window drifts from the command] → The stage obtains its text by launching
+  the engine, and a test compares the window's text to the file the command
+  wrote for the same report. The window holds the engine's output as a string
+  and never formats it, so there is nothing to drift.
 
 ## Migration Plan
 

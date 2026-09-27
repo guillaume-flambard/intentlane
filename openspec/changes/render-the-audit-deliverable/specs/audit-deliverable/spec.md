@@ -99,3 +99,27 @@ that looks complete.
 #### Scenario: A report that is not valid JSON
 - **WHEN** a deliverable is requested from a file that is not valid JSON
 - **THEN** the command exits non-zero, names the file, and writes no deliverable
+
+### Requirement: The window shows the deliverable the engine rendered
+
+The macOS application SHALL display the deliverable exactly as the engine
+produced it, and SHALL NOT recompose it. What the window shows SHALL be
+character for character what the command wrote for the same report.
+
+#### Scenario: The window and the file agree
+- **WHEN** a deliverable is rendered by the command for a report, and the window
+        is asked to show the deliverable for that same report
+- **THEN** the text the window shows is identical to the text the command wrote
+
+#### Scenario: The window is asked for a document it does not have
+- **WHEN** no deliverable has been produced for the project
+- **THEN** the window states that there is no deliverable yet, and shows no document
+
+### Requirement: The deliverable can be taken out of the window
+
+The macOS application SHALL offer to save the deliverable to a file the user
+names, and SHALL write exactly the text it displayed.
+
+#### Scenario: Saving the deliverable
+- **WHEN** a user saves the deliverable from the window
+- **THEN** the file written is byte-for-byte the text the window displayed

@@ -28,6 +28,9 @@ offre partie: il n'existe aujourd'hui aucun document à envoyer.
   Intelligence.
 - La frontière de revendication voyage avec le document: ce que l'audit affirme,
   ce qu'il refuse, et ce qu'un humain doit encore vérifier.
+- L'application macOS affiche ce livrable caractère pour caractère tel que le
+  moteur l'a rendu, et permet de l'enregistrer ou de le copier. Elle ne le rend
+  pas: la fenêtre ne recompose jamais un artefact du moteur, elle le lit.
 
 ## Capabilities
 
@@ -44,9 +47,11 @@ offre partie: il n'existe aujourd'hui aucun document à envoyer.
 ## Impact
 
 `packages/core` gagne un module de rendu pur et ses tests. `packages/cli` gagne
-une commande. Le rapport d'audit reste la seule autorité. Aucune dépendance
-nouvelle, aucun accès réseau, aucun appel de modèle. Le rapport réel FSNotes,
-déjà commité, sert de preuve: 51 findings, un score, dix groupes.
+une commande. `apps/studio` gagne un écran qui affiche et exporte le livrable,
+plus le lecteur qui l'obtient du moteur. Le rapport d'audit reste la seule
+autorité. Aucune dépendance nouvelle, aucun accès réseau, aucun appel de
+modèle. Le rapport réel FSNotes, déjà commité, sert de preuve: 51 findings, un
+score, dix groupes.
 
 **Écart de langue, noté volontairement.** `openspec/config.yaml` demande des
 artifacts en français, mais les douze specs déjà synchronisées sont en anglais et
@@ -65,4 +70,7 @@ Si la décision est l'inverse, un seul passage à relire: les requirements.
   ne le recalcule pas et n'ajoute aucune capacité que le rapport ne nomme pas.
 - Pas de preuve humaine ajoutée au document. Le livrable ouvre la place où un
   humain notera son observation, il ne la remplit pas.
+- La fenêtre ne rend pas le livrable. Elle affiche le texte que le moteur a
+  produit, et un test compare ce qu'elle affiche au fichier que la commande a
+  écrit: deux rendus du même document ne peuvent pas diverger.
 - Pas de nouvelle question au moteur. Le livrable lit un rapport déjà écrit.

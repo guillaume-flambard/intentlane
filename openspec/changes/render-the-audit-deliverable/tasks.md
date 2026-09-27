@@ -31,6 +31,13 @@
       finding.
 - [ ] 1.9 Un fichier qui n'est pas du JSON valide sort en non-zéro, nomme le
       fichier, et n'écrit aucun livrable. Vérifié par un test de la commande.
+- [ ] 1.10 La fenêtre affiche le texte que le moteur a rendu, caractère pour
+      caractère, et ne le recompose pas. Vérifié par un test qui compare le
+      texte affiché au fichier que la commande écrit pour le même rapport.
+- [ ] 1.11 Demandé sans livrable, la fenêtre déclare qu'il n'y en a pas encore
+      et n'affiche aucun document. Vérifié par un test.
+- [ ] 1.12 Un moteur qui échoue ou rend un rapport illisible fait apparaître la
+      raison dans la fenêtre, et aucun document. Vérifié par un test.
 
 ## 2. Vert
 
@@ -45,6 +52,10 @@
       qui lit le rapport, rend le livrable, écrit le fichier si `--out` est
       donné, et écrit sur stdout sinon. Vérifié par le test de 1.9 et par une
       exécution sur le rapport réel.
+- [ ] 2.4 Ajouter l'étape Deliverable au shell: le lecteur qui demande le
+      livrable au moteur, l'état qui le tient comme texte, et l'écran qui
+      l'affiche avec un contrôle d'enregistrement. Le texte n'est jamais formaté
+      par la fenêtre. Vérifié par les tests de 1.10, 1.11 et 1.12.
 
 ## 3. Run réel
 
@@ -59,3 +70,8 @@
       commande `audit` n'a pas bougé. Vérifié par une recherche dans
       AUDITOR-SPEC qui ne trouve aucun format ajouté, et par le README qui
       liste la commande.
+- [ ] 3.4 L'écran Deliverable est dessiné à partir du rapport FSNotes réel, à
+      chaque taille et dans les deux apparences, et n'est pas vide. Vérifié par
+      le harnais de rendu, comme les autres écrans du shell.
+- [ ] 3.5 `swift test` dans `apps/studio` vert, avec le nombre de tests
+      consigné. Vérifié par la sortie de la commande.
