@@ -135,11 +135,17 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
     return `  ${conformed ? "var" : "let"} ${property.name}: ${type}`;
   }).join("\n");
   const searchableTitle = "";
-  const annotation = conformed
-    ? `@AppEntity(schema: .${entity.schema})\n`
-    : entity.exposure
-      ? `@AppEntity(exposureCondition: .${entity.exposure.rules.map((rule) => rule.replace(/_([a-z])/g, (_, c) => c.toUpperCase())).join(", .")})\n`
-      : "";
+  // An entity that conforms to a system schema is declared through the macro. An
+  // entity of the app's own is a plain struct that satisfies `AppEntity` by hand,
+  // and it is left that way: SDK 27 spells that macro `@AppEntity(schema:)` and
+  // nothing else, so a second argument here would be a symbol no compiler on the
+  // machine can resolve.
+  //
+  // An `exposure` rule is deliberately not emitted here. It states when the app
+  // withholds an entity from the system, which the audit reads as a claim and a
+  // human verifies; App Intents has no API for it, so the generated project does
+  // not pretend to express it in Swift.
+  const annotation = conformed ? `@AppEntity(schema: .${entity.schema})\n` : "";
 
   const conformance = targeted ? "AppEntity, IndexedEntity" : "AppEntity";
   const typeDisplay = conformed

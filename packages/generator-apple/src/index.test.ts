@@ -705,8 +705,48 @@ describe("results and snippets", () => {
     expect(result.diagnostics).toEqual([]);
 
     const swift = generateSwift(result.ir!);
-    expect(swift).toContain("@available(macOS 27.0, *)\n@AppEntity(exposureCondition: .sourceDisabled)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
+    expect(swift).toContain("@available(macOS 27.0, *)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
     expect(swift).toMatchSnapshot();
+  });
+
+  it("keeps an exposure rule a contract claim instead of inventing App Intents code for it", () => {
+    const { min_ios: _minIos, ...appWithoutIos } = config.app;
+    const result = parseConfig({
+      ...config,
+      app: { ...appWithoutIos, min_macos: "10.14", locales: ["en"] },
+      entities: [
+        {
+          id: "notebook",
+          title: { en: "Notebook" },
+          identifier: "id",
+          display: { title: "title" },
+          query: { mode: "static" },
+          exposure: { rules: ["source_disabled", "item_missing"] }
+        }
+      ],
+      intents: [
+        {
+          id: "open_notebook",
+          title: { en: "Open notebook" },
+          parameters: [],
+          execution: { mode: "native", handler: "OpenNotebookHandler" },
+          target: "notebook",
+          schema: "system.open"
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+
+    // The rule survives in the IR, because the audit reads it as a claim.
+    expect(result.ir!.entities[0]!.exposure).toEqual({ rules: ["source_disabled", "item_missing"] });
+
+    // It is not App Intents code. `@AppEntity` takes only `schema:` in SDK 27, and
+    // no `Exposure` type is declared anywhere, so emitting either one would hand a
+    // buyer a project that does not compile.
+    const swift = generateSwift(result.ir!);
+    expect(swift).not.toContain("exposureCondition");
+    expect(swift).not.toContain("Exposure(");
+    expect(swift).toContain("@available(macOS 27.0, *)\nstruct IntentLaneNotebookEntity: AppEntity, IndexedEntity {");
   });
 
   it("leaves the macOS availability annotation off when no system schema is used and no floor reaches 27", () => {

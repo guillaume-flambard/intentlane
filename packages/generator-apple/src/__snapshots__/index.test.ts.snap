@@ -143,7 +143,6 @@ struct IntentLaneSnippetView: View {
   }
 }
 
-@AppEntity(exposureCondition: .sourceDisabled)
 struct IntentLaneIdeaEntity: AppEntity {
   static var typeDisplayRepresentation: TypeDisplayRepresentation {
     TypeDisplayRepresentation(name: LocalizedStringResource("Idea", table: "IntentLane"))
@@ -180,7 +179,6 @@ struct IntentLaneIdeaQuery: EntityQuery {
   }
 }
 
-@AppEntity(exposureCondition: .sourceDisabled)
 struct IntentLaneTagEntity: AppEntity {
   static var typeDisplayRepresentation: TypeDisplayRepresentation {
     TypeDisplayRepresentation(name: LocalizedStringResource("Tag", table: "IntentLane"))
@@ -520,7 +518,6 @@ struct IntentLaneSnippetView: View {
   }
 }
 
-@AppEntity(exposureCondition: .sourceDisabled)
 struct IntentLaneNoteEntity: AppEntity {
   static var typeDisplayRepresentation: TypeDisplayRepresentation {
     TypeDisplayRepresentation(name: LocalizedStringResource("Note", table: "IntentLane"))
@@ -657,7 +654,6 @@ struct IntentLaneSnippetView: View {
 }
 
 @available(macOS 27.0, *)
-@AppEntity(exposureCondition: .sourceDisabled)
 struct IntentLaneNotebookEntity: AppEntity, IndexedEntity {
   static var typeDisplayRepresentation: TypeDisplayRepresentation {
     TypeDisplayRepresentation(name: LocalizedStringResource("Notebook", table: "IntentLane"))
