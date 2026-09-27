@@ -7,6 +7,9 @@ export const CAPABILITY_CATALOGUE_VERSION = "27.0";
 export const CAPABILITY_GROUPS = [
   "foundation",
   "semantics",
+  "entity",
+  "parameters",
+  "models",
   "discovery",
   "cross-app",
   "relevance",
@@ -52,6 +55,16 @@ export type CapabilitySymbol = Readonly<{
    * a member that is not declared by its owner is no evidence at all.
    */
   member?: string;
+  /**
+   * The interface architectures the installed SDK ships this symbol for, for a
+   * symbol the SDK does not ship everywhere. `SpotlightSearchTool` is declared
+   * by `_CoreSpotlight_FoundationModels` on the arm64e interfaces only, so
+   * without this a comparison against an x86_64 interface would report a
+   * correct attribution as unresolved evidence. The field carries what the SDK
+   * ships, never a way to skip a comparison: on an interface the SDK does ship
+   * the symbol for, a missing declaration is still unresolved evidence.
+   */
+  architectures?: readonly string[];
 }>;
 
 export type CapabilityRecord = Readonly<{
@@ -196,6 +209,211 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     classification: "shortcuts-only"
   },
   {
+    id: "entity.transient",
+    group: "entity",
+    surface: "TransientAppEntity",
+    availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "TransientAppEntity" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "entity.file",
+    group: "entity",
+    surface: "FileEntity",
+    availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "AppIntents", symbol: "FileEntity" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    // The entity hands the system a handle to a file the app can reach, so a
+    // report that calls it a generic AppEntity hides the part a reader has to
+    // decide on: which content types, and therefore which files, are exposed.
+    security: "medium"
+  },
+  {
+    id: "entity.unique",
+    group: "entity",
+    surface: "UniqueAppEntity",
+    availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "AppIntents", symbol: "UniqueAppEntity" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "entity.url-representation",
+    group: "entity",
+    surface: "URLRepresentableEntity",
+    availability: { macos: "15.0", ios: "18.0" },
+    sdk: [{ framework: "AppIntents", symbol: "URLRepresentableEntity" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "entity.ownership",
+    group: "entity",
+    surface: "OwnershipProvidingEntity",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "OwnershipProvidingEntity" }],
+    companions: ["relevance.syncable-entity"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "entity.collection",
+    group: "entity",
+    surface: "EntityCollection",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "EntityCollection" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "parameters.rich-value",
+    group: "parameters",
+    surface: "IntentValueRepresentation",
+    availability: { macos: "26.4", ios: "26.4" },
+    sdk: [{ framework: "AppIntents", symbol: "IntentValueRepresentation" }],
+    companions: ["cross-app.transferable"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    // A `TransferRepresentation` moves a payload between apps, and this one
+    // moves the semantic representation the system understands. A report that
+    // files it next to a plain `Transferable` hides what leaves the device, so
+    // it carries a distinct record rather than a companion note.
+    security: "medium"
+  },
+  {
+    id: "parameters.union",
+    group: "parameters",
+    surface: "AppUnionValue",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "AppUnionValue" }],
+    companions: ["foundation.parameters"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    // The Foundation Models records carry `auditor`, not `build`: this change
+    // describes what the auditor sees and generates none of this stack. A
+    // higher rung here would be a claim a client report would repeat.
+    id: "models.system-language-model",
+    group: "models",
+    surface: "SystemLanguageModel",
+    availability: { macos: "26.0", ios: "26.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "SystemLanguageModel" }],
+    companions: ["models.language-model"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.language-model",
+    group: "models",
+    surface: "LanguageModel protocol",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "LanguageModel" }],
+    companions: ["models.system-language-model", "models.private-cloud"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.dynamic-profile",
+    group: "models",
+    surface: "DynamicProfile",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "DynamicProfile" }],
+    companions: ["models.language-model", "models.tool"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    // A dynamic profile picks its instructions and its tools by situation, so
+    // no static reading of the source establishes what a run will do.
+    security: "medium"
+  },
+  {
+    id: "models.private-cloud",
+    group: "models",
+    surface: "PrivateCloudComputeLanguageModel",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "PrivateCloudComputeLanguageModel" }],
+    companions: ["models.language-model"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    // The one record in this group where the prompt leaves the device, which is
+    // the fact a reader has to be told rather than infer from a model call.
+    security: "high"
+  },
+  {
+    id: "models.image-input",
+    group: "models",
+    surface: "ImageAttachmentContent",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "ImageAttachmentContent" }],
+    companions: ["models.system-language-model"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "models.generation-options",
+    group: "models",
+    surface: "GenerationOptions",
+    availability: { macos: "26.0", ios: "26.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "GenerationOptions" }],
+    companions: ["models.system-language-model"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "models.tool",
+    group: "models",
+    surface: "Tool protocol",
+    availability: { macos: "26.0", ios: "26.0" },
+    sdk: [{ framework: "FoundationModels", symbol: "Tool" }],
+    companions: ["models.system-language-model"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    // A tool is code the model may call, so adopting one hands the model a path
+    // into the app that a plain prompt never had.
+    security: "medium"
+  },
+  {
+    id: "models.ocr-tool",
+    group: "models",
+    surface: "OCRTool",
+    availability: { macos: "27.0", ios: "27.0" },
+    // Public only in the bridge module, so the bridge is the evidence: a
+    // public-only scan would read this tool as absent.
+    sdk: [{ framework: "_Vision_FoundationModels", symbol: "OCRTool" }],
+    companions: ["models.tool"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "medium"
+  },
+  {
+    id: "models.spotlight-tool",
+    group: "models",
+    surface: "SpotlightSearchTool",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "_CoreSpotlight_FoundationModels", symbol: "SpotlightSearchTool", architectures: ["arm64e"] }],
+    companions: ["models.tool", "discovery.indexed-entity"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "high"
+  },
+  {
     id: "discovery.entity-query",
     group: "discovery",
     surface: "EntityQuery",
@@ -205,6 +423,28 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     evidence: ["swift"],
     claim: "build",
     security: "low"
+  },
+  {
+    id: "discovery.entity-property-query",
+    group: "discovery",
+    surface: "EntityPropertyQuery",
+    availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "EntityPropertyQuery" }],
+    companions: ["discovery.entity-query"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "discovery.indexed-entity-query",
+    group: "discovery",
+    surface: "IndexedEntityQuery",
+    availability: { macos: "27.0", ios: "27.0" },
+    sdk: [{ framework: "AppIntents", symbol: "IndexedEntityQuery" }],
+    companions: ["discovery.entity-query", "discovery.indexed-entity"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "high"
   },
   {
     id: "discovery.intent-value-query",
@@ -328,6 +568,45 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     evidence: ["swift"],
     claim: "domain-package",
     security: "medium"
+  },
+  {
+    id: "execution.targets",
+    group: "execution",
+    surface: "IntentExecutionTargets",
+    availability: { macos: "27.0", ios: "27.0" },
+    // The type declares the option set, and the member is what an app writes on
+    // its intent. Both are evidence: naming only the type would say the option
+    // set exists, not that an app can restrict where its intent runs.
+    sdk: [
+      { framework: "AppIntents", symbol: "IntentExecutionTargets" },
+      { framework: "AppIntents", symbol: "AppIntent", member: "allowedExecutionTargets" }
+    ],
+    companions: ["foundation.app-intent"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "execution.snippet",
+    group: "execution",
+    surface: "SnippetIntent",
+    availability: { macos: "26.0", ios: "26.0" },
+    sdk: [{ framework: "AppIntents", symbol: "SnippetIntent" }],
+    companions: ["execution.snippet-view", "execution.native-handler"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
+  },
+  {
+    id: "execution.snippet-view",
+    group: "execution",
+    surface: "ShowsSnippetView",
+    availability: { macos: "13.0", ios: "16.0" },
+    sdk: [{ framework: "AppIntents", symbol: "ShowsSnippetView" }],
+    companions: ["foundation.result-traits"],
+    evidence: ["swift", "test"],
+    claim: "auditor",
+    security: "low"
   },
   {
     id: "proof.confirmation",

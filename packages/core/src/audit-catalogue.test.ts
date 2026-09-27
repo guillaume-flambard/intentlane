@@ -16,6 +16,9 @@ describe("capability catalogue", () => {
     expect([...CAPABILITY_GROUPS]).toEqual([
       "foundation",
       "semantics",
+      "entity",
+      "parameters",
+      "models",
       "discovery",
       "cross-app",
       "relevance",
@@ -61,6 +64,16 @@ describe("capability catalogue", () => {
   it("matches the availability the installed App Intents SDK declares", () => {
     const expected: Readonly<Record<string, readonly [string, string]>> = {
       "discovery.entity-query": ["13.0", "16.0"],
+      "entity.transient": ["13.0", "16.0"],
+      "entity.file": ["15.0", "18.0"],
+      "entity.unique": ["15.0", "18.0"],
+      "entity.url-representation": ["15.0", "18.0"],
+      "entity.ownership": ["27.0", "27.0"],
+      "entity.collection": ["27.0", "27.0"],
+      "parameters.rich-value": ["26.4", "26.4"],
+      "parameters.union": ["27.0", "27.0"],
+      "discovery.entity-property-query": ["13.0", "16.0"],
+      "discovery.indexed-entity-query": ["27.0", "27.0"],
       "discovery.intent-value-query": ["26.0", "26.0"],
       "discovery.indexed-entity": ["15.0", "18.0"],
       "discovery.spotlight-lifecycle": ["15.0", "18.0"],
@@ -102,8 +115,8 @@ describe("capability catalogue", () => {
       }
     }
     const proven = CAPABILITY_CATALOGUE.filter((record) => record.sdk.length > 0);
-    expect(proven.length).toBe(28);
-    expect(CAPABILITY_CATALOGUE.length).toBe(29);
+    expect(proven.length).toBe(50);
+    expect(CAPABILITY_CATALOGUE.length).toBe(51);
   });
 
   it("leaves the proof empty for the one record whose surface names a module, not a symbol", () => {

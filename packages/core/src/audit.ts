@@ -2,6 +2,7 @@ import type { AuditArchitectureReport } from "./audit-architecture.js";
 import type { AuditCatalogueReport } from "./audit-catalogue.js";
 import type { AuditConditionsReport } from "./audit-conditions.js";
 import type { AuditDataReport } from "./audit-data.js";
+import type { AuditOverlayReport } from "./audit-overlay.js";
 import type { AuditQualityReport } from "./audit-quality.js";
 import type { AuditRouteReport } from "./audit-route.js";
 import type { AuditTargetsReport } from "./audit-targets.js";
@@ -62,7 +63,9 @@ export const AUDIT_DIAGNOSTIC_CODES = [
   "ILA179",
   "ILA180",
   "ILA181",
-  "ILA182"
+  "ILA182",
+  "ILA190",
+  "ILA191"
 ] as const;
 
 export type AuditDiagnosticCode = (typeof AUDIT_DIAGNOSTIC_CODES)[number];
@@ -105,6 +108,7 @@ export type AuditReportExtras = Readonly<{
   quality?: AuditQualityReport;
   catalogue?: AuditCatalogueReport;
   targets?: AuditTargetsReport;
+  overlay?: AuditOverlayReport;
 }>;
 
 export type AuditReport = Readonly<{
@@ -118,6 +122,7 @@ export type AuditReport = Readonly<{
   quality?: AuditQualityReport;
   catalogue?: AuditCatalogueReport;
   targets?: AuditTargetsReport;
+  overlay?: AuditOverlayReport;
   findings: readonly AuditFinding[];
 }>;
 
@@ -152,6 +157,7 @@ export function createAuditReport(
     ...(extras.quality ? { quality: extras.quality } : {}),
     ...(extras.catalogue ? { catalogue: extras.catalogue } : {}),
     ...(extras.targets ? { targets: extras.targets } : {}),
+    ...(extras.overlay ? { overlay: extras.overlay } : {}),
     findings: [...findings].sort(compareFindings)
   };
 }

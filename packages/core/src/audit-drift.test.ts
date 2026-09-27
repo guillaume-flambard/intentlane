@@ -47,7 +47,15 @@ const APP_INTENTS_INTERFACE = [
 
 const CORE_SPOTLIGHT_INTERFACE = [INTERFACE_HEADER, "public struct CSSearchableItemRefinement {", "}"];
 
-const FOUNDATION_MODELS_INTERFACE = [INTERFACE_HEADER, "public protocol Generable {", "}", "public struct GenerationOptions {", "}"];
+const CLAIMED_BY_FOUNDATION_MODELS = [
+  ...new Set(
+    CAPABILITY_CATALOGUE.flatMap((record) => record.sdk)
+      .filter((entry) => entry.framework === "FoundationModels")
+      .map((entry) => entry.symbol)
+  )
+].sort();
+
+const FOUNDATION_MODELS_INTERFACE = [INTERFACE_HEADER, ...interfaceDeclaring(CLAIMED_BY_FOUNDATION_MODELS)];
 
 const CORE_SPOTLIGHT_HEADER = [
   "//  CSSearchableIndex.h",
@@ -589,6 +597,22 @@ describe.skipIf(installed === undefined)("the installed SDK 27", () => {
     expect(symbols).toBeDefined();
     expect(symbols ?? []).toContain("AppIntentTypeDefinition");
     expect(symbols ?? []).not.toContain("AppIntentsTesting");
+  });
+
+  it("resolves a system tool from its bridge framework, not from the public module", async () => {
+    const sdk = installed;
+    if (sdk === undefined) return;
+    // Both tools are public only in a bridge module. An auditor that scanned the
+    // public module alone would conclude the symbols are absent, so the record
+    // names the bridge and the reader has to reach it.
+    const vision = await readFrameworkSymbols(sdk.path, "_Vision_FoundationModels");
+    const spotlight = await readFrameworkSymbols(sdk.path, "_CoreSpotlight_FoundationModels");
+    const publicModule = await readFrameworkSymbols(sdk.path, "FoundationModels");
+
+    expect(vision ?? []).toContain("OCRTool");
+    expect(spotlight ?? []).toContain("SpotlightSearchTool");
+    expect(publicModule ?? []).not.toContain("OCRTool");
+    expect(publicModule ?? []).not.toContain("SpotlightSearchTool");
   });
 
   // One test per variant: the SDK ships four interfaces for every framework, and

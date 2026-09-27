@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   completeSchemaDomains,
+  detectExecutionTargets,
   detectSchemaDomains,
   detectSources,
   detectedCapabilities,
@@ -97,6 +98,150 @@ describe("audit detection", () => {
       { path: "Sources/App/Package.swift", contents: "struct Pkg: AppIntentsPackage {\n}" }
     ]);
     expect(detectedCapabilities(detections).has("foundation.app-intent")).toBe(false);
+  });
+
+  it("never renders a property query as an entity query", () => {
+    // `EntityPropertyQuery` refines `EntityQuery` in the SDK, so a detector
+    // that matched the supertype name would file a property query under the
+    // entity-query capability. Its resolution granularity is a different
+    // surface and the report has to keep the two apart.
+    const capabilities = detectedCapabilities(
+      detectSources([{ path: "Sources/App/Note.swift", contents: "struct NoteQuery: EntityPropertyQuery {\n}" }])
+    );
+    expect(capabilities.has("discovery.entity-property-query")).toBe(true);
+    expect(capabilities.has("discovery.entity-query")).toBe(false);
+  });
+
+  it("separates a rich value from a scalar parameter and a union from an optional", () => {
+    const rich = detectedCapabilities(
+      detectSources([
+        {
+          path: "Sources/App/Link.swift",
+          contents: "struct NoteLink: IntentValueRepresentation<Note, String> {\n}\nstruct Note: Transferable {\n}\n"
+        }
+      ])
+    );
+    expect(rich.has("parameters.rich-value")).toBe(true);
+    expect(rich.has("parameters.union")).toBe(false);
+
+    const union = detectedCapabilities(
+      detectSources([
+        { path: "Sources/App/Target.swift", contents: "enum Target: AppUnionValue {\n}\nstruct Opt {\n  var title: String?\n}\n" }
+      ])
+    );
+    expect(union.has("parameters.union")).toBe(true);
+    // A union parameter is not an optional parameter, and a scalar `@Parameter`
+    // is neither a union nor a rich value. An optional stays ordinary.
+    expect(union.has("parameters.rich-value")).toBe(false);
+    expect(union.has("foundation.parameters")).toBe(false);
+  });
+
+  it("signals an intent restricted to an extension as unreachable from the main process", () => {
+    const scopes = detectExecutionTargets([
+      {
+        path: "Sources/App/Extension.swift",
+        contents: [
+          "struct RunInBackground: AppIntent {",
+          "  static var allowedExecutionTargets: IntentExecutionTargets { .appIntentsExtension }",
+          "}"
+        ].join("\n")
+      }
+    ]);
+    expect(scopes).toEqual([
+      {
+        path: "Sources/App/Extension.swift",
+        line: 2,
+        targets: ["appIntentsExtension"],
+        restrictsTargets: true,
+        reachesMainProcess: false
+      }
+    ]);
+  });
+
+  it("names the default target without judging reachability for an unrestricted intent", () => {
+    const scopes = detectExecutionTargets([
+      {
+        path: "Sources/App/Anywhere.swift",
+        contents: "struct Anywhere: AppIntent {\n  static var allowedExecutionTargets: IntentExecutionTargets { .default }\n}"
+      }
+    ]);
+    // `.default` is a target the SDK declares, so reachability is judged: the
+    // intent does not name an extension, so the main process reaches it.
+    expect(scopes[0]?.targets).toEqual(["default"]);
+    expect(scopes[0]?.reachesMainProcess).toBe(true);
+
+    // An intent that names no target inherits the SDK default. The report names
+    // that default and the alternatives the SDK declares, and stops there
+    // rather than deciding for the project.
+    const inherited = detectExecutionTargets([
+      { path: "Sources/App/Silent.swift", contents: "struct Silent: AppIntent {\n}\n" }
+    ]);
+    expect(inherited).toEqual([]);
+  });
+
+  it("only names the execution targets the SDK declares", () => {
+    // A computed body naming a project symbol is not an SDK target, so the
+    // report carries no verdict instead of guessing where the intent runs.
+    const scopes = detectExecutionTargets([
+      {
+        path: "Sources/App/Computed.swift",
+        contents: "struct Computed: AppIntent {\n  static var allowedExecutionTargets: IntentExecutionTargets { Self.shared.targets }\n}"
+      }
+    ]);
+    expect(scopes).toEqual([
+      {
+        path: "Sources/App/Computed.swift",
+        line: 2,
+        targets: ["default"],
+        restrictsTargets: false,
+        reachesMainProcess: undefined
+      }
+    ]);
+  });
+
+  it("detects a snippet intent and the result that shows its view", () => {
+    const capabilities = detectedCapabilities(
+      detectSources([
+        {
+          path: "Sources/App/Snippet.swift",
+          contents: "struct ShowCard: SnippetIntent {\n}\nstruct Card: IntentResult, ShowsSnippetView {\n}\n"
+        }
+      ])
+    );
+    expect(capabilities.has("execution.snippet")).toBe(true);
+    expect(capabilities.has("execution.snippet-view")).toBe(true);
+  });
+
+  it("separates an app behind the model protocol from one bound to the system model", () => {
+    const abstracted = detectedCapabilities(
+      detectSources([{ path: "Sources/App/Runner.swift", contents: "struct Runner: LanguageModel {\n}\n" }])
+    );
+    // An app behind the protocol can escalate to another implementation later,
+    // which changes what it has to prove, so the two are not the same fact.
+    expect(abstracted.has("models.language-model")).toBe(true);
+    expect(abstracted.has("models.system-language-model")).toBe(false);
+
+    const bound = detectedCapabilities(
+      detectSources([{ path: "Sources/App/Local.swift", contents: "let model = SystemLanguageModel.default\n" }])
+    );
+    expect(bound.has("models.system-language-model")).toBe(true);
+    expect(bound.has("models.language-model")).toBe(false);
+  });
+
+  it("separates a cloud escalation from a local model call", () => {
+    const local = detectedCapabilities(
+      detectSources([
+        { path: "Sources/App/Local.swift", contents: "let model = SystemLanguageModel.default\nlet options = GenerationOptions()\n" }
+      ])
+    );
+    expect(local.has("models.generation-options")).toBe(true);
+    expect(local.has("models.private-cloud")).toBe(false);
+
+    const cloud = detectedCapabilities(
+      detectSources([{ path: "Sources/App/Cloud.swift", contents: "let model = PrivateCloudComputeLanguageModel.default\n" }])
+    );
+    expect(cloud.has("models.private-cloud")).toBe(true);
+    expect(cloud.has("models.system-language-model")).toBe(false);
   });
 });
 

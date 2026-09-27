@@ -470,6 +470,11 @@ export function driftIsComplete(drift: CatalogueDrift): boolean {
   return drift.unreadable.length === 0 && drift.partial.length === 0;
 }
 
+/** The architecture an interface variant is built for, `arm64e` for every Apple silicon slice. */
+function architectureOf(variant: SwiftinterfaceVariant): string {
+  return variant.split("-")[0] ?? variant;
+}
+
 function describes(entry: CapabilitySymbol): string {
   return entry.member === undefined ? `${entry.symbol} in ${entry.framework}` : `${entry.symbol}.${entry.member} in ${entry.framework}`;
 }
@@ -505,6 +510,12 @@ export function compareCatalogueWithSdk(index: SdkSymbolIndex, variant: Swiftint
   for (const record of CAPABILITY_CATALOGUE) {
     for (const entry of record.sdk) {
       if (findFrameworkSymbols(index, entry.framework) === undefined) continue;
+      // A symbol the SDK ships for some interfaces only is not in question on the
+      // others. The x86_64 interface of `_CoreSpotlight_FoundationModels` neither
+      // establishes `SpotlightSearchTool` nor refutes the attribution: the SDK
+      // simply does not ship it there, which is a fact about the SDK and not an
+      // error in the catalogue.
+      if (entry.architectures !== undefined && !entry.architectures.includes(architectureOf(variant))) continue;
       if (!resolvedIn(index, entry)) {
         unresolvedEvidence.push({
           kind: "unresolved-evidence",
