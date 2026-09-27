@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createAuditReport, type AuditFinding, type AuditTarget } from "./audit.js";
+import { createAuditReport, type AuditFinding, type AuditReport, type AuditState, type AuditTarget } from "./audit.js";
 import { runAudit } from "./audit-run.js";
 import { AUDIT_SCORE_BANDS, AUDIT_SIRI_DISCOVERY, scoreAuditReport } from "./audit-score.js";
 
@@ -197,3 +197,55 @@ describe("audit score", () => {
     expect(score.band).toBe("early");
   });
 });
+
+describe("the score says why it moved", () => {
+  const finding = (capability: string, state: AuditState): AuditFinding =>
+    ({
+      capability,
+      platform: "macos",
+      state,
+      confidence: "high",
+      evidence: [],
+      requirements: [],
+      gaps: [],
+      nextAction: ""
+    }) as AuditFinding;
+  const report = (findings: readonly AuditFinding[]): AuditReport =>
+    ({ findings, catalogue: { version: "27.0", capabilities: 38, state: "current", nextAction: "" } }) as unknown as AuditReport;
+
+  it("carries the catalogue the score was computed against, so a score is readable across tool versions", () => {
+    const scored = scoreAuditReport(report([finding("foundation.app-intent", "implemented")]));
+
+    expect(scored.catalogueVersion).toBe("27.0");
+    expect(scored.version).toBe("1.1");
+  });
+
+  it("breaks the score down by catalogue group, taking the group from the record", () => {
+    const scored = scoreAuditReport(
+      report([
+        finding("foundation.app-intent", "implemented"),
+        finding("foundation.parameters", "implemented"),
+        finding("models.system-language-model", "unknown"),
+        finding("models.language-model", "unknown")
+      ])
+    );
+
+    expect(scored.byGroup).toEqual([
+      { group: "foundation", points: 4, maximum: 6, applicable: 2, score: 67 },
+      { group: "models", points: 0, maximum: 6, applicable: 2, score: 0 }
+    ]);
+    // The group is not parsed out of the id: an id no record owns is left out
+    // rather than given an invented group.
+    expect(scoreByGroupIsAbsentFor(report([finding("not.a.capability", "implemented")]))).toBe(true);
+  });
+
+  it("keeps the global number unchanged, because a breakdown is information and not a rescoring", () => {
+    const findings = [finding("foundation.app-intent", "implemented"), finding("models.system-language-model", "unknown")];
+
+    expect(scoreAuditReport(report(findings)).score).toBe(33);
+  });
+});
+
+function scoreByGroupIsAbsentFor(value: AuditReport): boolean {
+  return scoreAuditReport(value).byGroup.length === 0;
+}

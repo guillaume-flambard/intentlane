@@ -307,12 +307,29 @@ exports[`formatDelta > renders a parseable JSON delta 1`] = `
     {
       "platform": "macos",
       "baseline": {
-        "version": "1.0",
+        "version": "1.1",
         "score": 33,
         "band": "early",
         "points": 2,
         "maximum": 6,
         "applicable": 2,
+        "catalogueVersion": "27.0",
+        "byGroup": [
+          {
+            "group": "foundation",
+            "points": 1,
+            "maximum": 3,
+            "applicable": 1,
+            "score": 33
+          },
+          {
+            "group": "semantics",
+            "points": 1,
+            "maximum": 3,
+            "applicable": 1,
+            "score": 33
+          }
+        ],
         "counts": {
           "unsupported": 0,
           "unknown": 0,
@@ -324,12 +341,29 @@ exports[`formatDelta > renders a parseable JSON delta 1`] = `
         "discovery": "none"
       },
       "candidate": {
-        "version": "1.0",
+        "version": "1.1",
         "score": 83,
         "band": "close",
         "points": 5,
         "maximum": 6,
         "applicable": 2,
+        "catalogueVersion": "27.0",
+        "byGroup": [
+          {
+            "group": "foundation",
+            "points": 2,
+            "maximum": 3,
+            "applicable": 1,
+            "score": 67
+          },
+          {
+            "group": "semantics",
+            "points": 3,
+            "maximum": 3,
+            "applicable": 1,
+            "score": 100
+          }
+        ],
         "counts": {
           "unsupported": 0,
           "unknown": 0,

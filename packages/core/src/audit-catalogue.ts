@@ -677,7 +677,18 @@ export const CAPABILITY_CATALOGUE: readonly CapabilityRecord[] = [
     claim: "siri-journey",
     security: "medium",
     classification: "siri-eligible"
-  }
+  },
+  {
+    id: "models.private-cloud-compute",
+    group: "models",
+    surface: "PrivateCloudComputeLanguageModel",
+    availability: { macos: "27.0", ios: "27.0" },
+        sdk: [{ framework: "FoundationModels", symbol: "PrivateCloudComputeLanguageModel" }],
+companions: ["models.language-model"],
+    evidence: ["swift"],
+    claim: "auditor",
+    security: "medium"
+  },
 ];
 
 export function findCapability(id: string): CapabilityRecord | undefined {

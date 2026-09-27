@@ -115,8 +115,8 @@ describe("capability catalogue", () => {
       }
     }
     const proven = CAPABILITY_CATALOGUE.filter((record) => record.sdk.length > 0);
-    expect(proven.length).toBe(50);
-    expect(CAPABILITY_CATALOGUE.length).toBe(51);
+    expect(proven.length).toBe(51);
+    expect(CAPABILITY_CATALOGUE.length).toBe(52);
   });
 
   it("leaves the proof empty for the one record whose surface names a module, not a symbol", () => {
