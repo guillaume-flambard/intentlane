@@ -142,11 +142,12 @@
 
 ## Proof Points
 
-**Metrics:** The local suite currently records 723 passing tests out of 724, with the remaining failure named rather than hidden. The claims registry records 8 proven claims, 1 partially proven claim, and 3 awaiting proof as of 2026-09-27.
+**Metrics:** The live CI workflow owns the current automated test status. The
+claims registry owns the count and status of publishable claims; this document
+does not duplicate either number.
 
-**Customers:** No paying customer or approved public case study yet. NetNewsWire is the active public-repository pilot; IINA, FSNotes, and HandBrake have produced automated audit evidence.
-
-**Testimonials:** None yet.
+**Public evidence:** Public-repository pilots provide automated audit and
+integration evidence. No public case study claims a verified Siri conversation.
 
 **Value themes:**
 
@@ -157,13 +158,11 @@
 | Native implementation | Generated Swift builds for iOS and macOS targets, with customer-owned adapter seams |
 | Surface honesty | Siri, Spotlight, and Shortcuts observations remain separate from build and metadata checks |
 
-## Goals
+## Public conversion
 
-**Business goal:** Win the first paid fixed-scope audit before 2026-11-15 and turn its findings into a credible implementation opportunity.
-
-**Conversion action:** Book a 30-minute qualification call about one existing iOS or macOS app and up to three candidate journeys.
-
-**Current metrics:** No paid audit yet. The immediate milestone is one qualified conversation and one audit offer sent by 2026-10-10.
+The repository offers two clear next steps: run the published read-only audit on
+a non-confidential application, or discuss one existing iOS or macOS app and up
+to three candidate journeys privately with the maintainer.
 
 ## Changelog
 

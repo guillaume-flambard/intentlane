@@ -1,137 +1,131 @@
-# IntentLane — architecture technique
+# IntentLane architecture
 
-## Principe
+## Principle
 
-Le YAML est la source de vérité. Le compilateur transforme un AST normalisé en plusieurs cibles. Aucun LLM n'est nécessaire pour compiler.
+The versioned YAML contract is the source for generation. The auditor reads an
+existing repository without changing it. Both paths are deterministic and run
+without a model.
 
 ```mermaid
-flowchart TD
-  A["intentlane.yaml"] --> B["Parser + validation"]
-  B --> C["IntentLane IR"]
-  C --> D["Apple generator"]
-  C --> E["Docs generator"]
-  C --> F["Test generator"]
-  D --> G["Expo config plugin"]
-  G --> H["Xcode project"]
+flowchart LR
+  R[Existing app repository] --> A[Read-only auditor]
+  A --> P[Evidence report]
+  Y[intentlane.yaml] --> V[Schema and validation]
+  V --> I[Normalized contract]
+  I --> G[Apple generator]
+  G --> S[Generated Swift and resources]
+  S --> O[Application-owned adapter]
 ```
 
-## Monorepo
+The application owns data lookup, authorization, navigation, and side effects.
+Generated interfaces stop at that boundary.
+
+## Repository map
 
 ```text
 intentlane/
 ├── apps/
-│   ├── example-expo/
-│   └── example-macos/
+│   ├── example-expo/       # workspace integration fixture
+│   ├── example-macos/      # Swift and metadata extraction fixture
+│   └── studio/             # unreleased macOS operator application
 ├── packages/
-│   ├── schema/              # types, JSON Schema, migrations
-│   ├── core/                # parser, IR, validation, diagnostics
-│   ├── generator-apple/     # templates Swift
-│   ├── expo-plugin/         # config plugin
-│   ├── runtime-expo/        # API JS optionnelle
-│   ├── cli/                 # init/validate/generate/doctor/test
-│   └── testkit/             # fixtures, snapshots, assertions
-├── fixtures/
-├── docs/
-├── pnpm-workspace.yaml
-├── turbo.json
-└── package.json
+│   ├── schema/             # contract types and validation
+│   ├── core/               # audit, evidence, diagnostics, and normalized data
+│   ├── generator-apple/    # deterministic Swift emitter
+│   ├── expo-plugin/        # unpublished Expo config plugin
+│   ├── cli/                # intentlane command
+│   └── studio-protocol/    # Studio capability-map protocol
+├── pilots/                 # public-app contracts and automated evidence
+├── docs/                   # maintained documentation
+├── openspec/               # accepted requirements and work in flight
+├── intentlane.schema.json  # machine-readable contract
+└── intentlane.yaml         # executable reference contract
 ```
 
 ## Stack
 
-- Node 22+, TypeScript strict.
-- pnpm workspaces + Turborepo.
-- Zod pour validation runtime ; JSON Schema exporté pour IDE.
-- Commander ou Clipanion pour le CLI.
-- Vitest pour core/générateurs.
-- Swift Testing/XCTest pour les fixtures Apple.
-- Expo Config Plugins pour mutation déterministe du projet natif.
-- Mustache/Handlebars interdit dans le core si cela fragilise l'échappement ; préférer un petit emitter Swift typé.
-
-## Intermediate Representation
-
-```ts
-type IntentIR = {
-  schemaVersion: string
-  app: AppIR
-  intents: NormalizedIntent[]
-  entities: NormalizedEntity[]
-  locales: string[]
-  capabilities: CapabilitySet
-}
-```
-
-L'IR contient des valeurs normalisées, jamais du YAML brut. Toutes les validations s'effectuent avant génération.
+- Node.js 22 or newer and strict TypeScript.
+- pnpm workspaces and Turborepo.
+- Zod for runtime validation and JSON Schema for editor support.
+- Commander for the CLI.
+- Vitest for TypeScript tests.
+- Swift Testing and XCTest for Studio and Apple fixtures.
+- Expo Config Plugins for the workspace-only bridged example.
 
 ## Packages
 
-### `@intentlane/schema`
+### `packages/schema`
 
-Types publics, schéma JSON, changelog de schéma et migrations automatiques.
+Owns the public YAML shape, schema-level validation, pilot manifests, evidence
+ledgers, and claim-confidence inputs.
 
-### `@intentlane/core`
+### `packages/core`
 
-Lecture, validation sémantique, capability resolution, diagnostics avec code stable (`IL1001`, etc.) et construction IR.
+Owns normalized data, stable diagnostics, repository discovery, capability
+detection, audit reports, evidence validation, report comparison, release gates,
+and client deliverable data.
 
-### `@intentlane/generator-apple`
+The auditor fingerprints the inspected worktree before and after a run. It does
+not generate into the target.
 
-Émet :
+### `packages/generator-apple`
 
-- un type Swift par intention ;
-- entités et queries ;
-- `AppShortcutsProvider` only for contracts that explicitly declare shortcut phrases ;
-- a customer-owned adapter template for stable-ID resolution and Spotlight lifecycle ;
-- ressources localisées ;
-- registre de handlers ;
-- snippets simples ;
-- manifeste de génération.
+Emits App Intents Swift, localized strings, generated-file manifests, resolver
+and handler interfaces, schema conformances supported by the current catalogue,
+and an optional adapter template that is written once.
 
-### `@intentlane/expo`
+The generator supports `open_app` and bounded native handlers. HTTP execution is
+rejected. Endpoint queries and generated enum schema conformances are not part of
+the current contract.
 
-Plugin idempotent qui copie les sources générées, configure les entitlements nécessaires et ajoute les ressources. Il ne doit pas modifier arbitrairement le projet de l'utilisateur.
+### `packages/expo-plugin`
 
-### `@intentlane/runtime-expo`
+Contains the config plugin exercised by `apps/example-expo`. It generates into
+the native project during prebuild and registers the Swift and localization
+resources idempotently.
 
-API minimale pour enregistrer les routes et synchroniser les données utiles. Ne pas prétendre que JavaScript peut toujours s'exécuter en arrière-plan.
+The package is not published. It is a contributor fixture until a release is cut
+under a scope the maintainer controls.
 
-## Stratégies d'exécution
+### `packages/cli`
 
-| Mode | Usage | MVP | Limite |
-|---|---|---:|---|
-| `open_app` | navigation/deep link | Oui | ouvre l'app |
-| `native` | action locale Swift | Oui | handler natif requis |
-| `http` | backend distant | Expérimental | auth et réseau |
-| `javascript` | handler JS direct | Non | cycle de vie incertain |
+Provides contract commands, the read-only audit, evidence validation, report
+comparison, verification, pilot execution, and source-visible commands that may
+be ahead of the last npm release. The root README names the boundary between the
+published package and `main`.
 
-## Compatibilité
+### `packages/studio-protocol`
 
-Chaque fonction générée possède une disponibilité minimale. Les fonctions récentes telles que `RelevantEntities`, `EntityCollection`, `SyncableEntity`, paramètres union et long-running intents restent des capabilities optionnelles. Le générateur doit refuser une capability incompatible avec la cible déclarée.
+Provides the typed capability-map data used by the unreleased Studio app. Studio
+runs the same engine as the CLI and does not maintain a second interpretation of
+audit states.
 
-## Sécurité
+## Evidence model
 
-- Deny-by-default pour opérations destructives.
-- Confirmation obligatoire pour suppression, paiement, publication ou partage.
-- Authentification obligatoire configurable pour données privées.
-- URLs et paramètres encodés, jamais interpolés.
-- Allowlist d'hôtes pour `http`.
-- Tokens récupérés au runtime via Keychain/app host ; jamais dans YAML.
-- Logs expurgés des valeurs sensibles.
-- Pas de télémétrie par défaut dans le CLI OSS.
+IntentLane preserves four separate layers:
 
-## Tests
+1. Source evidence says a declaration or implementation exists.
+2. Build evidence says the Apple toolchain accepted it.
+3. Application tests say the app-owned boundary behaves as contracted.
+4. Human evidence says a named system journey was observed under recorded conditions.
 
-1. Parser : fixtures valides/invalides.
-2. Validation : diagnostics stables.
-3. Generator : golden snapshots Swift.
-4. Plugin : idempotence après deux prebuilds.
-5. Swift : compilation de la fixture sous plusieurs Xcode supportés.
-6. E2E manuel MVP : Shortcuts et Siri sur simulateur/appareil.
+No layer silently promotes itself into the next one.
 
-## Décisions structurantes
+## Safety boundaries
 
-- ADR-001 : YAML contract-first.
-- ADR-002 : compilation déterministe sans LLM.
-- ADR-003 : Expo premier adaptateur.
-- ADR-004 : pas de handler JS garanti en background.
-- ADR-005 : code généré clairement isolé et remplaçable.
-- ADR-006 : la sortie est neutre vis-à-vis de la plateforme. Le Swift généré compile pour iOS comme pour macOS et le toolchain en extrait les mêmes métadonnées App Intents ; `apps/example-macos` le prouve sans projet Xcode, en compilant avec `swiftc` puis en invoquant `appintentsmetadataprocessor`. Expo reste le premier adaptateur d'intégration (ADR-003) parce qu'une app Expo régénère son dossier natif à chaque prebuild, mais ce n'est pas une contrainte du générateur : un target Swift natif commite simplement le fichier généré.
+- Destructive operations require an explicit policy.
+- Contracts contain no static credentials.
+- Generated URLs and parameters are encoded.
+- The auditor is local and read-only.
+- Indexed data is classified before a readiness claim is made.
+- Generated code never invents application permissions or ownership rules.
+- No telemetry is enabled by default in the open-source CLI.
+
+## Verification
+
+The CI workflow runs the authoritative checks. It typechecks the TypeScript,
+runs the automated suite, proves deterministic generation, compiles generated
+Swift, extracts macOS App Intents metadata, and builds the Expo example for an
+iOS simulator.
+
+Manual Siri, Spotlight, or Shortcuts observation remains a separate pilot step.

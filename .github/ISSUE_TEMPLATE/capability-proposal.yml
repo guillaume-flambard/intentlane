@@ -1,0 +1,47 @@
+name: Capability proposal
+description: Propose one contract, audit, or evidence capability with a real journey.
+title: "[Capability] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start from one named user journey and one Apple platform. Do not include proprietary application details.
+  - type: input
+    id: journey
+    attributes:
+      label: Named user journey
+      description: State the action and the application content it acts on.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Target platform
+      options:
+        - macOS
+        - iOS
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: Current gap
+      description: Show the smallest YAML or audit result that demonstrates what cannot be expressed or detected.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: Name the source, build, metadata, application-test, or human evidence that would settle this capability.
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Safety and ownership boundaries
+      description: State who owns data lookup, permissions, navigation, and side effects.
+    validations:
+      required: true

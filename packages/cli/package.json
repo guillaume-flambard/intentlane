@@ -1,14 +1,37 @@
 {
   "name": "@memolabs-apps/intentlane",
-  "version": "0.1.0",
+  "version": "0.2.0-next.0",
+  "description": "Read-only Apple Intelligence compatibility audits and deterministic App Intents generation for iOS and macOS apps.",
   "license": "MIT",
+  "author": "Guillaume Flambard",
   "type": "module",
   "bin": {
     "intentlane": "dist/index.cjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
+  "keywords": [
+    "app-intents",
+    "apple-intelligence",
+    "ios",
+    "macos",
+    "siri",
+    "spotlight"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guillaume-flambard/intentlane.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/guillaume-flambard/intentlane#readme",
+  "bugs": {
+    "url": "https://github.com/guillaume-flambard/intentlane/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22"
   }

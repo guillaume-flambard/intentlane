@@ -59,7 +59,7 @@ enum Snapshot {
 enum RealPilotState {
     static let facts = ProjectFacts(
         name: "FSNotes",
-        repositoryPath: "/Users/memo/projects/active/apps/clients/intentlane-fsnotes",
+        repositoryPath: "/tmp/intentlane-fixtures/fsnotes",
         branch: "intentlane/pilot-notebook",
         revision: "11b11e529722",
         xcodeProject: "FSNotes.xcodeproj",

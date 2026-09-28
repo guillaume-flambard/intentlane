@@ -94,7 +94,7 @@ async function isPluginDeclared(): Promise<boolean> {
   try {
     const manifest = JSON.parse(await readFile(resolve("package.json"), "utf8")) as Record<string, Record<string, unknown> | undefined>;
     const dependencies = { ...manifest.dependencies, ...manifest.devDependencies };
-    if (Object.keys(dependencies).includes("@intentlane/expo")) return true;
+    if (Object.keys(dependencies).includes("@memolabs-apps/intentlane-expo")) return true;
   } catch {
   }
   for (const candidate of ["app.json", "app.config.js", "app.config.ts", "app.config.mjs"]) {
@@ -267,7 +267,7 @@ async function doctorFacts(config: string, output: string, probeModel: boolean):
 }
 
 const program = new Command();
-program.version("0.1.0");
+program.version("0.2.0-next.0");
 program.name("intentlane").description("IntentLane deterministic App Intents compiler");
 
 program.command("init")

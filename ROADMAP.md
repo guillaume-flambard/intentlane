@@ -1,164 +1,91 @@
-# IntentLane — roadmap d'exécution
+# IntentLane roadmap
 
-## État actuel du contrat 0.1
+This roadmap describes product gates, not calendar promises. The live CI workflow
+owns automated status, and the claims registry owns what may be said publicly.
 
-Le contrat accepte `schema: "0.1"` avec un bloc `app` (`id`, `name`, `url_scheme`, `min_ios`, `locales`), des `intents` et des `entities`. Un paramètre porte `id`, `type` (`string`, `integer`, `number`, `boolean`, `date`, `datetime`, `enum`, `entity`), `required`, et optionnellement `title`, `prompt`, `values` (enum) ou `entity` (référence). Une entité porte `id`, `title`, `identifier`, `display` (`title`, `subtitle`) et `query` (`static` ; `endpoint` refusé en IL1401). L'exécution est `open_app` (route et mapping) ou `native` (handler Swift, et `result.returns` optionnel) ; `http` est refusé en IL1401. Le bloc `risk` (`level`, `confirmation`, `authentication`, `confirmation_prompt`) pilote la confirmation et la politique d'authentification. Une intention et une entité acceptent un champ optionnel `schema` (`domaine.membre`) pour se conformer à un App Schema.
+## Current foundation
 
-La CLI expose `init`, `doctor`, `validate` et `generate` (`--config`, `--output`, `--check`), et rapporte sa version avec `--version`. `generate` écrit `IntentLaneGenerated.swift`, une table `<locale>.lproj/IntentLane.strings` par locale non par défaut, et `intentlane.manifest.json` (version, `minIos`, hash d'entrée, hash de chaque fichier). `--check` distingue un fichier modifié à la main (IL1701) d'une sortie simplement périmée. Les codes de diagnostic sont `IL1001`, `IL1101`, `IL1201`, `IL1301`, `IL1401`, `IL1501`, `IL1601` et `IL1701`, listés dans `DIAGNOSTIC_CODES` et verrouillés par un test.
+The repository already contains:
 
-La CI a quatre jobs : `checks` (ubuntu), `swift` (matrice `macos-15` et `macos-26`), `macos` (`xcode-27`, qui exécute les deux passes de `verify.mjs`) et `simulator` (`macos-26`, qui construit le bundle du CLI, puis l'app Release, puis vérifie les métadonnées).
+- a versioned YAML contract and deterministic Swift generator;
+- a read-only repository auditor with text, JSON, and SARIF output;
+- native and bridged route qualification;
+- capability, data, architecture, condition, quality, and target evidence;
+- report comparison, evidence ledgers, and declared-claim verification;
+- macOS and Expo fixtures exercised in CI;
+- an unreleased Studio app that runs the same audit engine;
+- source-visible schema work beyond the last npm release.
 
-## Programme Siri 27
+The latest published package is `@memolabs-apps/intentlane@0.1.0`. The repository
+prepares the next prerelease without presenting it as published. The Expo plugin
+is workspace-only until a tagged npm release exists.
 
-Le MVP Expo ci-dessous est complété par un programme dédié aux applications macOS 27 et iOS 27 existantes, dont les spécifications vivent dans des documents séparés :
+## Gate 1: trustworthy public surface
 
-- `docs/apple/APPLE-27-APP-INTENTS-RESEARCH.md` : inventaire des capacités Apple (App Intents, App Schemas, entités, indexation, Siri, Spotlight) et de leurs sources.
-- `docs/spec/AUDITOR-SPEC.md` : spécification de `intentlane audit`, un analyseur de dépôt en lecture seule qui rapporte, par cible, ce que le SDK supporte, ce que l'application implémente et ce qui est faisable.
-- `docs/apple/SIRI-27-ROADMAP.md` : la séquence normative du programme, en six phases.
-- `docs/pilots/PILOT-PLAYBOOK.md` : critères de sélection d'un pilote, isolation, parcours et échelle de preuve.
-- `docs/product/COMMERCIAL-READINESS.md` : matrice des revendications, offres à périmètre fixe et conditions de mise sur le marché.
-- `docs/product/UNEXPLORED-ANGLES.md` : angles à ne pas manquer, à traduire en contrôles de l'auditeur ou en hypothèses à valider.
+Exit criteria:
 
-La séquence normative est celle de `docs/apple/SIRI-27-ROADMAP.md` : **Phase A** livrer `intentlane audit` (catalogue versionné, sorties texte, JSON et SARIF, diagnostics stables `ILA`), **Phase B** prouver un parcours Siri sur macOS 27 dans une application publique, **Phase C** répéter la preuve sur iOS 27, **Phase D** livrer un premier domaine de schéma complet, **Phase E** ajouter les packages avancés qu'un pilote réclame, **Phase F** publier le package commercial. Aucune revendication publique ne dépasse la preuve d'un pilote.
+- The root README has one installable quickstart using only a published package.
+- Package metadata names the repository, issue tracker, license, and README.
+- Public documents do not expose private paths, credentials, commercial targets,
+  account failures, or unsent maintainer outreach.
+- Bug, capability, pilot, pull request, conduct, and security paths are clear.
+- Documentation claims are tied to code, CI, or a named evidence artifact.
 
-Les changements ouverts correspondants vivent dans `openspec/changes/` : `audit-capability-inventory`, `add-schema-domain-package`, `prove-macos-siri-journey`, `prove-ios-siri-journey`, `package-validated-service` et `add-advanced-app-intents-capabilities`.
+## Gate 2: reproducible external audit
 
-**Phase A, `intentlane audit`. fait** : le CLI expose `intentlane audit [directory]` (`--platform macos|ios|both`, `--format text|json|sarif`, `--output`, `--min-macos`, `--min-ios`, `--build-metadata`, `--sdk-path`, `--strict`). Le core porte douze modules : le contrat de rapport et les diagnostics `ILA` (`audit.ts`), la découverte en lecture seule des cibles Xcode, paquets Swift et apps Expo avec empreinte du worktree (`audit-project.ts`), le catalogue des capacités avec leur disponibilité par plateforme et leur niveau de revendication (`audit-catalogue.ts`), la détection des App Intents, raccourcis, schémas, entités, tests et valeurs transférables (`audit-detect.ts`), les sorties texte, JSON et SARIF déterministes (`audit-format.ts`), et l'orchestration qui classe chaque capacité `unsupported`, `unknown`, `detected`, `implemented`, `tested` ou `feasible` (`audit-run.ts`), plus le score de compatibilité qui note chaque capacité de la plateforme cible et nomme la découverte (`audit-score.ts`), et la qualification de la voie technique, qui dit si le projet est `native`, `bridged`, `ineligible` ou `unknown` avec sa preuve (`audit-route.ts`), et la classification des données que le projet indexerait, qui nomme les classes lues dans les propriétés déclarées et dit si le projet embarque un manifeste de confidentialité quand il indexe des entités (`audit-data.ts`), et la qualification de l'architecture de données, qui dit si le contenu se résout localement, par une synchronisation, par un service distant ou pas du tout (`audit-architecture.ts`), et les conditions d'un test de capacité, qui nomment les neuf conditions dont un résultat Siri dépend, enregistrent celles que la machine peut prouver elle-même et laissent les autres à confirmer par une personne (`audit-conditions.ts`), et la qualité de l'action, qui lit les signaux d'un parcours utilisable (un résultat affichable, une vue, un raccourci enregistré, le placeholder `applicationName` et une confirmation avant une action risquée) et signale une phrase que le système n'enregistrera pas (`audit-quality.ts`), et l'état du catalogue, qui dit de quelle version d'Xcode la table de disponibilité est dérivée et si le SDK inspecté est plus ancien ou plus récent qu'elle (`audit-catalogue.ts`). Un projet qui n'a qu'un `AppShortcutsProvider` reste dans Raccourcis et sa découverte Siri est `unknown` ; une conformance de schéma sans ses compagnons reste `detected` ; `--build-metadata` promeut les capacités `foundation` et `semantics` à `tested` sans jamais promouvoir `proof.siri-surface`, ce qui est le critère d'acceptation 5 d'`docs/spec/AUDITOR-SPEC.md`. `--sdk-path` lit le `SDKSettings.json` du SDK installé, enregistre sa version dans le rapport et déclare `unsupported` toute capacité que ce SDK est trop ancien pour fournir. Prouvé par 309 tests, la restriction par cible qui lit `foundation.app-intent` comme `implemented` sur iOS et pas sur macOS pour le dépôt NetNewsWire (sa seule App Intent n'est compilée que par une cible iOS), la voie technique lue comme `native` sur les deux fixtures générées et comme `bridged` sur `apps/example-expo`, la classification des données qui lit `public` sur les deux fixtures et `declared` sur `apps/example-expo` parce que son prebuild embarque un manifeste de confidentialité, l'architecture de données lue comme `unknown` sur les deux fixtures générées et comme `local` sur `apps/example-expo` parce que le résolveur d'entités y écrit dans `UserDefaults`, les conditions de test qui enregistrent cinq des neuf conditions sur la machine de développement et sur le runner (`conditions 5/9 recorded`) tout en nommant les quatre qui demandent une confirmation humaine, la qualité de l'action lue à `4/5` signaux sur la fixture Studio (pas de confirmation, aucune action risquée) et à `5/5` sur `apps/example-expo`, le catalogue lu comme `current` sur le SDK macOS 27.0 installé, et `--platform both` qui produit deux rapports complets, une collection `reports` en JSON, deux runs dans un seul document SARIF et deux sections en texte, sans changer la sortie d'une seule plateforme, l'audit réel de la fixture Studio (`implemented` pour les capacités de schéma, `proof.siri-surface` en `detected`, `execution.live-activity` en `unsupported` avec `ILA100`), le score qui donne la même bande `early` aux deux fixtures d'exemple tout en distinguant `shortcuts-only` (la fixture Shelf, qui n'a qu'un fournisseur de raccourcis) de `schema-backed` (la fixture Studio), `--strict` qui sort en code 0 sur un projet macOS propre et en code 1 quand le SDK inspecté est trop ancien (`ILA160` ; les gaps `ILA100`, qui disent qu'une capacité n'est pas livrée par la plateforme cible, sont informatifs et ne bloquent jamais), l'audit des métadonnées du même build qui fait passer cinq capacités à `tested`, et `--sdk-path` sur le SDK macOS 27.0 installé puis sur un SDK 26.5 factice qui bascule les capacités de schéma en `unsupported`. Le CLI porte aussi deux commandes de preuve : `intentlane audit-diff <baseline> <candidate>` compare deux rapports d'audit sans relancer l'analyse, joint par `(plateforme, capacité)`, rapporte les progressions, les régressions et les changements non classés en texte ou en JSON, garde le contexte (cible, SDK, catalogue, conditions) hors des progressions et refuse un JSON invalide (`ILA170`), une version inconnue (`ILA171`) ou une plateforme présente d'un seul côté (`ILA172`), avec `--fail-on regression` pour bloquer une CI ; et `intentlane evidence validate <ledger>` vérifie un ledger de preuve de pilote versionné (`pilot-evidence/1.0`), exige `contract` et `build` pour chaque parcours, ne réclame les couches `shortcuts`, `spotlight` et `siri` que si elles sont revendiquées, exige confirmation, authentification et ownership sur une action risquée, ne rend `verified` que si chaque couche requise passe pour chaque parcours et qu'une reproduction indépendante passe, ne lit jamais les chemins d'artefacts et sort en code non nul en `--strict` sur un ledger `unverified` (`ILA173`, `ILA174`, `ILA175`). `docs/product/OPEN-CORE-READINESS.md` inventorie l'état de contribution et de maintien et liste les décisions à prendre avant d'écrire une politique. La phase A est donc complète, et `docs/product/AUDIT-GUIDE.md` en est le guide de lecture (chaque option, chaque bloc du rapport, les codes de diagnostic et la recette de baseline d'un candidat pilote). La phase B a son candidat : NetNewsWire, dont la baseline d'audit est enregistrée hors du dépôt et qui a révélé puis fait corriger le défaut de portée par cible ; deux changements ouverts préparent la suite : `openspec/changes/validate-public-macos-pilots/` propose NetNewsWire comme premier pilote macOS (puis FSNotes), avec forks isolés, fixtures locales sans identifiants et l'échelle de preuve complète avant toute revendication publique, et `openspec/changes/prepare-open-core-readiness/` décrit le modèle de contribution et de maintien, la gouvernance à décider et une séquence de communication adossée aux preuves.
+Exit criteria:
 
-## Phase 0 — preuve technique (2–3 jours)
+- A person outside the maintainer's development workflow installs the published
+  CLI in a clean application repository.
+- They produce a useful audit without private support or repository mutation.
+- The elapsed time, confusing steps, and missing diagnostics are recorded.
+- The public quickstart is corrected from that observation.
 
-- Projet Swift/Expo minimal.
-- Une `AppIntent` écrite à la main.
-- Une phrase App Shortcut.
-- Exécution `open_app` avec paramètre.
-- Validation sur appareil réel.
+This gate is still open.
 
-**Gate :** arrêter si la cible Expo ne peut pas embarquer proprement les sources générées ou si l'expérience utilisateur n'est pas démontrable.
+## Gate 3: versioned release
 
-## Phase 1 — compilateur vertical (semaine 1)
+Exit criteria:
 
-- Monorepo pnpm. **fait**
-- Schéma 0.1 et types Zod. **fait**
-- `init`, `validate`, `generate`. **fait**
-- Un paramètre `string`. **fait**
-- Génération Swift snapshotée. **fait**
-- Fixture Expo. **fait** (`apps/example-expo`, deux intents, en/fr)
+- A release commit is selected and tagged.
+- The CLI version, package manifest, lockfile, documentation, and built artifact
+  agree.
+- The package is installed in a clean directory and its documented commands are
+  exercised from the tarball.
+- GitHub Release notes state what changed and what remains unavailable.
+- The Expo plugin is published only under a scope the maintainer controls.
 
-**Gate :** même entrée = sortie byte-for-byte identique. **vérifié** par test, par `generate --check` et par deux prebuilds successifs (projet Xcode identique au bit près).
+No source-visible command becomes part of the npm promise before this gate.
 
-## Phase 2 — plugin Expo (semaine 2)
+## Gate 4: named Apple journey
 
-- Config plugin idempotent. **fait** : résolution portable du générateur depuis le projet consommateur, groupe `IntentLaneGenerated` créé une seule fois, ajout au target non répété.
-- Copie des sources et ressources. **fait** : le Swift généré est enregistré dans la phase Sources, les tables `<locale>.lproj/IntentLane.strings` dans la phase Resources, et un prebuild réel a prouvé que la seconde exécution ne produit aucun doublon.
-- `doctor`. **fait** : contrôles `node`, `config`, `schema`, `generated`, `xcode`, `plugin`.
-- Deep links sûrs. **fait** : les URLs sont construites via `URLComponents` et les query triées, et l'exemple Kollio les route réellement (analyseur d'URL et routeur dans `apps/example-expo/src`, couverts par 16 tests unitaires).
-- EAS development build documenté. **fait** : section « Running on a device » du README, parcours local `expo run:ios` et parcours EAS `eas build --profile development`, avec la raison native (Expo Go ne peut pas exécuter les App Intents générées).
+Exit criteria for one journey:
 
-**Gate :** un utilisateur externe suit le quickstart en moins de 30 minutes. **pas encore mesuré** ; le quickstart `init` vers build simulateur est reproductible ici.
+1. The app and platform are named.
+2. The action and content entity are useful to that app.
+3. The application-owned resolver, permissions, navigation, and side effects are tested.
+4. Build and metadata evidence pass on the target SDK.
+5. System-surface observations, if claimed, record their conditions.
+6. A second person reproduces any claim described as verified.
 
-## Phase 3 — vrai MVP (semaines 3–4)
+A build, metadata file, or Core Spotlight index test does not substitute for a
+Siri observation.
 
-- Types primitifs et enums. **fait** : `string`, `integer`, `number`, `boolean`, `date`, `datetime` et `enum` sont générés, avec `AppEnum` et libellés de cas localisés dans la table `IntentLane`, conversions de query par type, et contrôles IL1301 et IL1401. Prouvé par compilation `swiftc` et par un build simulateur de `apps/example-expo`.
-- App Entities statiques/endpoint. **fait** pour `static` : l'entité génère une `AppEntity`, une `EntityQuery` et un protocole de résolution que l'application implémente et enregistre dans `IntentLaneEntityResolvers`, les paramètres `entity` référencent une entité par id et envoient `<valeur>.id` dans la query, `display.title` et `display.subtitle` nomment les propriétés affichées, et les titres d'entité alimentent la table `IntentLane`. `query.mode: endpoint` est refusé en IL1401 (pas de réseau généré). Prouvé par `swiftc` et par un build simulateur Release où `extract.actionsdata` contient l'entité, sa requête et le paramètre typé.
-- Localisation en/fr. **fait** : `title` et `prompt` d'un paramètre sont localisés dans la table `IntentLane` (le `title` alimente aussi le nom du type d'un `enum`), avec repli sur l'identifiant brut quand aucun `title` n'est déclaré, et IL1201 si la locale par défaut manque. Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où chaque paramètre porte un `title.key` localisé (par exemple `Idea title`, `Due date`, `Priority`) au lieu de son identifiant.
-- Confirmation et politique de risque. **fait** : `confirmation: always` génère un `requestConfirmation` avant l'action, `authentication: required` et `none` génèrent une `authenticationPolicy` explicite, `inherited` n'émet rien, et `confirmation_prompt` alimente le dialogue et la table `IntentLane` (repli sur le titre de l'intention). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `DeleteIdea` porte `authenticationPolicy: 1` avec `isAuthPolExplicit: true` alors que les autres intentions restent à `0`.
-- Résultat/dialogue et snippet simple. **fait** : `perform()` retourne `ProvidesDialog & ShowsSnippetView & OpensIntent`, une vue `IntentLaneSnippetView` est déclarée une fois par fichier et affiche le titre de l'intention plus une ligne par paramètre (conversion identique à la query, libellés dans la table `IntentLane`, aucune ligne pour une intention sans paramètre). Prouvé par `swiftc`, par un build simulateur Release, et par `extract.actionsdata` où `outputFlags` passe de `5` à `7` pour les quatre intentions quand la conformance est ajoutée.
-- CI macOS et matrice Xcode minimale. **fait** : `.github/workflows/ci.yml` a quatre jobs. `checks` (ubuntu) enchaîne installation depuis le lockfile, typecheck, tests, validate, régénération, échec si périmé, et une seconde génération dans `/tmp` comparée par `diff -r` pour prouver le déterminisme byte pour byte. `swift` compile le Swift généré des deux fixtures avec `swiftc` contre le SDK simulateur sur `macos-15` et `macos-26` (Xcode 16.4 contre Xcode 26.4.1, versions imprimées par chaque run). `macos` (`xcode-27`, seule image hébergée qui fournit Xcode 27 et donc le SDK macOS 27) exécute `node apps/example-macos/verify.mjs` : génération du contrat macOS, compilation pour le SDK macOS du runner, extraction des métadonnées avec `appintentsmetadataprocessor`, puis assertions sur les actions, les flags, la politique d'authentification, l'entité, la requête, l'enum et les raccourcis ; le script lit la version du SDK et le build de Xcode sur la machine, donc il s'adapte au toolchain du runner, et il échoue avec un message actionnable si ce toolchain précède Xcode 27. Le même job audite ensuite les deux fixtures générées avec `intentlane audit` (`--sdk-path` sur le SDK macOS du runner et `--build-metadata` sur les métadonnées extraites) et vérifie les états rapportés : la fixture Shelf reste `implemented` pour les App Intents avec une découverte Siri `unknown`, la fixture Studio atteint `tested` sur ses capacités de schéma et ne dépasse jamais `detected` pour Siri. `simulator` (macos-26) fait un `expo prebuild`, construit l'app Release avec `xcodebuild`, puis lit `Metadata.appintents/extract.actionsdata` et la table `fr.lproj/IntentLane.strings` du produit et vérifie les quatre actions, `outputFlags: 7`, la politique d'authentification explicite de `DeleteIdea`, l'entité et sa requête, les raccourcis enregistrés, et deux traductions. Le job construit aussi le bundle du CLI avec `pnpm bundle` avant le prebuild, parce que le plugin invoque `node <cli>/dist/index.cjs` et non le TypeScript source.
-- Exemple Kollio-like. **fait** : `apps/example-expo` est devenu Kollio, une petite liste d'idées qui déclare quatre intentions (`open_inbox`, `create_idea`, `open_idea`, `delete_idea`), une entité `idea`, et du contenu en/fr. L'écran affiche les idées et route les URLs que les intentions ouvrent : création depuis la query, ouverture, suppression. L'analyseur d'URL et le routeur vivent dans `apps/example-expo/src` et sont couverts par 16 tests unitaires, et `vitest.config.ts` inclut désormais `apps/*/src/**/*.test.ts`. Le défaut cosmétique qui ajoutait un `?` final à une URL sans query est corrigé dans le générateur (la query n'est posée que si elle est non vide), prouvé par compilation et exécution de `IntentLaneRoute.make`. Prouvé par un build simulateur Release installé et lancé : l'écran affiche le titre Kollio, le bandeau de dernière route et les trois idées du seed.
-- Résolveur d'entité enregistré par l'exemple. **fait** : un plugin de config local (`apps/example-expo/plugins/withIdeaResolver.cjs`, déclaré avec son extension car Expo résout une référence fichier par un `require.resolve` nu qui n'essaie pas `.cjs`) écrit `IdeaResolver.swift` et l'ajoute à la phase Sources, fusionne `IntentLaneEntityResolverRegistration.register()` dans `AppDelegate.swift` après `bindReactNativeFactory(factory)` dans un bloc `@generated`, et enregistre `IntentLaneEntityResolvers.idea` sur le main actor au lancement. Le transport est `Settings` de React Native vers `NSUserDefaults` sous la clé `intentlane.ideas`, publiée par `App.tsx` à chaque changement. Prouvé par 11 tests unitaires du plugin, par un prebuild réel idempotent (pbxproj, AppDelegate et `IdeaResolver.swift` identiques au second run), par un build Release qui réussit, par la lecture du plist de l'app qui contient les trois idées publiées, et par une sonde Swift exécutée qui décode ces données et sert `suggestedIdeaEntities()` et `ideaEntities(for:)`.
+## Gate 5: bounded implementation offer
 
-**Gate :** cinq pilotes, dont deux apps existantes. **pas encore mesuré** ; le formulaire d'issue pilote (`.github/ISSUE_TEMPLATE/pilot-report.yml`) existe pour le recueillir.
+The audit may lead to an implementation only when it identifies a useful and
+feasible journey. The implementation remains limited to one domain and two or
+three named journeys, with customer-owned adapters and an evidence ledger.
 
-## Phase 3 bis : cible macOS 27
+Recurring verification, production observability, marketplace features, MCP,
+Android, Flutter, and a hosted dashboard remain demand-gated future directions.
 
-Objectif : prouver que la sortie d'IntentLane n'est pas liée à iOS et qu'elle alimente le nouveau Siri sur macOS, où une app sans App Intents reste invisible aux actions in-app d'Apple Intelligence.
+## Contribution priorities
 
-- Exemple macOS versionné et vérifié en CI. **fait** : `apps/example-macos` contient un contrat dédié (`dev.intentlane.shelf`, cinq intentions `open_shelf`, `save_link`, `open_link`, `pin_link` et `delete_link`, une entité `link`, locales en/fr), la liste de protocoles attendue par le compilateur (`protocols.json`, la même que le `<Module>_const_extract_protocols.json` produit par Xcode) et `verify.mjs`, un script Node sans dépendance qui enchaîne génération, compilation et extraction sans projet Xcode. La recette est établie : `swiftc -target arm64-apple-macos<version>` avec **les deux** flags `-emit-const-values` et `-const-gather-protocols-list <json>` (sans le second, aucun `.swiftconstvalues` n'est écrit et le processeur refuse de tourner), puis `appintentsmetadataprocessor` avec `--platform-family macOS`, `--source-file-list` et `--swift-const-vals-list`. Prouvé par un run complet : les cinq actions, `outputFlags: 7` sur les quatre `open_app` et `4` sur la native `PinLink`, `DeleteLink` seule avec `authenticationPolicy: 1` et `isAuthPolExplicit: true`, `PinLink` dont l'`outputType` vaut `IntentLaneLinkEntity`, `IntentLaneLinkEntity`, `IntentLaneLinkQuery`, `IntentLaneSaveLinkTag` et quatre raccourcis. Le même fichier Swift, sans une ligne modifiée, produit donc des métadonnées App Intents complètes sur macOS comme sur iOS.
-- Conformances de schéma (`@AppIntent(schema:)`, `@AppEntity(schema:)`). **fait** : une intention et une entité acceptent un champ optionnel `schema`, de la forme `domaine.membre`, et une intention à protocole nomme son entité cible avec `target`. La table (`packages/core/src/app-schemas.ts`) est dérivée de la surface publique des App Schemas d'Xcode 27 (27A266a) et croisée avec la table du processeur de métadonnées ; elle porte 35 intentions atteignables et vingt entités, plus les 254 références publiques connues, ce qui permet de distinguer une faute de frappe d'un schéma connu mais non conforme-able. Quatre intentions n'ont aucun protocole, dont `reader.rotatePages` qui fournit ses propres paramètres `pages` et `isClockwise`, seize ont le protocole `open` (`books.openBook`, `files.openFile`, `mail.openMessage`, `reader.openPage`, `system.open`, ...) et quinze le protocole `delete` (`files.deleteFiles`, `photos.deleteAssets`, `reader.deletePages`, ...) ; les vingt entités restent les mêmes. Le générateur écrit `@AppIntent(schema: .<référence>)` et `@AppEntity(schema: .<référence>)`, émet `var` au lieu de `let`, omet `typeDisplayRepresentation` et déclare un initialiseur explicite sur une entité conforme, parce que la macro applique un property wrapper et prend le nom d'affichage du schéma : `@Property` dans une `AppEntity` est un typealias vers `EntityProperty`, une classe finale sans `init(wrappedValue:)`, donc l'initialiseur memberwise synthétisé demanderait une valeur impossible à construire. Pour un schéma à protocole ou à paramètres il dérive la forme du schéma au lieu de la demander au contrat : une intention `open` émet `var target: IntentLane<Entité>Entity` et aucun `perform()` (l'extension `OpenIntent` fournit le sien, et le système ouvre l'application), une intention `delete` émet un `parameterSummary`, un `var entities: [IntentLane<Entité>Entity]` et un `perform()` qui délègue au handler nommé ; un schéma sans protocole qui fournit ses paramètres émet un `@Parameter` par paramètre du schéma, les types du schéma devenant `String`, `Bool`, `Int`, `Double`, l'entité cible ou un tableau de celle-ci, puis un `perform()` qui délègue au handler nommé ; dans les deux cas l'entité cible se conforme à `IndexedEntity` et le fichier importe `CoreSpotlight`, parce que le processeur de métadonnées exige que la cible soit résolvable (`IndexedEntity`, `UniqueAppEntity`, `TransientAppEntity`, `EntityStringQuery` ou `IntentValueQuery`). Un schéma inconnu, mal formé, d'un autre genre, non satisfiable, ou dont la disponibilité iOS dépasse le `min_ios` de l'application, est refusé en IL1401 avec un message qui nomme ce qui manque ; pour un schéma à protocole, un `target` absent ou inconnu, un `target` sur un schéma sans protocole, un mode d'exécution qui n'est pas `native`, et un paramètre ou un résultat déclarés le sont aussi, puisque le schéma les fournit. Les conformances d'enum restent à faire. Prouvé par un probe compilé puis extrait pour les trois formes, par le second contrat d'exemple (`apps/example-macos/schemas.yaml`, app Studio) et par `verify.mjs` qui exécute deux passes, et surtout sur un vrai binaire macOS 27 : dans le fork NetNewsWire, l'entité conformée à `reader.page` porte `assistantDefinedSchemas` valant `[{"domain":"reader","name":"ReaderPageEntity","version":"1.0.0"}]` et l'action `OpenArticle` conformée à `reader.openPage` porte les protocoles `AssistantIntent` et `OpenEntity` avec `assistantDefinedSchemas` valant `[{"domain":"reader","name":"ReaderOpenPageIntent","version":"1.0.0"}]`, `openAppWhenRun` vrai et `outputFlags: 0` ; l'audit du fork passe de `15/100` à `19/100 (early, schema-backed)`. La mesure faite avant de s'y attaquer avait montré que les schémas utiles (`notes.createNote`, `calendar.createEvent`, `reminders.createReminder`, `mail.createDraft`) exigent que l'application fasse l'action et retourne l'entité créée, ce qui a rendu le mode `native` préalable. Prouvé par un second contrat d'exemple (`apps/example-macos/schemas.yaml`, app Studio) et par `verify.mjs`, qui exécute désormais deux passes : pour l'action `StopCapture` conformée à `camera.stopCapture`, `outputFlags: 7` et `assistantDefinedSchemas` valant `[{"domain":"camera","name":"StopCaptureIntent","version":"1.0.0"}]` avec le protocole système `com.apple.link.systemProtocol.AssistantIntent` ; pour l'entité `IntentLaneSoundEntity` conformée à `audio.ambientSound`, `assistantDefinedSchemas` valant `[{"domain":"audio","name":"AmbientSoundEntity","version":"1.0.0"}]` ; et la passe Shelf, qui ne déclare aucun schéma, garde `systemProtocols` vide sur ses cinq actions. La mesure faite avant de s'y attaquer avait montré que les schémas utiles (`notes.createNote`, `calendar.createEvent`, `reminders.createReminder`, `mail.createDraft`) exigent que l'application fasse l'action et retourne l'entité créée, ce qui a rendu le mode `native` préalable.
-- Exécution `native`. **fait** : le contrat nomme un handler Swift (`execution.mode: native` + `execution.handler`) et peut exiger une valeur de retour (`result.returns`, qui nomme une entité du contrat). Le générateur émet un `protocol <Handler> { func perform(...) async throws [-> IntentLane<Entité>Entity] }` par intention, le registre `@MainActor enum IntentLaneIntentHandlers { static var <id>: (any <Handler>)? }`, et un `perform()` qui jette `IntentLaneHandlerError.missingHandler("<id>")` tant que l'application n'a pas enregistré son implémentation ; avec `returns`, le type de retour porte `ReturnsValue<IntentLane<Entité>Entity>` et `.result(value:dialog:)` transporte la valeur. Diagnostics : handler absent, mal formé ou dupliqué, `route`/`mapping` sur une intention native, `result.returns` hors `native` ou vers une entité inconnue (IL1301, IL1601) ; `http` refusé (IL1401). Prouvé par un probe compilé et extrait sans Xcode (`extract.actionsdata` : `ArchiveNote` et `CreateNote`, `outputFlags: 4`), et par `apps/example-macos` dont l'intention native `pin_link` rapporte `outputFlags: 4` et un `outputType` valant `IntentLaneLinkEntity` alors que les quatre intentions `open_app` gardent `outputFlags: 7`. La mesure des `outputFlags` est désormais connue : `ProvidesDialog` 4, `ShowsSnippetView` 2, `OpensIntent` 1.
+1. Run the published auditor on public or non-confidential applications.
+2. Report contract shapes that block a valuable named journey.
+3. Improve diagnostics that do not state a clear next action.
+4. Add focused Apple SDK fixtures with explicit availability.
+5. Remove duplicated status from documents and point to live evidence instead.
 
-## Phase 4 — bêta open source (semaines 5–6)
-
-- Documentation publique. **partiel** : le dépôt est public et sous licence MIT, avec `README.md`, `SPEC.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/MIGRATION.md`, `CONTRIBUTING.md` et `AGENT-GUIDE.md` dans le dépôt. Il n'y a pas encore de site de documentation ni de référence CLI publiée.
-- CLI publiée sur npm. **publié** : `@memolabs-apps/intentlane` n'est plus privé, son `bin` pointe sur `dist/index.cjs` (un seul fichier produit par esbuild, 710 ko, qui absorbe `commander`, `yaml` et `zod`, donc aucune dépendance runtime pour le consommateur), et `files` limite la publication au dossier `dist`. Prouvé par `npm pack` : le tarball contient deux entrées, `dist/index.cjs` et `package.json`. Le nom est passé de `@intentlane/cli` à `@memolabs-apps/intentlane` parce que le compte npm n'a pas le scope `@intentlane` et le publier sous un scope qui n'est pas le sien serait une usurpation ; `@memolabs-apps` est le scope du compte, où il a déjà des droits en écriture. Publié sur le registre le 2026-09-25 : `@memolabs-apps/intentlane@0.1.0`, vérifié par le registre lui-même (2 fichiers, 727 526 octets décompressés) puis par une installation dans un dossier vierge, où `npx intentlane --version` répond `0.1.0`, `npx intentlane init` écrit une configuration, et `npx intentlane validate` répond `Valid IntentLane 0.1: 2 intent(s) ready.` avec un seul paquet installé.
-- Plugin `@intentlane/expo`. **paquet prêt, publication à faire** : plus privé, `files` limité à `app.plugin.cjs` et `src/apply.cjs`, `engines` node 22 ou plus. Il n'invoque plus `tsx src/index.ts` mais le bundle du CLI (`node <cli>/dist/index.cjs`), avec un message actionnable quand le paquet est installé mais que le bundle manque. Prouvé par `npm pack` (le tarball ne contient plus ni test ni déclaration de types) et par le job CI `simulator`, qui construit désormais le bundle avec `pnpm bundle` avant le prebuild.
-- Diagnostics stables. **fait** : la liste des codes vit dans `DIAGNOSTIC_CODES`, exporté par `@intentlane/core`, `DiagnosticCode` en dérive et un test la verrouille, donc ajouter un code impose de mettre à jour la table de `SPEC.md`. `IL1701`, jusqu'ici documenté et jamais émis, est maintenant produit par `intentlane generate --check` quand un fichier généré ne correspond plus au hash enregistré dans le manifeste, avec un message distinct quand le contrat a simplement changé.
-- Guide de migration. **fait** : `docs/architecture/MIGRATION.md` couvre la politique de versioning du champ `schema` (SemVer simplifié, une montée mineure reste lisible par la même version majeure, une montée majeure est cassante et livre un chemin de migration), ce que signifie `0.1` (seule version, rien à migrer), ce qui se passera à la prochaine version, et le fait que `intentlane migrate` est prévu et pas encore livré. Les références trompeuses ont été corrigées : `SPEC.md` ne présente plus la commande comme disponible, et le hint du check `schema` de `intentlane doctor` pointait vers une commande inexistante.
-- Collecte volontaire de feedback. **fait** : un formulaire d'issue GitHub (`.github/ISSUE_TEMPLATE/pilot-report.yml`) recueille la version d'IntentLane, la chaine d'outils Expo, React Native et Xcode, l'extrait de contrat en YAML, l'objectif, le resultat avec l'erreur de compilation le cas echeant, la sortie de `intentlane doctor`, les diagnostics obtenus, ce que le contrat 0.1 ne peut pas exprimer et le Swift ecrit a la main. Il est lie depuis `CONTRIBUTING.md` et `README.md`.
-
-## Phase 5 — validation commerciale
-
-- Audit payant pour agences/apps.
-- Interview des pilotes.
-- Mesure des erreurs CI récurrentes.
-- Landing page et liste d'attente Pro.
-
-Ne construire le dashboard que si les utilisateurs réclament historique, équipes ou matrice de builds.
-
-## Backlog post-MVP
-
-- Suggestions d'intentions par analyse du repo.
-- Android App Actions.
-- Flutter et Capacitor.
-- RelevantEntities/EntityCollection/SyncableEntity.
-- Long-running intents et annulation.
-- Test runner de formulations.
-- Policies organisationnelles.
-- Dashboard de compatibilité.
-- Adaptateur Navirox officiel.
-
-## Premier ordre de tickets
-
-1. `chore: scaffold pnpm monorepo` **fait**
-2. `feat(schema): define schema 0.1` **fait**
-3. `feat(core): parse and normalize config` **fait**
-4. `feat(core): stable diagnostics` **fait**
-5. `feat(apple): emit minimal AppIntent` **fait**
-6. `test(apple): add golden Swift snapshots` **fait**
-7. `feat(cli): implement init validate generate` **fait**
-8. `feat(expo): add generated sources config plugin` **fait** (résolution portable, idempotence testée, prebuild réel vérifié)
-9. `feat(example): create Expo create-idea demo` **fait** (`apps/example-expo`, typecheck et prebuild verts)
-10. `feat(cli): implement doctor` **fait**
-11. `docs: publish 15-minute quickstart` **fait** (README racine et README de l'exemple), la mesure du gate reste à faire
-
-Ticket suivant : `feat(pilot): implement the macOS 27 ASRi path on the NetNewsWire fork`.
-It must use `.system.searchInApp` and `.system.open`, indexed article entities and
-`AppIntentsTesting`. Reader schemas remain an optional Shortcuts package and
-cannot close this gate.
-
-## Client-Ready v1 (état au 23 septembre 2026)
-
-Périmètre, critères de sortie vérifiables (E1–E10) et preuves : voir
-[CLIENT-READY-V1.md](docs/product/CLIENT-READY-V1.md). Guide d'intégration client :
-[CLIENT-QUICKSTART.md](docs/product/CLIENT-QUICKSTART.md).
-
-- Parcours natif (audit, contrat, génération, adaptateur, `verify`,
-  exemple macOS). **fait et vérifié** : `apps/example-macos` +
-  `verify.mjs`, adaptateur `--adapter-output`, métadonnées extraites
-  (Xcode 27A266a).
-- Parcours Expo/React Native (plugin idempotent, adaptateur exemple, tests de
-  route, build simulateur, métadonnées). **fait et vérifié** :
-  `apps/example-expo`, plugin `@intentlane/expo`, `withIdeaResolver.cjs`,
-  `routes.test.ts`, job CI `simulator`.
-- `intentlane verify` et `verify --strict`. **fait et prouvé** : certification d'un
-  ensemble de revendications déclaré, chaque revendication nommant ce qui la
-  settles ; familles `deterministic` et `observed` ; catalogue exposed par
-  `intentlane claims` ; refus d'une revendication inconnue et d'un ensemble vide ;
-  sortie non nulle en `--strict` tant qu'une revendication n'est pas certifiée.
-- Contrôle de preuves (`evidence validate --strict`, `audit-diff`). **fait**.
-- Suite complète verte. **fait** : `pnpm test` 318/318, `pnpm build`,
-  `pnpm validate`, `generate --check`, probe `swiftc`, `verify.mjs`.
-- Documentation client (spec v1, quickstart). **fait** : `docs/product/CLIENT-READY-V1.md`,
-  `docs/product/CLIENT-QUICKSTART.md`.
-
-Bloqueurs réels vers une v1 commercialisable (rien n'est coché sans preuve) :
-
-- Publication npm : `@memolabs-apps/intentlane@0.1.0` est sur le registre, `@intentlane/expo` attend un scope
-  (`npm pack` vérifié) mais **non publiés** — `npm whoami` répond 401
-  Unauthorized sur cette machine.
-- Gate R1 (personne externe suit le quickstart en moins de 30 minutes) :
-  **non mesuré**.
-- Preuves Siri/Spotlight visuelles P1/P2 : **non automatisables** ; exigent
-  observation réelle et reproduction par un second testeur ; le ledger reste
-  `unverified` sans cela.
-- Second pilote (P3, FSNotes ou remplaçant) et cohorte (P5) : **non atteints**.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development and review contract.

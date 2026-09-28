@@ -24,19 +24,13 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../.
 /// from this record must carry none.
 const KNOWN_DEBT: Readonly<Record<string, number>> = {
   "AGENT-GUIDE.md": 1,
-  "ROADMAP.md": 12,
-  "docs/architecture/ARCHITECTURE.md": 1,
   "docs/pilots/MANUAL-SIRI-ACCEPTANCE.md": 4,
   "docs/pilots/PILOT-IINA-DISCOVERY.md": 6,
-  "docs/product/CLIENT-QUICKSTART.md": 5,
-  "docs/product/CLIENT-READY-V1.md": 3,
-  "docs/product/MARKET-STUDY.md": 4,
   "docs/product/PRD.md": 1,
   "openspec/changes/migrate-netnewswire-to-the-contract/QUALIFICATION.md": 4,
   "openspec/changes/migrate-netnewswire-to-the-contract/proposal.md": 3,
   "pilots/iina/README.md": 8,
-  "pilots/iina/RUNBOOK.md": 1,
-  "research/analysis-optimisation-2026-09-27.md": 18
+  "pilots/iina/RUNBOOK.md": 1
 };
 
 /// Documents the rule does not cover, named rather than skipped in silence: these

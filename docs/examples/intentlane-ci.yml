@@ -1,0 +1,28 @@
+name: IntentLane
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx intentlane generate --config intentlane.yaml --output Mac/IntentLaneGenerated --check
+      - run: >-
+          npx intentlane verify
+          --config intentlane.yaml
+          --output Mac/IntentLaneGenerated
+          --app-test "xcodebuild -project Client.xcodeproj -scheme Client -destination 'platform=macOS' test"
+          --metadata build/Client.app/Metadata.appintents
+          --strict

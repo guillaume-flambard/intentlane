@@ -27,11 +27,10 @@ What is sold, to whom, and what is proven about the selling.
 | [docs/product/AUDIT-GUIDE.md](product/AUDIT-GUIDE.md) | Every `intentlane audit` option, report block and diagnostic code. |
 | [docs/product/AUDIT-REPORT-TEMPLATE.md](product/AUDIT-REPORT-TEMPLATE.md) | The skeleton for the client-facing readiness report built from an audit run. |
 | [docs/product/CLIENT-QUICKSTART.md](product/CLIENT-QUICKSTART.md) | The client-facing integration guide. |
-| [docs/product/CLIENT-READY-V1.md](product/CLIENT-READY-V1.md) | What "client-ready v1" means, with its exit criteria. |
+| [docs/product/CLIENT-READY-V1.md](product/CLIENT-READY-V1.md) | What `client-ready v1` means, with its exit criteria. |
 | [docs/product/COMMERCIAL-READINESS.md](product/COMMERCIAL-READINESS.md) | The claim matrix and the conditions to launch. |
 | [docs/product/OPEN-CORE-READINESS.md](product/OPEN-CORE-READINESS.md) | What must be true before the repository opens. |
 | [docs/product/PUBLIC-PILOT-CANDIDATES.md](product/PUBLIC-PILOT-CANDIDATES.md) | Public applications worth piloting, and why. |
-| [docs/product/MARKET-STUDY.md](product/MARKET-STUDY.md) | Market study. Its closing verdict predates the current product position and no longer describes it; the research sections still hold. |
 | [docs/product/UNEXPLORED-ANGLES.md](product/UNEXPLORED-ANGLES.md) | Angles not to miss, to turn into auditor checks or hypotheses. |
 
 ## Architecture

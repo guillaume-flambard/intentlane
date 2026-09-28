@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible IntentLane failure without confidential data.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Remove secrets, proprietary source, client data, usernames, and local filesystem paths. Follow SECURITY.md for vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: IntentLane version or commit
+      description: Paste `intentlane --version` for npm, or the commit SHA for a source checkout.
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command
+      placeholder: npx intentlane audit . --platform macos
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use a public repository or a minimal non-confidential fixture.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: Include the diagnostic code when one was printed.
+    validations:
+      required: true
+  - type: input
+    id: toolchain
+    attributes:
+      label: Environment
+      description: Node, macOS, Xcode, and target platform versions that affect the result.
+    validations:
+      required: true

@@ -1,138 +1,129 @@
-# IntentLane — Client Quickstart
+# IntentLane client quickstart
 
-Objectif : intégrer une capacité App Intents vérifiable dans une app cliente en
-une session, puis la faire tourner dans sa CI. Durée estimée : 30 à 45 minutes
-pour un développeur qui connaît son app (le parcours n'a jamais été mesuré
-avec une personne externe).
+This guide uses only the CLI that is available from npm today. It audits one
+existing app, creates a contract, generates Swift, and prepares a repeatable
+verification command.
 
-## Prérequis
+The path is designed for a developer who knows the application. It has not yet
+been timed with an external user, so the durations below are planning estimates,
+not a measured promise.
 
-- macOS avec Xcode 27 (le toolchain extrait les métadonnées App Intents ;
-  `verify.mjs` refuse un toolchain antérieur).
-- Node 22+ (CLI et plugin), npm ou pnpm.
-- Une app cliente : cible Swift/Xcode native, ou app Expo/React Native avec un
-  dossier natif régénéré par `prebuild`.
-- Aucun compte, aucun certificat : les App Intents se compilent et se testent
-  en local ; le build simulateur suffit.
+## Prerequisites
 
-## Durée et étapes
+- macOS and the Xcode toolchain used by the target application.
+- Node.js 22 or newer.
+- An existing native Xcode target.
+- Permission to inspect and change the application repository.
 
-| Étape | Durée | Produit |
-| --- | --- | --- |
-| 1. Audit | 5 min | rapport des capacités et des écarts, sans écrire |
-| 2. Contrat | 5 min | `intentlane.yaml` (1–2 intents, 1 entité) |
-| 3. Génération | 1 min | Swift + strings + manifeste + squelette d'adaptateur |
-| 4. Code à remplir | 15–25 min | adaptateur (résolution, droits, routeur) + test métier |
-| 5. Vérification locale | 5 min | `intentlane verify` |
-| 6. CI | 5 min | une commande `intentlane verify --strict` |
+The Expo config plugin in the IntentLane repository is not published. External
+applications should use the native generated-file path until that package has a
+release.
 
-## Fichiers à créer
-
-```text
-intentlane.yaml                  # contrat (source de vérité)
-Mac/IntentLaneAdapter.swift      # généré une fois, puis application-owned
-<output>/IntentLaneGenerated.swift
-<output>/<locale>.lproj/IntentLane.strings
-<output>/intentlane.manifest.json
-Tests de l'app (votre target)    # test métier du contrat
-.github/workflows/intentlane.yml # porte CI
-```
-
-## Commandes locales
+## 1. Install the published CLI
 
 ```sh
-npx intentlane init                          # contrat minimal, ne touche à rien d'autre
-npx intentlane validate                      # YAML valide (diagnostics IL)
-npx intentlane generate -c intentlane.yaml \
-  -o Mac/IntentLaneGenerated \
-  --adapter-output Mac/IntentLaneAdapter.swift   # Swift + squelette d'adaptateur
-npx intentlane doctor                        # environnement
+npm install --save-dev @memolabs-apps/intentlane@0.1.0
+npx intentlane --version
+```
+
+Commit `package.json` and the lockfile so local development and CI use the same
+tool version.
+
+## 2. Audit the existing target
+
+```sh
+npx intentlane audit . --platform macos
+```
+
+Use `--platform ios` for an iOS target. Keep a JSON baseline when the result will
+be reviewed or compared later:
+
+```sh
+npx intentlane audit . \
+  --platform macos \
+  --format json \
+  --output intentlane-audit.json
+```
+
+The audit is read-only. Review the route, target, data, architecture, conditions,
+quality, and capability findings before choosing a journey.
+
+## 3. Create and edit the contract
+
+```sh
+npx intentlane init
+npx intentlane validate
+```
+
+`init` writes `intentlane.yaml` only when it does not already exist. Choose one
+or two journeys for the first pass. Keep application lookup, permissions,
+navigation, and side effects out of the generated contract.
+
+## 4. Generate Swift and the adapter boundary
+
+```sh
+npx intentlane generate \
+  --config intentlane.yaml \
+  --output Mac/IntentLaneGenerated \
+  --adapter-output Mac/IntentLaneAdapter.swift
+```
+
+The generated directory contains Swift, localized strings when declared, and a
+manifest. The adapter is created once and then belongs to the application. A
+later generation refuses to overwrite it unless `--overwrite-adapter` is
+explicit.
+
+Implement the application-owned pieces:
+
+1. Resolve stable identifiers to authorized records.
+2. Return no record when the user may not access it.
+3. Route through the application's existing navigation.
+4. Test positive, negative, permission, and lifecycle behavior.
+
+Add the generated Swift and the application-owned adapter to the target using
+the project's normal Xcode setup. Do not edit generated output.
+
+## 5. Verify the integration
+
+```sh
+npx intentlane generate \
+  --config intentlane.yaml \
+  --output Mac/IntentLaneGenerated \
+  --check
+
 npx intentlane verify \
-  -c intentlane.yaml \
-  -o Mac/IntentLaneGenerated \
+  --config intentlane.yaml \
+  --output Mac/IntentLaneGenerated \
   --app-test "xcodebuild -project Client.xcodeproj -scheme Client -destination 'platform=macOS' test" \
-  --metadata build/.../Client.app/Metadata.appintents
+  --metadata build/Client.app/Metadata.appintents
 ```
 
-Pour une app Expo : `npx expo prebuild`, puis le plugin `@intentlane/expo` relance
-la génération à chaque prebuild ; `apps/example-expo` est la référence complète.
+The metadata path depends on the application's build settings. `verify` reports
+each claimed layer separately. It does not turn build or metadata evidence into
+a Siri claim.
 
-## Le seul code à remplir
+## 6. Add CI
 
-IntentLane émet l'interface ; l'app fournit le reste, jamais l'inverse :
+Copy [the maintained workflow example](../examples/intentlane-ci.yml) into the
+client repository as `.github/workflows/intentlane.yml`, then replace the sample
+test command and metadata path.
 
-1. **Résolution** : implémenter le protocole de l'entité (ex.
-   `IntentLaneIdeaResolver`) — `entities(for:)`, `suggestedEntities()` — et
-   l'enregistrer (`IntentLaneEntityResolvers.idea = MonResolver()`).
-2. **Droits** : ne renvoyer que les objets autorisés ; un titre absent → zéro
-   résultat ; un objet non autorisé n'est ni suggéré ni ouvert.
-3. **Routeur** : ouvrir via la navigation existante de l'app (sidebar, deep
-   link, écran), sélectionner l'ID exact.
-4. **Test métier** : prouver les sept points du contrat (ID stable exact,
-   recherche autorisée ordonnée, zéro résultat sur titre absent, objet non
-   autorisé exclu, ouverture via le routeur réel, écriture avec droits +
-   confirmation + effet final, réindexation sur create/update/delete).
+The example assumes the CLI and its exact version are already recorded in the
+client's `package.json` and lockfile.
 
-L'adaptateur généré contient des TODOs pour ces quatre points. Une génération
-suivante refuse de l'écraser sans `--overwrite-adapter`.
+## Human evidence remains separate
 
-## Commande CI unique
+Automation can prove the contract, generated output, application tests, build,
+metadata, and a named Core Spotlight index test. It cannot prove that Siri chose
+and completed a spoken journey.
 
-```yaml
-# .github/workflows/intentlane.yml
-steps:
-  - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with: { node-version: 22 }
-  - run: npx intentlane verify --pilot intentlane.pilot.yaml --strict
-```
+Record a system-surface observation only when a person ran the named journey
+under recorded OS, SDK, locale, language, account, permission, and test-data
+conditions. A second person must reproduce it before a public case study calls
+the journey verified.
 
-Le manifeste `intentlane.pilot.yaml` déclare ce que le client revendique et la
-commande qui settles chaque porte :
+## Handling confidential applications
 
-```yaml
-version: intentlane-pilot/1.0
-contract: intentlane.yaml
-generated: Mac/IntentLaneGenerated
-metadata: build/.../Client.app/Metadata.appintents
-claims: [contract, generated, applicationTests, integrationTests, metadata]
-gates:
-  applicationTests: "xcodebuild -project Client.xcodeproj -scheme Client test"
-  integrationTests: "bash tests/run-integration-tests.sh"
-```
-
-`verify` affiche chaque revendication avec sa famille et son statut, puis écrit
-`Any claim not listed here is not certified`. `--strict` sort non nul tant qu'une
-revendication de l'ensemble n'est pas certifiée. Le ledger n'est lu que si une
-revendication observée, comme `siri-conversation`, est effectivement revendiquée.
-`npx intentlane claims` affiche le catalogue complet.
-
-## Test automatique ≠ preuve visuelle Siri/Spotlight
-
-| | Automatisé | Preuve visuelle |
-| --- | --- | --- |
-| Contrat / génération / build / métadonnées | oui | non |
-| Tests métier (résolution, droits, navigation) | oui | non |
-| Intégration réelle (résolveur, ouverture, routage) | oui | non |
-| Carte Siri / Spotlight visible | non | **oui**, observation réelle |
-| Conversation Siri parlée | non | **oui**, phrase réelle |
-| Reproduction indépendante | non | **oui**, second testeur |
-
-Une certification verte prouve la chaîne du client, pas Siri. Le statut
-`certified` nomme les revendications qu'il couvre, et rien d'autre n'est
-certifié. Ne jamais promettre une phrase Siri ni une carte Spotlight sans
-l'observation réelle consignée dans le ledger, en revendiquant explicitement la
-revendication observée correspondante.
-
-
-## Procédure de validation par deux testeurs
-
-1. Installer le build vérifié (simulateur ou appareil de test).
-2. Testereur A exécute chaque parcours (recherche Spotlight, ouverture,
-   action écrite, négatif) et consigne : date, OS + build, locale, langue Siri,
-   phrase, résultat attendu, résultat observé.
-3. Testeur B rejoue les mêmes parcours depuis un état propre, sans assistance.
-4. Le ledger (`PILOT-CLIENT-LEDGER.yaml`) ne passe à `verified` qu'avec les
-   deux observations concordantes. `intentlane evidence validate --strict`
-   le vérifie.
-5. Aucune revendication commerciale ne dépasse le statut du ledger.
+Do not paste a private contract, generated source, repository path, or audit
+report into a public GitHub issue. Reduce a problem to a non-confidential fixture
+or contact the maintainer privately through the link in the root README.

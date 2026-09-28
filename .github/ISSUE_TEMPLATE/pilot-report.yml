@@ -1,14 +1,13 @@
 name: Pilot report
 description: Run IntentLane on an app you already ship and report where the contract got in the way.
 title: "[Pilot] "
-labels: ["pilot report"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for trying IntentLane on a real app. The Phase 3 gate needs five pilots, two of them existing apps, so this report is the most useful contribution you can make.
+        Thanks for trying IntentLane on a real app. This issue is public. Use a public app or a non-confidential fixture, and remove secrets, proprietary source, client data, usernames, and local filesystem paths.
 
-        A report without the contract is hard to act on. Paste the relevant `intentlane.yaml` excerpt, the exact versions, and what `intentlane doctor` printed.
+        Paste only the smallest safe `intentlane.yaml` excerpt, the exact versions, and the relevant lines from `intentlane doctor`.
   - type: input
     id: intentlane-version
     attributes:
@@ -29,7 +28,7 @@ body:
     id: contract
     attributes:
       label: Contract excerpt
-      description: The `intentlane.yaml` you wrote, trimmed to the part that matters.
+      description: The smallest non-confidential excerpt that reproduces the gap.
       render: yaml
     validations:
       required: true
@@ -44,14 +43,14 @@ body:
     id: outcome
     attributes:
       label: What happened
-      description: The generated Swift, the build result, or the behaviour you observed. Paste the compiler error and the generated file when the Swift does not compile.
+      description: The build result, diagnostic, or behaviour you observed. Reduce generated Swift to a safe minimal fixture.
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
       label: "`intentlane doctor` output"
-      description: The full output, including the hint lines.
+      description: Only the relevant lines, with usernames and paths removed.
       render: shell
     validations:
       required: false
@@ -73,6 +72,6 @@ body:
     id: manual
     attributes:
       label: What you had to write by hand
-      description: Swift you edited after generation, or App Intents code you wrote yourself.
+      description: Describe the seam or provide a minimal non-confidential example. Do not paste application-owned source you cannot publish.
     validations:
       required: false

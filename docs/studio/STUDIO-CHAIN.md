@@ -87,7 +87,7 @@ is 19 of 22 and stays paused.
 
 The chain order is the buyer's order. The build order is chosen by what is due.
 
-The milestone is 2026-10-10: one qualified conversation and one audit offer
+The public-surface milestone is one reproducible external audit and one bounded implementation proposal
 sent. M3 is the document that offer is made of, and the capability map from M2
 is what makes it credible in the same meeting: a real report, real groups, a
 real score, and a stated boundary about what is not proven. M1 is a

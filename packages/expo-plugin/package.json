@@ -1,8 +1,21 @@
 {
-  "name": "@intentlane/expo",
-  "version": "0.1.0",
+  "name": "@memolabs-apps/intentlane-expo",
+  "version": "0.2.0-next.0",
+  "description": "Unpublished Expo config plugin for IntentLane-generated App Intents Swift and localization resources.",
   "license": "MIT",
+  "author": "Guillaume Flambard",
   "main": "app.plugin.cjs",
-  "files": ["app.plugin.cjs", "src/apply.cjs"],
+  "files": ["app.plugin.cjs", "src/apply.cjs", "README.md"],
+  "keywords": ["app-intents", "expo", "ios", "siri"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guillaume-flambard/intentlane.git",
+    "directory": "packages/expo-plugin"
+  },
+  "homepage": "https://github.com/guillaume-flambard/intentlane#readme",
+  "bugs": {
+    "url": "https://github.com/guillaume-flambard/intentlane/issues"
+  },
+  "publishConfig": { "access": "public" },
   "engines": { "node": ">=22" }
 }

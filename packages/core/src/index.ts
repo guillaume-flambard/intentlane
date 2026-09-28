@@ -560,7 +560,7 @@ export function collectDoctorChecks(facts: DoctorFacts): readonly DoctorCheck[] 
   checks.push(
     facts.pluginDeclared
       ? { id: "plugin", status: "ok", message: "Expo config plugin is declared." }
-      : { id: "plugin", status: "warning", message: "Expo config plugin is not declared in package.json.", hint: "Add '@intentlane/expo' to your app config plugins." }
+      : { id: "plugin", status: "warning", message: "Expo config plugin is not declared in package.json.", hint: "The Expo plugin is currently workspace-only and has no public npm release." }
   );
 
   if (facts.appleEnvironment) {

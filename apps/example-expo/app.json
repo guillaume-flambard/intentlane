@@ -12,7 +12,7 @@
     },
     "plugins": [
       [
-        "@intentlane/expo",
+        "@memolabs-apps/intentlane-expo",
         {
           "configFile": "intentlane.yaml"
         }

@@ -700,19 +700,9 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       evidence » a été retirée du paragraphe sur l'offre d'implémentation. Les
       deux lignes du `AUDIT-OFFER.md` qui disent déjà ce que un bloc ne peut pas
       affirmer sont intactes.
-- [x] 6.5 Préparer les brouillons de PR et de contact par mainteneur, sans les
-      envoyer, et publier la règle de contribution qui l'interdit le cas échéant.
-      Vérifié par la présence des brouillons et leur absence d'envoi. **Fait, dans
-      `maintainer-drafts.md`.** Les cinq mainteneurs, la règle de contribution de
-      chacun, et la règle qui les gouverne tous : **aucune branche n'est poussée,
-      aucun ticket n'est ouvert, aucun mainteneur n'est contacté tant que la
-      personne n'a pas décidé.** La ligne commune aux cinq brouillons est
-      « ce qu'il ne revendique pas », citée de la fiche du pilote, parce que c'est
-      celle qu'un mainteneur va probablement recopier. Trois des cinq seraient
-      probablement refusés et c'est très bien : la question de Cyberduck sur la
-      lecture du fichier de signets est une vraie question ouverte que le pilote a
-      trouvée, pas une décision qu'il a prise. Transmission n'a pas de brouillon
-      du tout, et son contact honnête est une question sur sa chaîne d'outils.
+- [x] 6.5 Garder toute préparation de contact mainteneur hors du dépôt public.
+      Aucun brouillon, branche distante, ticket ou message n'est une preuve
+      produit. Toute prise de contact reste une décision humaine séparée.
 
 ## 7. La clôture
 
@@ -736,9 +726,8 @@ redécouvert sur les trois suivants, plus cher à diagnostiquer à chaque fois.
       16 amend, 12 keep, 1 closed et 0 escalate**, et le zéro escalate est le
       chiffre à lire.
 - [x] 7.4 Écrire dans le document que le push et npm sont des décisions de la
-      personne, restées en attente, et ne pas les présenter comme faits. Vérifié
-      par relecture. **Fait**, dans `results.md` et dans `maintainer-drafts.md`, où
-      l'absence d'envoi est nommée dans la première phrase.
+      personne, et ne pas les présenter comme faits. Les brouillons de contact
+      restent hors du dépôt public.
 - [x] 7.5 Ne retirer aucune limitation enregistrée par un pilote, même si elle
       affaiblit le résultat. Vérifié par relecture croisée avec les fiches.
       **Fait, et la vérification a trouvé une limitation que le groupe 6 aurait

@@ -1,101 +1,105 @@
 # Contributing to IntentLane
 
-IntentLane compiles a versioned YAML contract into Apple App Intents for Expo apps. There is no model in the build path: the same contract always produces the same Swift. The most useful contributions come from people who tried it on a real Expo app and can say exactly where the contract got in the way.
+IntentLane audits Apple application repositories and compiles a versioned YAML
+contract into App Intents Swift. The same inputs must produce the same output,
+and every public claim must name the evidence that supports it.
+
+## Before sharing anything publicly
+
+GitHub issues, pull requests, logs, contracts, and generated files are public.
+Remove proprietary source, secrets, tokens, customer data, private repository
+names, usernames, and local filesystem paths before submitting them.
+
+Do not open a public issue for a vulnerability. Follow
+[SECURITY.md](.github/SECURITY.md).
 
 ## What helps most
 
-- **Pilot reports.** Run the quickstart on an app you already ship and report what broke, what the contract could not express, and what you had to write by hand. The Phase 3 gate needs five pilots, two of them existing apps. Use the [pilot report form](.github/ISSUE_TEMPLATE/pilot-report.yml) so the report carries the details below.
-- **Contract gaps.** If an intent, a parameter type or an execution mode cannot be declared in `0.1`, open an issue with the YAML you wish worked.
-- **Diagnostics.** A confusing message, a missing code, or a case that should be rejected and is not.
-- **Docs.** Anything in [README.md](README.md), [SPEC.md](SPEC.md) or [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) that does not match what the code does.
-- **Adapters.** Not yet. Android, Flutter and Capacitor are deliberate non-goals until the Apple path has pilots.
+- **Audit reports from public projects.** Include the repository revision, target
+  platform, command, result, and the smallest non-confidential excerpt needed to
+  reproduce the finding.
+- **Contract gaps.** Show the minimal YAML shape you expected to work.
+- **Diagnostics.** Name the command, diagnostic code, and why the next action was
+  unclear.
+- **Documentation.** Point to a statement that differs from released behavior.
+- **Focused Apple evidence.** Add a fixture or test for one SDK behavior already
+  in scope.
 
-## Before you open an issue
+The repository does not accept Android, Flutter, Capacitor, dashboard, or SaaS
+work without an approved scope change.
 
-Include the contract excerpt, the IntentLane version, your Expo, React Native and Xcode versions, the output of `npx intentlane doctor`, and the diagnostics you got. If the generated Swift failed to compile, paste the compiler error and the generated file. A report without the contract is hard to act on.
+## Choose the right issue form
 
-## Development
+- Use the pilot form only for a non-confidential application you are allowed to
+  discuss publicly.
+- Use the bug form for a minimal reproducible failure.
+- Use the capability proposal for a new contract or audit surface.
+
+A question that requires private source access should start with a private
+conversation, not a redacted issue that cannot be reproduced.
+
+## Development setup
+
+Prerequisites:
+
+- Node.js 22 or newer.
+- pnpm 11.27.0 through Corepack.
+- Xcode only for Swift compilation, metadata extraction, or the example apps.
+
+From a clean checkout:
 
 ```sh
-pnpm install
-pnpm test
+corepack enable
+pnpm install --frozen-lockfile
 pnpm build
+pnpm test
 pnpm validate
 pnpm generate --output .intentlane/generated
 node packages/cli/dist/index.cjs generate --output .intentlane/generated --check
 ```
 
-`.intentlane/` is not versioned, so a fresh clone has no generated output and
-`--check` fails until you generate once. `pnpm build` writes
-`packages/cli/dist/index.cjs`, which is the same bundle the published CLI
-ships, so the `node` command above checks the exact artifact a consumer runs.
+`.intentlane/` is not versioned. Generate once before running `--check` in a new
+checkout. `pnpm build` writes the same bundled CLI shape prepared for npm.
 
-`apps/example-expo` is the end-to-end fixture. It needs an iOS toolchain:
+The Expo example is a workspace fixture, not a published installation path:
 
 ```sh
 cd apps/example-expo
-npx expo prebuild --platform ios
-npx expo run:ios
+pnpm prebuild
+pnpm ios
 ```
-
-The repository layout and the role of each package are in [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ## Rules the code follows
 
-These are not style preferences, they are the properties the project sells. A change that breaks one of them will be asked to change.
+1. **Contract first.** Add valid and invalid schema fixtures before generation.
+2. **No model in the build path.** Generation stays deterministic and offline.
+3. **Deterministic output.** The same contract produces byte-identical files.
+4. **Own only generated files.** Never rewrite application-owned business logic.
+5. **No secrets in the contract.** Runtime credentials belong in the app's secure store.
+6. **Test every Swift emission.** Include a focused test and a golden snapshot where applicable.
+7. **Make errors actionable.** State what failed, where, and what to do next.
+8. **Keep scope explicit.** A new platform or abstraction needs an exercised use case.
+9. **Keep diagnostics stable.** Public diagnostic codes change only with documentation and tests.
+10. **Separate evidence layers.** A green build never becomes a Siri claim.
 
-1. **Contract first.** A new capability starts in `packages/schema`, with tests that reject the invalid shapes, then in the IR in `packages/core`, and only then in the generator. Never the other way around.
-2. **No model in the build path.** Generation is deterministic and offline. An LLM may help you write the code, never the output.
-3. **Deterministic output.** The same contract produces byte-identical files. The CI generates twice and compares.
-4. **Own your files only.** The generator writes inside its output directory and nowhere else. The plugin edits the Xcode project through the injected `XcodeUtils` layer, never by rewriting `project.pbxproj` directly, and it must be idempotent: a second run changes nothing.
-5. **No secrets in the contract.** Tokens and keys belong in the Keychain at runtime.
-6. **Every Swift emission has a golden snapshot.** A snapshot change in a pull request needs an explanation in the description.
-7. **Errors are actionable.** A diagnostic says what is wrong, where, and what to do.
-8. **No scope creep.** Do not add an abstraction for a platform that is not exercised yet.
-9. **No comments in the code.** The code and the docs carry the explanation.
-10. **Stable diagnostics.** The codes `IL1001` to `IL1701` are part of the public surface. Adding one means updating [SPEC.md](SPEC.md).
+## Pull requests
 
-## Repository readiness
+- Keep one concern per pull request.
+- Explain the user-visible change and its evidence.
+- Run the narrowest relevant tests, then `pnpm verify` before requesting review.
+- Document every public option.
+- Explain snapshot changes.
+- Do not add AI attribution or generated-by trailers.
+- Complete the pull request template and link a public issue when one exists.
 
-[OPEN-CORE-READINESS.md](docs/product/OPEN-CORE-READINESS.md) records the contributor and
-maintainer inventory with the evidence behind every claim, and the choices that
-still need an owner decision before a policy is written.
+`main` must remain green. A pull request is ready only when its automated checks
+pass and any manual evidence it claims is attached.
 
-## Commits and pull requests
+## Working with coding agents
 
-- One concern per pull request.
-- A pull request is done when the tests are green, the typecheck is green, every public option is documented, and no snapshot moved without an explanation.
-- Write commit messages that say what changed and why. Do not add AI attribution, co-author trailers or "generated with" lines.
+[AGENT-GUIDE.md](AGENT-GUIDE.md) defines the compiler boundaries and Apple naming
+rules. Tools are welcome, but the contributor remains responsible for every
+claim, file, and test in the submission.
 
-## Working with an agent
-
-This repository is largely written with coding agents, and [AGENT-GUIDE.md](AGENT-GUIDE.md) is the instruction file they read. Using one is welcome. The rules above still apply to the result, and you are responsible for what you submit.
-
-## Verification
-
-`pnpm verify` runs the whole chain the CI `checks` job runs, in the same order:
-typecheck and bundle, the test suite, the reference contract, then the generated Swift
-twice with a diff between the two runs. It is one command because the failure this
-repository has already paid for twice was a check that looked green because nobody ran
-the steps after a change.
-
-The command is not a decoration. It was proved to fail by breaking the reference config
-and running it, which is the only way to know a gate can fail.
-
-### Why the CI jobs are red on the private mirror
-
-The private mirror `guillaume-flambard/intentlane-private` shows every job failing in
-under ten seconds. That is not a code failure and not a workflow failure. The jobs never
-obtain a runner: the API reports `runner_name` empty and zero steps, and the identical
-workflow passed in six minutes on the public repository. The difference is that private
-repositories have no included Actions minutes on this plan, so the jobs queue and then
-fail.
-
-Until that changes, a red run on the private mirror says nothing about the code, and
-`pnpm verify` is the gate that does. A runner on a maintainer machine would make the CI
-real and free for private repositories, at the cost of running workflow code on that
-machine.
-
-The three pilot mirrors have Actions disabled entirely. They inherit the upstream
-releases' workflows, which expect the upstream release environment and cannot pass on a
-private mirror, and a mirror is not a place to run someone else's release pipeline.
+By participating, you agree to follow
+[CODE_OF_CONDUCT.md](.github/CODE_OF_CONDUCT.md).

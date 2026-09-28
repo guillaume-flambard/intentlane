@@ -12,7 +12,7 @@ the example registers at launch.
 | File | Role |
 | --- | --- |
 | `intentlane.yaml` | The contract: four intents (`open_inbox`, `create_idea`, `open_idea`, `delete_idea`), one `idea` entity, English and French copy. |
-| `app.json` | Expo config with `scheme: intentlaneexample` and the `@intentlane/expo` plugin pointing at `intentlane.yaml`. |
+| `app.json` | Expo config with `scheme: intentlaneexample` and the `@memolabs-apps/intentlane-expo` plugin pointing at `intentlane.yaml`. |
 | `App.tsx` | The screen: header, last route banner, idea list, hint. |
 | `src/routes.ts` | Parses an IntentLane URL into segments and a query. No React Native import, so it is unit tested. |
 | `src/ideas.ts` | The `Idea` type, the seed ideas, the query to idea conversion, and the entity projection. |
@@ -60,19 +60,20 @@ pnpm prebuild
 pnpm ios
 ```
 
-After the app is installed, open the Shortcuts app and look for "Create an idea" and
-"Open the inbox". Saying "Create an idea in IntentLane Example" opens
+After the app is installed, open the Shortcuts app and look for `Create an idea` and
+`Open the inbox`. Saying `Create an idea in IntentLane Example` opens
 `intentlaneexample:/ideas/new?title=...`.
 
-Opening a custom scheme from outside the app makes iOS show an "Open in IntentLane
-Example?" alert first. That alert is SpringBoard asking for confirmation, not an app bug.
+Opening a custom scheme from outside the app makes iOS show an
+`Open in IntentLane Example?` alert first. That alert is SpringBoard asking for
+confirmation, not an app bug.
 
 ## The entity resolver
 
 The generated Swift declares `IntentLaneIdeaResolver` and an empty
 `IntentLaneEntityResolvers.idea`, because IntentLane never emits business logic. The example
 fills that hole with a local config plugin, `plugins/withIdeaResolver.cjs`, declared in
-`app.json` as `"./plugins/withIdeaResolver.cjs"`:
+`app.json` as `./plugins/withIdeaResolver.cjs`:
 
 - It writes `ios/<project>/IntentLaneNative/IdeaResolver.swift` and adds it to the app
   target, so `IntentLaneIdeaResolverImplementation` decodes the published JSON into
@@ -98,6 +99,6 @@ and `IdeaResolver.swift` byte for byte identical.
   a second run.
 - A config plugin referenced as a file path must carry its extension. Expo resolves a
   direct file reference with plain `require.resolve`, which does not try `.cjs`, so
-  `"./plugins/withIdeaResolver"` fails with `Failed to resolve plugin for module`.
+  `./plugins/withIdeaResolver` fails with `Failed to resolve plugin for module`.
 - The `idea` entity is only as fresh as the last publish. The resolver reads whatever the
   app wrote, so an idea created by Siri appears in the entity list after the next publish.

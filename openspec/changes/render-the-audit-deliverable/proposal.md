@@ -7,7 +7,7 @@ reçoit aujourd'hui est `formatText`: une liste à plat
 `platform state capability (confidence)`, sans ordre de lecture, sans frontière de
 preuve, et sans séparation entre ce que la machine a constaté et ce qu'un humain
 doit encore vérifier. L'offre vendue est un audit à périmètre fixe dont le
-livrable est le document que le client ouvre, et le jalon du 2026-10-10 est une
+livrable est le document que le client ouvre, et le jalon public est une
 offre partie: il n'existe aujourd'hui aucun document à envoyer.
 
 ## What Changes

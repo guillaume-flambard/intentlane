@@ -36,7 +36,7 @@ importers:
 
   apps/example-expo:
     dependencies:
-      '@intentlane/expo':
+      '@memolabs-apps/intentlane-expo':
         specifier: workspace:*
         version: link:../../packages/expo-plugin
       expo:

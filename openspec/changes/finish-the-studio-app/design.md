@@ -13,7 +13,7 @@ See `proposal.md` for the motivation. What the implementation has to work with:
   no Help, and no journey shortcut.
 - `StudioView.screens` is a `switch` over `StudioStage`, now six cases, with no
   indicator of position in the journey.
-- `ProjectScreen` has `Button("Open recent") {}` with
+- `ProjectScreen` has a button labelled `Open recent` with
   `.disabled(true)` and a help string promising a run that does not exist.
 - `Resources/en.lproj` and `fr.lproj` exist, `CFBundleLocalizations` lists both,
   and the French file holds twelve keys of which ten appear nowhere in `Sources/`.
@@ -109,7 +109,7 @@ the stages.
   and the snapshot harness renders the dark appearance as well as the light one,
   so a contrast regression shows up as an image rather than as a preference.
 - [Scene work grows without a buyer] → Every task is scoped to something the
-  reader sees before the 2026-10-10 milestone. The order in `tasks.md` puts the
+  reader sees before the public-surface milestone. The order in `tasks.md` puts the
   honesty fixes first, because an app that lies about itself is the one defect no
   amount of polish hides.
 
