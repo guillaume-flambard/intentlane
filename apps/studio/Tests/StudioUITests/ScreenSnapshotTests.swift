@@ -103,6 +103,54 @@ enum RealPilotState {
         return AuditReportParser.parse(data)
     }
 
+    /// The engine's own document for the real FSNotes report, read by running the
+    /// engine. Nothing here composes it: if the engine cannot run, the deliverable
+    /// screens are simply not drawn, because a hand-written document would be a
+    /// second deliverable and the screen would be verified against the wrong one.
+    static var realDeliverable: String? {
+        guard let auditPath = realAuditPath, let engine = enginePath else { return nil }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["pnpm", "exec", "tsx", engine, "deliverable", auditPath]
+        // Both pipes are drained before waiting, and the process runs in the
+        // repository root, because the engine's own paths are relative to it.
+        let output = Pipe()
+        let errors = Pipe()
+        process.standardOutput = output
+        process.standardError = errors
+        process.currentDirectoryURL = repositoryRoot
+        guard (try? process.run()) != nil else { return nil }
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        _ = errors.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { return nil }
+        let text = String(decoding: data, as: UTF8.self)
+        return text.isEmpty ? nil : text
+    }
+
+    /// The repository root, resolved the same way every other read in this file
+    /// resolves it, so the engine runs where its relative paths mean something.
+    static var repositoryRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // StudioUITests
+            .deletingLastPathComponent()   // Tests
+            .deletingLastPathComponent()   // apps/studio
+            .deletingLastPathComponent()   // apps
+            .deletingLastPathComponent()   // repository root
+    }
+
+    /// The committed FSNotes report, read from the same place `realAudit` reads it.
+    static var realAuditPath: String? {
+        let path = repositoryRoot.appendingPathComponent("packages/studio-protocol/fixtures/fsnotes-audit.json")
+        return FileManager.default.fileExists(atPath: path.path) ? path.path : nil
+    }
+
+    /// The CLI entry point, run through the same toolchain the repository uses.
+    static var enginePath: String? {
+        let path = repositoryRoot.appendingPathComponent("packages/cli/src/index.ts")
+        return FileManager.default.fileExists(atPath: path.path) ? path.path : nil
+    }
+
     static func inspection() -> ProjectInspection {
         ProjectInspection(
             facts: facts,
@@ -162,6 +210,17 @@ enum RealPilotState {
             draw("07-capabilities", StudioView.fixture(stage: .capabilities, inspection: inspection(), audit: audit))
         }
         draw("08-capabilities-empty", StudioView.fixture(stage: .capabilities, inspection: inspection()))
+
+        // The deliverable, drawn from the text the engine itself renders for the
+        // real FSNotes report, and drawn again with no document. The screen under
+        // test is therefore shown a real deliverable rather than one written by
+        // hand to look like one.
+        if let deliverable = realDeliverable {
+            draw("09-deliverable", StudioView.fixture(
+                stage: .deliverable, inspection: inspection(), deliverable: .ready(deliverable)
+            ))
+        }
+        draw("10-deliverable-absent", StudioView.fixture(stage: .deliverable, inspection: inspection()))
         return drawn
     }
 }
@@ -198,7 +257,8 @@ extension StudioView {
         plan: [PlanNode]? = nil,
         journal: RunJournal? = nil,
         report: RunReport? = nil,
-        audit: AuditReportMirror? = nil
+        audit: AuditReportMirror? = nil,
+        deliverable: DeliverableDisplay = .absent
     ) -> StudioView {
         let model = StudioModel()
         model.applyFixture(
@@ -208,7 +268,8 @@ extension StudioView {
             plan: plan,
             journal: journal,
             report: report,
-            audit: audit
+            audit: audit,
+            deliverable: deliverable
         )
         return StudioView(model: model)
     }

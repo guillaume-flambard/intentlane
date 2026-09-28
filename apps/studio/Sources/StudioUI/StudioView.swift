@@ -52,6 +52,8 @@ public struct StudioView: View {
             RunScreen(model: model)
         case .result:
             ResultScreen(model: model)
+        case .deliverable:
+            DeliverableScreen(model: model)
         }
     }
 

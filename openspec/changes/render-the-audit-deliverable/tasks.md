@@ -31,12 +31,12 @@
       finding.
 - [x] 1.9 Un fichier qui n'est pas du JSON valide sort en non-zéro, nomme le
       fichier, et n'écrit aucun livrable. Vérifié par un test de la commande.
-- [ ] 1.10 La fenêtre affiche le texte que le moteur a rendu, caractère pour
+- [x] 1.10 La fenêtre affiche le texte que le moteur a rendu, caractère pour
       caractère, et ne le recompose pas. Vérifié par un test qui compare le
       texte affiché au fichier que la commande écrit pour le même rapport.
-- [ ] 1.11 Demandé sans livrable, la fenêtre déclare qu'il n'y en a pas encore
+- [x] 1.11 Demandé sans livrable, la fenêtre déclare qu'il n'y en a pas encore
       et n'affiche aucun document. Vérifié par un test.
-- [ ] 1.12 Un moteur qui échoue ou rend un rapport illisible fait apparaître la
+- [x] 1.12 Un moteur qui échoue ou rend un rapport illisible fait apparaître la
       raison dans la fenêtre, et aucun document. Vérifié par un test.
 
 ## 2. Vert

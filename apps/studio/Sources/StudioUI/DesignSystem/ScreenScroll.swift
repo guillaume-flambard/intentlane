@@ -9,15 +9,21 @@ import SwiftUI
 /// scrolling exactly as before.
 public struct ScreenScroll<Content: View>: View {
     @Environment(\.intentLaneScreenScrolls) private var scrolls
+    /// A document can be wider than the window, as Markdown tables and long evidence
+    /// lines are. A screen that only scrolled vertically would clip the right-hand
+    /// end of a line, and a deliverable with a clipped score is a deliverable a
+    /// reader misreads.
+    let axes: Axis.Set
     @ViewBuilder let content: Content
 
-    public init(@ViewBuilder content: () -> Content) {
+    public init(_ axes: Axis.Set = .vertical, @ViewBuilder content: () -> Content) {
+        self.axes = axes
         self.content = content()
     }
 
     public var body: some View {
         if scrolls {
-            ScrollView { content }
+            ScrollView(axes) { content }
         } else {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

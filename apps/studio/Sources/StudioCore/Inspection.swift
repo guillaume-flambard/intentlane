@@ -1,9 +1,10 @@
 import Foundation
 import StudioCore
 
-/// The five stages of one journey, in the order the reader lives them. A project, a
-/// goal, a route to approve, the work, and what came out. There is no dashboard
-/// before the project and no settings after the result.
+/// The stages of one journey, in the order the reader lives them. A project, a
+/// goal, a route to approve, the work, what came out, and the document that leaves
+/// the building. There is no dashboard before the project and no settings after the
+/// deliverable.
 public enum StudioStage: Int, CaseIterable, Sendable, Equatable {
     case project
     case capabilities
@@ -11,6 +12,7 @@ public enum StudioStage: Int, CaseIterable, Sendable, Equatable {
     case plan
     case run
     case result
+    case deliverable
 
     public var label: String {
         switch self {
@@ -20,6 +22,7 @@ public enum StudioStage: Int, CaseIterable, Sendable, Equatable {
         case .plan: "Plan"
         case .run: "Work"
         case .result: "Result"
+        case .deliverable: "Deliverable"
         }
     }
 }

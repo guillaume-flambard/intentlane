@@ -119,6 +119,60 @@ public final class StudioModel {
     private static let auditReadFailure =
         "The engine did not return a report, so there is nothing to map."
 
+    // MARK: Deliverable
+
+    /// What the window shows of the deliverable. It is a string and a state,
+    /// deliberately: a richer type would be a document this window composed.
+    public internal(set) var deliverable: DeliverableDisplay = .absent
+
+    /// The engine's document, verbatim, and nil when there is none. Nothing in
+    /// this file formats it, wraps it, or re-indents it.
+    public var deliverableText: String? {
+        if case .ready(let text) = deliverable { return text }
+        return nil
+    }
+
+    /// The engine runner the deliverable is read through. Injectable so a test can
+    /// assert the command and the text without launching anything.
+    public var deliverableRunner: DeliverableExecutor.Runner?
+
+    /// Asks the engine to render the deliverable for the report this project was
+    /// audited into, and keeps exactly what it printed.
+    ///
+    /// The window is a reader here. A person running the same command on the same
+    /// report gets the same document, and a test compares the two, so the window
+    /// cannot drift into composing a second one.
+    public func readDeliverable() {
+        // No project means no report to render from. A state that was placed
+        // deliberately, by a fixture, is left alone rather than replaced by an
+        // absence the window had no way to learn: "there is nothing to read" and
+        // "there is nothing to show" are different facts, and only the engine can
+        // settle the second one.
+        guard let reportPath else { return }
+        // The engine URL is read here, on the actor, and then handed over as a
+        // plain value: a `@Sendable` runner cannot reach back into main-actor state,
+        // and it should not have to.
+        let engine = Self.engineURL
+        let runner = deliverableRunner ?? { arguments in
+            DeliverableExecutor(engine: engine).launch(arguments)
+        }
+        switch DeliverableExecutor(engine: engine, run: runner).render(reportPath: reportPath) {
+        case .success(let text):
+            deliverable = .ready(text)
+        case .failure(let failure):
+            deliverable = .failed(failure.reason)
+        }
+    }
+
+    /// The report the deliverable is rendered from: the one this project was
+    /// audited into, in the run directory the audit writes.
+    public var reportPath: String? {
+        guard let repository else { return nil }
+        return repository
+            .appendingPathComponent(".worktrees/studio/.intentlane/run/audit.json")
+            .path
+    }
+
     /// Places the model in a state without running anything, so a screen can be drawn
     /// for a journal that already exists. It never fabricates a verdict: the verdict
     /// is still derived from the journal it is handed.
@@ -129,7 +183,8 @@ public final class StudioModel {
         plan: [PlanNode]? = nil,
         journal: RunJournal? = nil,
         report: RunReport? = nil,
-        audit: AuditReportMirror? = nil
+        audit: AuditReportMirror? = nil,
+        deliverable: DeliverableDisplay = .absent
     ) {
         self.inspection = inspection
         self.selectedGoalID = selectedGoalID
@@ -148,6 +203,11 @@ public final class StudioModel {
         }
         self.audit = audit
         self.auditProblem = nil
+        // A fixture places a document the engine already rendered, so a screen can
+        // be drawn for a state that exists. It is the same string the window would
+        // have read, never one this app composed: a fixture cannot invent a
+        // deliverable any more than it can invent an audit.
+        self.deliverable = deliverable
         self.stage = stage
     }
 
