@@ -12,7 +12,7 @@ import Foundation
 /// `score` and `catalogue`. Every other block the report may carry (`route`,
 /// `data`, `architecture`, `conditions`, `quality`, `targets`, `overlay`) exists
 /// in the engine's own shape and is not read as a CapabilityNode.
-public struct AuditReportMirror: Sendable, Equatable {
+public struct AuditReportMirror: Sendable, Equatable, Codable {
     public let reportVersion: String
     public let targetName: String
     public let platform: String?
@@ -37,7 +37,7 @@ public struct AuditReportMirror: Sendable, Equatable {
     }
 }
 
-public struct AuditFindingMirror: Sendable, Equatable {
+public struct AuditFindingMirror: Sendable, Equatable, Codable {
     public let capability: String
     public let platform: String?
     public let state: String
@@ -68,7 +68,7 @@ public struct AuditFindingMirror: Sendable, Equatable {
     }
 }
 
-public struct AuditEvidenceMirror: Sendable, Equatable {
+public struct AuditEvidenceMirror: Sendable, Equatable, Codable {
     public let kind: String
     public let path: String?
     public let line: Int?
@@ -82,7 +82,7 @@ public struct AuditEvidenceMirror: Sendable, Equatable {
     }
 }
 
-public struct AuditGapMirror: Sendable, Equatable {
+public struct AuditGapMirror: Sendable, Equatable, Codable {
     public let code: String
     public let message: String
 
@@ -92,7 +92,7 @@ public struct AuditGapMirror: Sendable, Equatable {
     }
 }
 
-public struct AuditScoreMirror: Sendable, Equatable {
+public struct AuditScoreMirror: Sendable, Equatable, Codable {
     public let score: Int
     public let band: String
     public let points: Int

@@ -75,9 +75,64 @@ struct CapabilityScreenTests {
     @Test func noRepositoryIsNamedSoNoRealAuditIsRead() {
         // The real-run discipline in one line: an absent environment variable
         // yields an absent report, never a fixture.
-        #expect(RealAuditReader.read(repositoryPath: nil) == nil)
-        #expect(RealAuditReader.read(repositoryPath: "") == nil)
-        #expect(RealAuditReader.read(repositoryPath: "/nonexistent/intentlane/no-run-here") == nil)
+        #expect(RealAuditReader.read(repositoryPath: nil, currentRevision: "abc123") == .absent)
+        #expect(RealAuditReader.read(repositoryPath: "", currentRevision: "abc123") == .absent)
+        #expect(
+            RealAuditReader.read(
+                repositoryPath: "/nonexistent/intentlane/no-run-here",
+                currentRevision: "abc123"
+            ) == .absent
+        )
+    }
+
+    @Test func aReportFromAnotherCommitIsNeverHandedToTheScreen() throws {
+        // The screen's own path, not the reader's: a complete report describing a
+        // commit the worktree has left must not reach the map.
+        let repository = FileManager.default.temporaryDirectory
+            .appendingPathComponent("intentlane-screen-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: repository) }
+        try FileManager.default.createDirectory(at: repository, withIntermediateDirectories: true)
+        try RealAuditReader.write(
+            report: AuditReportMirror(
+                reportVersion: "1.0",
+                targetName: "Stale",
+                platform: "macos",
+                findings: [],
+                score: nil,
+                catalogue: "27.0"
+            ),
+            revision: "old000",
+            to: repository.path
+        )
+
+        let model = StudioModel()
+        model.applyFixture(stage: .capabilities, inspection: ProjectInspection(
+            facts: ProjectFacts(
+                name: "MyApp",
+                repositoryPath: repository.path,
+                branch: "main",
+                revision: "new111",
+                xcodeProject: nil,
+                minimumMacOS: "27.0",
+                uncommitted: []
+            ),
+            contract: nil,
+            cards: [],
+            omissions: [],
+            engineAvailable: false,
+            contractProblem: nil
+        ))
+
+        let freshness = RealAuditReader.read(
+            repositoryPath: repository.path,
+            currentRevision: model.facts?.revision
+        )
+        #expect(freshness.isStale, "the model's own revision is what the report is judged against")
+        #expect(freshness.report == nil, "and a stale report never becomes a tree")
+        guard case .empty = model.capabilityScreen else {
+            Issue.record("with no engine and no fresh report, the screen states an absence")
+            return
+        }
     }
 
     @Test func readingIsItsOwnStateWhileTheEngineRuns() {

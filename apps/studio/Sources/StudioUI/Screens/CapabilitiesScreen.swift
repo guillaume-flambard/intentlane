@@ -53,6 +53,17 @@ public struct CapabilitiesScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 520, alignment: .leading)
 
+                // A report that was refused because it described another commit
+                // is a different statement from the absence of one, and the
+                // reader is told which happened.
+                if let problem = model.auditProblem {
+                    Text(problem)
+                        .font(Type.metadata)
+                        .foregroundStyle(theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 520, alignment: .leading)
+                }
+
                 if model.canReadCapabilityAudit {
                     Button("Read the map") { model.openCapabilities() }
                         .buttonStyle(.borderedProminent)

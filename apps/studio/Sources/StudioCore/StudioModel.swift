@@ -74,16 +74,28 @@ public final class StudioModel {
     /// read-only: nothing is transformed, and a report the model already holds is
     /// never read a second time.
     ///
-    /// The run directory's own `audit.json` wins when the run already wrote one,
-    /// because a report on disk is a report a person can point at. The engine is
-    /// asked only when there is none.
+    /// Freshness is asked before presence. A report on disk is used only when its
+    /// own provenance matches the worktree that is there now; a report that does
+    /// not match is discarded and the engine is asked again, because a complete
+    /// document describing a commit that is no longer checked out is exactly the
+    /// stale-and-plausible failure this screen must not show.
     public func openCapabilities() {
         stage = .capabilities
         guard audit == nil, !isAuditing else { return }
 
-        if let existing = RealAuditReader.read(repositoryPath: ProcessInfo.processInfo.environment["INTENTLANE_STUDIO_REPO"]) {
-            audit = existing
+        switch RealAuditReader.read(
+            repositoryPath: ProcessInfo.processInfo.environment["INTENTLANE_STUDIO_REPO"],
+            currentRevision: facts?.revision
+        ) {
+        case .fresh(let report):
+            audit = report
             return
+        case .stale(let reason):
+            // Stated before the work starts, so the reader sees why the map is
+            // being rebuilt rather than watching it appear unexplained.
+            auditProblem = reason
+        case .absent:
+            break
         }
 
         guard let scope = scope(), engineAvailable else { return }
@@ -95,8 +107,17 @@ public final class StudioModel {
             }.value
             self.audit = report
             self.isAuditing = false
+            if report == nil { self.auditProblem = Self.auditReadFailure }
         }
     }
+
+    /// Why the map could not be shown, when the reason is not the absence of an
+    /// audit. Stated rather than swallowed, and cleared as soon as a report
+    /// arrives.
+    public internal(set) var auditProblem: String?
+
+    private static let auditReadFailure =
+        "The engine did not return a report, so there is nothing to map."
 
     /// Places the model in a state without running anything, so a screen can be drawn
     /// for a journal that already exists. It never fabricates a verdict: the verdict
@@ -126,6 +147,7 @@ public final class StudioModel {
             )
         }
         self.audit = audit
+        self.auditProblem = nil
         self.stage = stage
     }
 
