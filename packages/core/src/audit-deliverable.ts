@@ -56,6 +56,16 @@ function heading(level: number, text: string): string {
   return `${"#".repeat(level)} ${text}\n`;
 }
 
+/// One list line.
+///
+/// The caller does not end its text with a newline: this adds it, and doubling it
+/// would put a blank line between every line, which turns an indented evidence
+/// line into its own loose paragraph instead of a detail of the finding above it.
+/// The document is read as a list, so the list has to be tight.
+///
+/// A nested line is written as `bullet("  evidence")`, where the spaces come after
+/// the marker. Markdown nests on indentation measured from the marker, so spaces
+/// placed before the `-` would simply be counted as part of the text.
 function bullet(text: string): string {
   return `- ${text}\n`;
 }
@@ -67,14 +77,14 @@ function evidenceLocation(evidence: { path: string; line?: number }): string {
 /// One finding, in the shape the document prints it. Shared by every group so a
 /// finding in a named group and a finding in `other` cannot drift apart.
 function renderFinding(finding: AuditFinding): string {
-  let out = bullet(`**${finding.capability}**: ${finding.state}, ${finding.confidence} confidence\n`);
+  let out = bullet(`**${finding.capability}**: ${finding.state}, ${finding.confidence} confidence`);
   for (const evidence of finding.evidence) {
-    out += bullet(`  evidence: ${evidenceLocation(evidence)}\n`);
+    out += bullet(`  evidence: ${evidenceLocation(evidence)}`);
   }
   for (const gap of finding.gaps) {
-    out += bullet(`  gap ${gap.code}: ${gap.message}\n`);
+    out += bullet(`  gap ${gap.code}: ${gap.message}`);
   }
-  if (finding.nextAction.length > 0) out += bullet(`  next: ${finding.nextAction}\n`);
+  if (finding.nextAction.length > 0) out += bullet(`  next: ${finding.nextAction}`);
   return out;
 }
 
@@ -88,17 +98,17 @@ function renderPlatform(report: ScoredAuditReport): string {
   const target = report.target;
   const score = report.score;
   let out = heading(2, `${target.name}, ${platformHeading(target.platform)}`);
-  if (target.deploymentTarget !== undefined) out += bullet(`Deployment floor: ${target.deploymentTarget}\n`);
+  if (target.deploymentTarget !== undefined) out += bullet(`Deployment floor: ${target.deploymentTarget}`);
 
   out += heading(3, "What the application supports today");
   out += bullet(
     `Compatibility score ${score.score}/100, band ${score.band}, ${score.discovery} discovery. ` +
       `These are the report's own figures: ${score.points} of ${score.maximum} points across ` +
-      `${score.applicable} applicable capabilities.\n`
+      `${score.applicable} applicable capabilities.`
   );
-  out += bullet("State of each capability the audit classified:\n");
+  out += bullet("State of each capability the audit classified:");
   for (const state of AUDIT_STATES) {
-    out += bullet(`  ${state}: ${score.counts[state as AuditState] ?? 0}\n`);
+    out += bullet(`  ${state}: ${score.counts[state as AuditState] ?? 0}`);
   }
 
   // A `Map` of mutable arrays, because the report's findings are readonly and the
@@ -121,43 +131,43 @@ function renderPlatform(report: ScoredAuditReport): string {
 
   out += heading(3, "What the audit recorded about the application");
   if (report.route !== undefined) {
-    out += bullet(`Integration route: ${report.route.route} (${report.route.confidence} confidence)\n`);
+    out += bullet(`Integration route: ${report.route.route} (${report.route.confidence} confidence)`);
   }
   if (report.data !== undefined) {
     out += bullet(
       `Indexed data: ${report.data.classes.join(", ") || "none"}, privacy ${report.data.privacy}, ` +
-        `indexed ${report.data.indexed ? "yes" : "no"}\n`
+        `indexed ${report.data.indexed ? "yes" : "no"}`
     );
   }
   if (report.architecture !== undefined) {
-    out += bullet(`Architecture: ${report.architecture.architecture} (${report.architecture.confidence} confidence)\n`);
+    out += bullet(`Architecture: ${report.architecture.architecture} (${report.architecture.confidence} confidence)`);
   }
   if (report.quality !== undefined) {
     out += bullet(
-      `Action quality: ${report.quality.signals.length} signal(s), ${report.quality.issues.length} issue(s)\n`
+      `Action quality: ${report.quality.signals.length} signal(s), ${report.quality.issues.length} issue(s)`
     );
-    for (const issue of report.quality.issues) out += bullet(`  issue: ${issue}\n`);
+    for (const issue of report.quality.issues) out += bullet(`  issue: ${issue}`);
   }
   if (report.conditions !== undefined) {
-    out += bullet(`Test conditions: ${report.conditions.conditions.length} recorded\n`);
+    out += bullet(`Test conditions: ${report.conditions.conditions.length} recorded`);
   }
   if (report.catalogue !== undefined) {
     out += bullet(
       `Capability catalogue ${report.catalogue.version}, state ${report.catalogue.state}, ` +
-        `${report.catalogue.capabilities} capabilities\n`
+        `${report.catalogue.capabilities} capabilities`
     );
   }
   if (report.targets !== undefined) {
-    out += bullet(`Build targets: ${report.targets.targets.length}, scoped ${report.targets.scoped ? "yes" : "no"}\n`);
+    out += bullet(`Build targets: ${report.targets.targets.length}, scoped ${report.targets.scoped ? "yes" : "no"}`);
   }
   if (report.overlay !== undefined) {
     out += bullet(
       `Consumer overlay ${report.overlay.version}: ${report.overlay.consumption.length} entr(ies), ` +
-        `${report.overlay.unknown.length} unknown\n`
+        `${report.overlay.unknown.length} unknown`
     );
   }
   if (report.sdk !== undefined) {
-    out += bullet(`SDK: ${report.sdk.version} (${report.sdk.canonicalName})\n`);
+    out += bullet(`SDK: ${report.sdk.version} (${report.sdk.canonicalName})`);
   }
 
   return out;
@@ -181,22 +191,21 @@ function renderHumanSection(): string {
 /// repository to infer.
 function renderBoundary(): string {
   let out = heading(2, "What this document does not say");
-  out += bullet("The audit is read-only. It changed nothing in the audited repository.\n");
-  out += bullet("The audit is local. No source, secret or proprietary data left the machine.\n");
+  out += bullet("The audit is read-only. It changed nothing in the audited repository.");
+  out += bullet("The audit is local. No source, secret or proprietary data left the machine.");
   out +=
     bullet(
-      "A capability the audit could not decide is reported as `unknown`, which means\n" +
-        "  undecided. It is not a negative result and not a pass.\n"
+      "A capability the audit could not decide is reported as `unknown`, which means " +
+        "undecided. It is not a negative result and not a pass."
     );
   out +=
     bullet(
-      "Nothing here was observed on a device. Behaviour on Siri, Spotlight and\n" +
-        "  Shortcuts is not established by this report, and a human check is still\n" +
-        "  outstanding.\n"
+      "Nothing here was observed on a device. Behaviour on Siri, Spotlight and " +
+        "Shortcuts is not established by this report, and a human check is still outstanding."
     );
   out += bullet(
-    "Siri and Apple Intelligence discovery are reported only where the report carries\n" +
-      "  schema evidence. Shortcuts support is not Siri support.\n"
+    "Siri and Apple Intelligence discovery are reported only where the report carries " +
+      "schema evidence. Shortcuts support is not Siri support."
   );
   return out;
 }
@@ -218,5 +227,6 @@ export function renderDeliverable(reports: readonly ScoredAuditReport[]): string
   out += renderHumanSection();
   out += "\n";
   out += renderBoundary();
-  return out;
+  // No trailing blank: the document ends on the last line it says.
+  return `${out.replace(/\n+$/, "\n")}`;
 }

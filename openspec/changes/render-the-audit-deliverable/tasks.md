@@ -59,19 +59,19 @@
 
 ## 3. Run réel
 
-- [ ] 3.1 Rendre le rapport FSNotes réel et le lire comme le ferait un client:
+- [x] 3.1 Rendre le rapport FSNotes réel et le lire comme le ferait un client:
       51 findings, le score que le rapport porte, dix groupes, et rien
       d'inventé. Vérifié par le fichier livré, lu.
-- [ ] 3.2 `pnpm test`, `pnpm build` et `pnpm validate` verts, et
+- [x] 3.2 `pnpm test`, `pnpm build` et `pnpm validate` verts, et
       `openspec validate --changes --strict` propre. Vérifié par les sorties
       des commandes.
-- [ ] 3.3 Le README documente la commande dans sa section CLI, et
+- [x] 3.3 Le README documente la commande dans sa section CLI, et
       `docs/spec/AUDITOR-SPEC.md` reste inchangé, puisque le contrat de la
       commande `audit` n'a pas bougé. Vérifié par une recherche dans
       AUDITOR-SPEC qui ne trouve aucun format ajouté, et par le README qui
       liste la commande.
-- [ ] 3.4 L'écran Deliverable est dessiné à partir du rapport FSNotes réel, à
+- [x] 3.4 L'écran Deliverable est dessiné à partir du rapport FSNotes réel, à
       chaque taille et dans les deux apparences, et n'est pas vide. Vérifié par
       le harnais de rendu, comme les autres écrans du shell.
-- [ ] 3.5 `swift test` dans `apps/studio` vert, avec le nombre de tests
+- [x] 3.5 `swift test` dans `apps/studio` vert, avec le nombre de tests
       consigné. Vérifié par la sortie de la commande.

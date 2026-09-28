@@ -492,6 +492,52 @@ describe("the groups are the catalogue's, and there is one list of them", () => 
   });
 });
 
+describe("the document is read, not just produced", () => {
+  it("puts no blank line between two lines of the same list", () => {
+    // Reading the delivered file found this: a blank line after every bullet
+    // turned each indented evidence line into its own loose paragraph, so the
+    // finding and its evidence stopped looking like one thing. In Markdown a
+    // blank line is a paragraph break, so this is a rendering defect, not a
+    // whitespace preference.
+    const deliverable = renderDeliverable([reportFixture()]);
+    // Pairs of adjacent lines, dropping the final newline's empty entry, which is
+    // the end of the file and not a blank line inside it.
+    const pairs = deliverable
+      .split("\n")
+      .slice(0, -1)
+      .map((line, at, all) => [line, all[at + 1]] as const);
+    const blankAfterBullet = pairs
+      .filter(([line, next]) => line.startsWith("- ") && next === "")
+      .map(([line]) => line);
+
+    expect(
+      blankAfterBullet,
+      `these list lines are followed by a blank: ${blankAfterBullet.slice(0, 3).join(" / ")}`
+    ).toEqual([]);
+  });
+
+  it("keeps an evidence line attached to the finding above it", () => {
+    const deliverable = renderDeliverable([
+      report({ findings: [finding({ evidence: [{ kind: "swift", path: "Sources/App.swift", line: 9 }] })] })
+    ]);
+    const lines = deliverable.split("\n");
+    const at = lines.findIndex((line) => line.includes("**discovery.entity-query**"));
+
+    expect(at).toBeGreaterThan(0);
+    expect(lines[at + 1]).toBe("-   evidence: Sources/App.swift:9");
+  });
+
+  it("keeps the document short enough to be read", () => {
+    // 51 findings and their evidence, with a blank line between each line, was
+    // 314 lines where the same content is 175. A document twice its necessary
+    // length is one nobody finishes.
+    const deliverable = renderDeliverable([reportFixture()]);
+    const lines = deliverable.split("\n").length;
+
+    expect(lines).toBeLessThan(200);
+  });
+});
+
 describe("the document is a function of its input and nothing else", () => {
   it("renders the same report to the same text", () => {
     const first = renderDeliverable([reportFixture()]);

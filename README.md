@@ -133,6 +133,27 @@ The advanced groups stay advisory until a pilot asks for them. `discovery`, `cro
 
 Every report also carries a compatibility score. It is deterministic: each capability the target platform ships is worth up to three points, `detected` earns one, `implemented` two and `tested` three, and a capability the platform does not ship is left out of the denominator. The text output prints it on a `score <n>/100 (<band>, <discovery>) <points>/<maximum> points` line, and the JSON output adds a `score` object with the same numbers plus a count of every state. The band is `none` at zero, `early` up to 33, `partial` up to 66, `close` below 100 and `ready` at 100. `discovery` separates the two promises: `schema-backed` when a `semantics` capability is at least `implemented`, `shortcuts-only` when only the Shortcuts surface is, and `none` otherwise.
 
+`intentlane deliverable <report.json>`
+
+- `--out <file>`: write the document to a file instead of stdout.
+
+Renders the client document from a report the audit already wrote. It is a
+separate command rather than a fourth `--format` value, so the report contract
+stays the report: a deliverable can be re-rendered from a report a client
+already has, without re-auditing anything.
+
+Every figure in the document is read from the report rather than computed from
+it, score included, so the document can never disagree with the report it
+describes. The document is in English, which is a known limit rather than a
+design choice, and it carries a section for a person to record what they
+observed on a device, written empty because the audit observes nothing: it
+reads a repository and never runs the application.
+
+The command refuses a report it cannot use, exits non-zero, names the file and
+writes nothing at all: a report that is not JSON, a file that is not there, a
+document that parses without being a report, and a report with no `score` block,
+since rendering that one would mean inventing the figures.
+
 ## Siri AI content integration
 
 For a new macOS 27 content integration, the primary target is the System App
