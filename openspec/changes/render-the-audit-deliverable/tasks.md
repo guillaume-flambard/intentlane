@@ -2,34 +2,34 @@
 
 ## 1. Rouge: le rendu a son contrat avant d'exister
 
-- [ ] 1.1 Un rapport portant un seul finding rend un livrable qui nomme la
+- [x] 1.1 Un rapport portant un seul finding rend un livrable qui nomme la
       capability, l'état et le chemin de preuve, et le rendu est une fonction
       pure du rapport déjà analysé. Vérifié par un test qui échoue parce que le
       module n'existe pas encore.
-- [ ] 1.2 Le même rapport rendu deux fois donne deux rendus identiques octet
+- [x] 1.2 Le même rapport rendu deux fois donne deux rendus identiques octet
       pour octet. Vérifié par un test.
-- [ ] 1.3 Chaque nombre du livrable est celui du rapport: score, points,
+- [x] 1.3 Chaque nombre du livrable est celui du rapport: score, points,
       maximum, band, et le compte de findings par état. Vérifié par un test qui
       compare aux valeurs du rapport, y compris sur un rapport dont le score est
       inhabituel, pour que la comparaison ne passe pas par hasard.
-- [ ] 1.4 Un rapport portant tous les blocs optionnels (route, data,
+- [x] 1.4 Un rapport portant tous les blocs optionnels (route, data,
       architecture, conditions, quality, catalogue, targets, overlay) rend
       chacun d'eux, pour qu'un bloc ajouté au rapport ne puisse pas disparaître
       du document. Vérifié par un test.
-- [ ] 1.5 Deux plateformes auditées donnent deux sections distinctes, et aucune
+- [x] 1.5 Deux plateformes auditées donnent deux sections distinctes, et aucune
       affirmation sur une plateforme qui n'a pas été auditée. Vérifié par un
       test.
-- [ ] 1.6 Un finding Shortcuts seul est rendu comme un support Shortcuts, sans
+- [x] 1.6 Un finding Shortcuts seul est rendu comme un support Shortcuts, sans
       formulation Siri ni Apple Intelligence. Vérifié par un test.
-- [ ] 1.7 Un finding `unknown` est rendu comme indécis, jamais comme non supporté
+- [x] 1.7 Un finding `unknown` est rendu comme indécis, jamais comme non supporté
       ni comme implémenté, et une capability absente du rapport n'est pas
       nommée du tout. Vérifié par un test.
-- [ ] 1.8 La section humaine est présente et vide, et le livrable énonce ses
+- [x] 1.8 La section humaine est présente et vide, et le livrable énonce ses
       limites: audit en lecture seule et local, absence rapportée comme
       `unknown` et non `missing`, comportement Siri non observé par l'audit.
       Vérifié par un test qui affirme que la section existe et ne contient aucun
       finding.
-- [ ] 1.9 Un fichier qui n'est pas du JSON valide sort en non-zéro, nomme le
+- [x] 1.9 Un fichier qui n'est pas du JSON valide sort en non-zéro, nomme le
       fichier, et n'écrit aucun livrable. Vérifié par un test de la commande.
 - [ ] 1.10 La fenêtre affiche le texte que le moteur a rendu, caractère pour
       caractère, et ne le recompose pas. Vérifié par un test qui compare le

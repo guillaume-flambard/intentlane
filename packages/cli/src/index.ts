@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
+import { registerDeliverableCommand } from "./audit-deliverable-cli.js";
 import { parse } from "yaml";
 import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
@@ -853,6 +854,10 @@ pilot.command("run")
 
     process.stdout.write("the first step this run owes has no implementation yet, so nothing was claimed\n");
   });
+
+// Registered last so the command list reads in the order a person meets it: the
+// engine's own commands first, then the document they produce.
+registerDeliverableCommand(program);
 
 program.parseAsync().catch((reason: unknown) => {
   process.stderr.write(`${reason instanceof Error ? reason.message : String(reason)}\n`);
