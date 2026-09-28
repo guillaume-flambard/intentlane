@@ -1,8 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { Command } from "commander";
-import { renderDeliverable } from "../../core/src/audit-deliverable.js";
-import type { AuditReport } from "../../core/src/audit.js";
+import { renderDeliverable, type ScoredAuditReport } from "../../core/src/audit-deliverable.js";
 
 /// The command that turns a report into the document a client reads.
 ///
@@ -17,17 +16,43 @@ import type { AuditReport } from "../../core/src/audit.js";
 /// nothing at all. A half-written deliverable is the failure a client cannot
 /// detect, so the command refuses rather than degrading.
 
-/// Whether a parsed document is a report.
+/// Whether a parsed document is a scored audit report.
 ///
-/// `findings` is what makes it one: a report that carries no findings is a
+/// `findings` is what makes it a report: a report that carries no findings is a
 /// document claiming an audit found nothing, which is a different statement from a
-/// document that does not know. Anything without that array is not a report and
-/// is refused, because rendering it would produce a confident document about a
-/// file that was never audited.
-export function isAuditReport(value: unknown): value is AuditReport {
+/// document that does not know.
+///
+/// `score` is required because the document copies it rather than computing it. A
+/// report without a score block was not written by the current engine, and
+/// rendering it would either crash or, worse, quietly substitute a score the audit
+/// never stated. Refusing names the missing block, which is what a person holding
+/// that file needs to be told.
+export function isAuditReport(value: unknown): value is ScoredAuditReport {
   if (typeof value !== "object" || value === null) return false;
-  const candidate = value as { findings?: unknown; target?: unknown };
-  return Array.isArray(candidate.findings) && typeof candidate.target === "object" && candidate.target !== null;
+  const candidate = value as { findings?: unknown; target?: unknown; score?: unknown };
+  return (
+    Array.isArray(candidate.findings) &&
+    typeof candidate.target === "object" &&
+    candidate.target !== null &&
+    typeof candidate.score === "object" &&
+    candidate.score !== null
+  );
+}
+
+/// Why a document is not a report a deliverable can be rendered from.
+///
+/// Separate from the exit so the message names the actual problem: a reader who
+/// handed the command the wrong file, or a report from an older tool, needs to know
+/// which of the two it is.
+export function describeUnrenderable(value: unknown): string {
+  if (typeof value !== "object" || value === null) return "not an object";
+  const candidate = value as { findings?: unknown; target?: unknown; score?: unknown };
+  if (!Array.isArray(candidate.findings)) return "no findings";
+  if (typeof candidate.target !== "object" || candidate.target === null) return "no target";
+  if (typeof candidate.score !== "object" || candidate.score === null) {
+    return "no score block, so every figure in the document would have to be invented";
+  }
+  return "not an audit report";
 }
 
 export function registerDeliverableCommand(program: Command): void {
@@ -63,7 +88,7 @@ export function registerDeliverableCommand(program: Command): void {
 
       if (!isAuditReport(parsed)) {
         process.stderr.write(
-          `${report} parses, but it is not an audit report: no findings and no target.\n`
+          `${report} parses, but it cannot be rendered: ${describeUnrenderable(parsed)}.\n`
         );
         process.exitCode = 1;
         return;

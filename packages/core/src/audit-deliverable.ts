@@ -1,14 +1,17 @@
 import { AUDIT_STATES, type AuditFinding, type AuditPlatform, type AuditReport, type AuditState } from "./audit.js";
-import { scoreAuditReport } from "./audit-score.js";
+import { CAPABILITY_GROUPS, type CapabilityGroup } from "./audit-catalogue.js";
+
+export type { CapabilityGroup };
+import type { AuditScore } from "./audit-score.js";
 
 /// The deliverable a client reads, rendered from a report the engine already wrote.
 ///
 /// Three rules hold the document to the report it came from.
 ///
-/// **Every number is copied.** The score, its points, its maximum and the count of
-/// findings per state are the report's own figures, read back from the report
-/// rather than recomputed here. A renderer that re-derived them would be a second
-/// audit, and a second audit is a second opinion about someone else's code.
+/// **Every number is copied.** The score, its points, its maximum, its discovery
+/// mode and the count of findings per state are read from the report. A renderer
+/// that re-derived them would be a second audit, and a second audit is a second
+/// opinion about someone else's code.
 ///
 /// **An absence stays an absence.** A capability the report does not name is not
 /// mentioned, because the audit did not classify it and the document does not
@@ -23,18 +26,27 @@ import { scoreAuditReport } from "./audit-score.js";
 ///
 /// The function is pure: reports in, text out, no filesystem, no subprocess, no
 /// model. Rendering the same report twice produces the same document.
-const CAPABILITY_GROUPS = [
-  "foundation",
-  "semantics",
-  "entity",
-  "parameters",
-  "models",
-  "discovery",
-  "cross-app",
-  "relevance",
-  "execution",
-  "proof"
-] as const;
+export type ScoredAuditReport = AuditReport &
+  Readonly<{ score: AuditScore }>;
+
+/// Where a capability is filed, derived once for the whole repository.
+///
+/// The ten groups are the catalogue's, imported rather than repeated, and the
+/// `other` bucket is part of the answer rather than a fallback: a finding the
+/// catalogue does not name is still a finding, and it is filed where a reader
+/// goes looking for what did not fit. `capability-map.ts` derives the same
+/// answer from the same list, so the window and the document present one report
+/// one way.
+export function derivedCapabilityGroup(capability: string): CapabilityGroup | "other" {
+  const dot = capability.indexOf(".");
+  const head = dot > 0 ? capability.slice(0, dot) : capability;
+  return (CAPABILITY_GROUPS as readonly string[]).includes(head) ? (head as CapabilityGroup) : "other";
+}
+
+/// The ten groups plus `other`, in the order the document prints them. A group
+/// with no finding is not printed: the document describes this project, not the
+/// catalogue.
+export const DELIVERABLE_GROUPS: readonly (CapabilityGroup | "other")[] = [...CAPABILITY_GROUPS, "other"];
 
 /// The document's language. The report's own words are copied whatever this is, so
 /// nothing the engine said is translated here.
@@ -52,12 +64,18 @@ function evidenceLocation(evidence: { path: string; line?: number }): string {
   return evidence.line === undefined ? evidence.path : `${evidence.path}:${evidence.line}`;
 }
 
-/// The finding's own group, as the first dot-separated fragment of its capability
-/// id, or `other` when the catalogue does not name it. Mirrors `capabilityTree()`
-/// so the document and the window present the same report the same way.
-function groupOf(capability: string): string {
-  const fragment = capability.split(".")[0] ?? capability;
-  return (CAPABILITY_GROUPS as readonly string[]).includes(fragment) ? fragment : "other";
+/// One finding, in the shape the document prints it. Shared by every group so a
+/// finding in a named group and a finding in `other` cannot drift apart.
+function renderFinding(finding: AuditFinding): string {
+  let out = bullet(`**${finding.capability}**: ${finding.state}, ${finding.confidence} confidence\n`);
+  for (const evidence of finding.evidence) {
+    out += bullet(`  evidence: ${evidenceLocation(evidence)}\n`);
+  }
+  for (const gap of finding.gaps) {
+    out += bullet(`  gap ${gap.code}: ${gap.message}\n`);
+  }
+  if (finding.nextAction.length > 0) out += bullet(`  next: ${finding.nextAction}\n`);
+  return out;
 }
 
 function platformHeading(platform: AuditPlatform): string {
@@ -66,14 +84,9 @@ function platformHeading(platform: AuditPlatform): string {
 
 /// One platform's section. Everything in it is derived from that platform's report,
 /// so a reader of a macOS section never sees an iOS finding and the reverse.
-function renderPlatform(report: AuditReport): string {
+function renderPlatform(report: ScoredAuditReport): string {
   const target = report.target;
-  const score = scoreAuditReport(report);
-  const byState = new Map<AuditState, number>(AUDIT_STATES.map((state) => [state, 0]));
-  for (const finding of report.findings) {
-    byState.set(finding.state, (byState.get(finding.state) ?? 0) + 1);
-  }
-
+  const score = report.score;
   let out = heading(2, `${target.name}, ${platformHeading(target.platform)}`);
   if (target.deploymentTarget !== undefined) out += bullet(`Deployment floor: ${target.deploymentTarget}\n`);
 
@@ -85,48 +98,25 @@ function renderPlatform(report: AuditReport): string {
   );
   out += bullet("State of each capability the audit classified:\n");
   for (const state of AUDIT_STATES) {
-    out += bullet(`  ${state}: ${byState.get(state) ?? 0}\n`);
+    out += bullet(`  ${state}: ${score.counts[state as AuditState] ?? 0}\n`);
   }
 
   // A `Map` of mutable arrays, because the report's findings are readonly and the
   // renderer groups them without ever modifying one.
   const groups = new Map<string, AuditFinding[]>();
   for (const finding of report.findings) {
-    const group = groupOf(finding.capability);
+    const group = derivedCapabilityGroup(finding.capability);
     const bucket = groups.get(group);
     if (bucket === undefined) groups.set(group, [finding]);
     else bucket.push(finding);
   }
 
   out += heading(3, "Capability by capability");
-  for (const group of CAPABILITY_GROUPS) {
+  for (const group of DELIVERABLE_GROUPS) {
     const bucket = groups.get(group);
     if (bucket === undefined || bucket.length === 0) continue;
     out += heading(4, group);
-    for (const finding of bucket) {
-      out += bullet(`**${finding.capability}**: ${finding.state}, ${finding.confidence} confidence\n`);
-      if (finding.evidence.length > 0) {
-        for (const evidence of finding.evidence) {
-          out += bullet(`  evidence: ${evidenceLocation(evidence)}\n`);
-        }
-      }
-      for (const gap of finding.gaps) {
-        out += bullet(`  gap ${gap.code}: ${gap.message}\n`);
-      }
-      if (finding.nextAction.length > 0) out += bullet(`  next: ${finding.nextAction}\n`);
-    }
-  }
-  // A finding whose group the catalogue does not name is still a finding, and the
-  // reader goes looking for it where it is filed.
-  const others = groups.get("other");
-  if (others !== undefined && others.length > 0) {
-    out += heading(4, "other");
-    for (const finding of others) {
-      out += bullet(`**${finding.capability}**: ${finding.state}, ${finding.confidence} confidence\n`);
-      for (const evidence of finding.evidence) {
-        out += bullet(`  evidence: ${evidenceLocation(evidence)}\n`);
-      }
-    }
+    for (const finding of bucket) out += renderFinding(finding);
   }
 
   out += heading(3, "What the audit recorded about the application");
@@ -214,7 +204,7 @@ function renderBoundary(): string {
 /// Renders one document from the reports the engine produced, in the order a
 /// client reads it: what the application can do, what the audit recorded, what a
 /// person has yet to observe, and what the document does not claim.
-export function renderDeliverable(reports: readonly AuditReport[]): string {
+export function renderDeliverable(reports: readonly ScoredAuditReport[]): string {
   const documentTitle = reports.length === 1 ? reports[0]!.target.name : "IntentLane audit";
   let out = `# ${documentTitle}, Apple capability audit\n\n`;
   out += `Locale: ${DELIVERABLE_LOCALE}\n\n`;

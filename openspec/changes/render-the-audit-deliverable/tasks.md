@@ -41,18 +41,18 @@
 
 ## 2. Vert
 
-- [ ] 2.1 Déplacer la dérivation des groupes dans core et faire importer
+- [x] 2.1 Déplacer la dérivation des groupes dans core et faire importer
       `capability-map.ts` de studio-protocol, pour qu'une seule liste des dix
       groupes existe dans le dépôt. Vérifié par le test de M2 qui passe sans
       modification, et par une recherche qui ne trouve qu'une liste.
-- [ ] 2.2 Implémenter le rendu dans core, en fonction pure de rapports déjà
+- [x] 2.2 Implémenter le rendu dans core, en fonction pure de rapports déjà
       analysés, sans lecture de fichier. Vérifié par tous les tests du groupe 1,
       qui deviennent verts.
-- [ ] 2.3 Câbler `intentlane deliverable <rapport.json> [--out <fichier>]`,
+- [x] 2.3 Câbler `intentlane deliverable <rapport.json> [--out <fichier>]`,
       qui lit le rapport, rend le livrable, écrit le fichier si `--out` est
       donné, et écrit sur stdout sinon. Vérifié par le test de 1.9 et par une
       exécution sur le rapport réel.
-- [ ] 2.4 Ajouter l'étape Deliverable au shell: le lecteur qui demande le
+- [x] 2.4 Ajouter l'étape Deliverable au shell: le lecteur qui demande le
       livrable au moteur, l'état qui le tient comme texte, et l'écran qui
       l'affiche avec un contrôle d'enregistrement. Le texte n'est jamais formaté
       par la fenêtre. Vérifié par les tests de 1.10, 1.11 et 1.12.

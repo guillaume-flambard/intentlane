@@ -42,6 +42,28 @@ function withWorkspace(body: (workspace: string) => void): void {
   }
 }
 
+/// A report as the engine writes it: findings plus the score block `formatJson`
+/// injects, because the score is derived rather than collected. The command
+/// refuses a report without it, so a fixture that left it out would be refused for
+/// the wrong reason.
+function scoredReport(overrides: { name: string; findings?: unknown[] }): object {
+  return {
+    reportVersion: "1.0",
+    target: { name: overrides.name, platform: "macos" },
+    score: {
+      version: "1.0",
+      score: 0,
+      band: "none",
+      points: 0,
+      maximum: 150,
+      applicable: 50,
+      counts: { unsupported: 0, unknown: 0, detected: 0, implemented: 0, tested: 0, feasible: 0 },
+      discovery: "schema-backed"
+    },
+    findings: overrides.findings ?? []
+  };
+}
+
 describe("the command renders a deliverable from a report", () => {
   it("writes the document to the file it was asked for", () => {
     withWorkspace((workspace) => {
@@ -49,11 +71,7 @@ describe("the command renders a deliverable from a report", () => {
       const deliverable = join(workspace, "DELIVERABLE.md");
       writeFileSync(
         report,
-        JSON.stringify({
-          reportVersion: "1.0",
-          target: { name: "MyApp", platform: "macos" },
-          findings: []
-        })
+        JSON.stringify(scoredReport({ name: "MyApp" }))
       );
 
       const result = runCli("deliverable", report, "--out", deliverable);
@@ -71,11 +89,7 @@ describe("the command renders a deliverable from a report", () => {
       const report = join(workspace, "audit.json");
       writeFileSync(
         report,
-        JSON.stringify({
-          reportVersion: "1.0",
-          target: { name: "StdoutApp", platform: "macos" },
-          findings: []
-        })
+        JSON.stringify(scoredReport({ name: "StdoutApp" }))
       );
 
       const result = runCli("deliverable", report);
@@ -121,6 +135,25 @@ describe("the command refuses a report it cannot read", () => {
       const result = runCli("deliverable", report, "--out", deliverable);
       expect(result.code).not.toBe(0);
       expect(existsSync(deliverable), "an unrecognisable report still produced a deliverable").toBe(false);
+    });
+  });
+
+  it("refuses a report with no score block, rather than inventing the figures", () => {
+    withWorkspace((workspace) => {
+      // A report without a score was not written by the current engine. Rendering
+      // it would mean computing a score the report never stated, which is the one
+      // thing the document promises not to do.
+      const report = join(workspace, "unscored.json");
+      const deliverable = join(workspace, "DELIVERABLE.md");
+      writeFileSync(
+        report,
+        JSON.stringify({ reportVersion: "1.0", target: { name: "Old", platform: "macos" }, findings: [] })
+      );
+
+      const result = runCli("deliverable", report, "--out", deliverable);
+      expect(result.code).not.toBe(0);
+      expect(result.stderr).toContain("score");
+      expect(existsSync(deliverable), "an unscored report still produced a deliverable").toBe(false);
     });
   });
 });

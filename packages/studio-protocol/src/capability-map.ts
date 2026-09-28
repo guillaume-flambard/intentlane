@@ -7,24 +7,22 @@ import type {
   AuditReport,
   AuditState
 } from "../../core/src/audit.js";
+import { derivedCapabilityGroup, type CapabilityGroup as CatalogueCapabilityGroup } from "../../core/src/audit-deliverable.js";
+import { CAPABILITY_GROUPS } from "../../core/src/audit-catalogue.js";
 
-// The ten groups the catalogue publishes. The list is copied from the catalogue
-// rather than redeclared, because inventing a group in the map would let a
-// renderer rename a capability the engine has already classified.
-const CATALOGUE_GROUPS = [
-  "foundation",
-  "semantics",
-  "entity",
-  "parameters",
-  "models",
-  "discovery",
-  "cross-app",
-  "relevance",
-  "execution",
-  "proof"
-] as const;
+/// The ten groups the catalogue publishes, and the `other` bucket a finding the
+/// catalogue does not name is filed under.
+///
+/// They are the catalogue's own, imported from core, because this map and the
+/// client deliverable present the same report to the same reader. Two copies of
+/// these ten names is two places for a group to be renamed in one of them, and the
+/// window would then disagree with the document it is sitting next to.
+const CATALOGUE_GROUPS = CAPABILITY_GROUPS;
 
-export type CapabilityGroup = (typeof CATALOGUE_GROUPS)[number] | "other";
+/// The ten catalogue groups, plus the `other` bucket the derivation can return.
+/// The map needs `other` as a first-class group because it renders one, and the
+/// document files a finding there too.
+export type CapabilityGroup = CatalogueCapabilityGroup | "other";
 
 type NodeState = AuditState;
 
@@ -79,18 +77,15 @@ export type CapabilityTree = Readonly<{
   groups: readonly CapabilityGroupBucket[];
 }>;
 
-function firstFragment(capability: string): string {
-  const dot = capability.indexOf(".");
-  return dot > 0 ? capability.slice(0, dot) : capability;
-}
-
+/// One derivation of the groups, for the whole repository.
+///
+/// An unlisted group is not silently folded into a known one, and it is not
+/// dropped either: `other` files the finding where a reader goes to look for what
+/// did not fit, and the node inside it is unchanged. The deliverable derives it the
+/// same way, from the same function, so the window and the document cannot present
+/// the same report differently.
 function groupOf(capability: string): CapabilityGroup {
-  const head = firstFragment(capability);
-  const known = (CATALOGUE_GROUPS as readonly string[]).includes(head);
-  // Deliberate: an unlisted group is not silently folded into a known one, and it
-  // is not dropped either. `other` renders the finding where a reader goes to look
-  // for what did not fit, and the node inside it is unchanged.
-  return (known ? head : "other") as CapabilityGroup;
+  return derivedCapabilityGroup(capability);
 }
 
 function nodeOf(finding: AuditFinding): CapabilityNode {
