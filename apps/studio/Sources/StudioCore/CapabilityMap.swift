@@ -41,8 +41,15 @@ public struct CapabilityNode: Sendable, Equatable, Identifiable {
     }
 
     /// The bullet a person cannot read without the engine's own explanation.
+    ///
+    /// The two settled states are named rather than enumerated against a
+    /// complement, because the spec says this map declares the report's six
+    /// states and no other. A `verified` state does not exist in the report,
+    /// and an earlier version of this property named one: dead logic that
+    /// contradicted the requirement it was written under. `CapabilityStatesTests`
+    /// fails if any state literal returns that the report does not produce.
     public var needsAttention: Bool {
-        state != "implemented" && state != "tested" && state != "verified"
+        state != "implemented" && state != "tested"
     }
 }
 
