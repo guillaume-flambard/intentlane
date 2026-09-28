@@ -28,8 +28,17 @@ const SWIFT_TYPES: Readonly<Record<string, string>> = {
   boolean: "Bool",
   date: "DateComponents",
   datetime: "Date",
-  searchCriteria: "StringSearchCriteria"
+  searchCriteria: "StringSearchCriteria",
+  attributedString: "AttributedString",
+  file: "[IntentFile]"
 };
+
+/**
+ * Concrete subtypes the Apple metadata processor accepts for a file parameter.
+ * `public.item` itself is refused, so a default is stated rather than left to the
+ * schema, which does not constrain the type.
+ */
+const DEFAULT_FILE_TYPES: readonly string[] = ["plainText", "image"];
 
 const AUTHENTICATION_POLICIES: Readonly<Record<string, string>> = {
   none: ".alwaysAllowed",
@@ -73,19 +82,54 @@ function targetEntity(ir: ConfigIR, intent: IntentIR): EntityIR {
   return entity;
 }
 
-function schemaParameterDeclarations(ir: ConfigIR, intent: IntentIR): readonly Readonly<{ name: string; swiftType: string }>[] {
+function schemaEntityTypeName(ir: ConfigIR, intent: IntentIR, reference: string | undefined): string {
+  if (reference === undefined) return `IntentLane${targetEntity(ir, intent).swiftName}Entity`;
+  const entity = ir.entities.find((candidate) => candidate.schema === reference);
+  if (!entity) {
+    throw new Error(`IL1401: Schema intent '${intent.id}' names entity schema '${reference}', which the contract does not declare.`);
+  }
+  return `IntentLane${entity.swiftName}Entity`;
+}
+
+function schemaResultEntity(ir: ConfigIR, intent: IntentIR): string | undefined {
+  const entry = intent.schema ? findAppSchema("intent", intent.schema) : undefined;
+  if (!entry?.result) return undefined;
+  return schemaEntityTypeName(ir, intent, entry.result.entity);
+}
+
+type SchemaSlot = Readonly<{ name: string; swiftType: string; optional: boolean; fileTypes?: readonly string[] }>;
+
+function schemaSlots(ir: ConfigIR, intent: IntentIR): readonly SchemaSlot[] {
   const entry = intent.schema ? findAppSchema("intent", intent.schema) : undefined;
   if (!entry || entry.parameters.length === 0) {
-    return intent.parameters.map((parameter) => ({ name: parameter.id, swiftType: swiftType(intent, parameter, ir.entities) }));
+    return intent.parameters.map((parameter) => ({
+      name: parameter.id,
+      swiftType: swiftType(intent, parameter, ir.entities),
+      optional: parameter.required !== true
+    }));
   }
   return entry.parameters.map((parameter) => {
-    const typeName = parameter.type === "entity" || parameter.type === "entityArray"
-      ? `IntentLane${targetEntity(ir, intent).swiftName}Entity`
-      : undefined;
-    if (parameter.type === "entity") return { name: parameter.name, swiftType: typeName! };
-    if (parameter.type === "entityArray") return { name: parameter.name, swiftType: `[${typeName!}]` };
-    return { name: parameter.name, swiftType: SWIFT_TYPES[parameter.type] ?? "String" };
+    const base =
+      parameter.type === "entity" || parameter.type === "entityArray"
+        ? schemaEntityTypeName(ir, intent, parameter.entity)
+        : SWIFT_TYPES[parameter.type] ?? "String";
+    const swiftType = parameter.type === "entityArray" ? `[${base}]` : base;
+    return {
+      name: parameter.name,
+      swiftType: parameter.optional === true ? `${swiftType}?` : swiftType,
+      optional: parameter.optional === true,
+      ...(parameter.type === "file" ? { fileTypes: parameter.fileTypes ?? DEFAULT_FILE_TYPES } : {})
+    };
   });
+}
+
+function schemaParameterDeclarations(ir: ConfigIR, intent: IntentIR): readonly SchemaSlot[] {
+  return schemaSlots(ir, intent);
+}
+
+function schemaSlotAnnotation(slot: SchemaSlot, title: string): string {
+  const contentTypes = slot.fileTypes === undefined ? "" : `, supportedContentTypes: [${slot.fileTypes.map((type) => `.${type}`).join(", ")}]`;
+  return `  @Parameter(title: ${localizedResource(title)}${contentTypes})\n  var ${slot.name}: ${slot.swiftType}`;
 }
 
 function enumTypeName(intent: IntentIR, parameter: ParameterIR): string {
@@ -110,7 +154,81 @@ function parameterDeclaration(intent: IntentIR, parameter: ParameterIR, entities
   return `  @Parameter(title: ${localizedResource(parameterTitle(parameter, locale))}${prompt})\n  var ${parameter.id}: ${swiftType(intent, parameter, entities)}`;
 }
 
-function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindexable: boolean, spotlightIndexName: string, availability: string): string {
+const SCHEMA_PROPERTY_TYPES: Readonly<Record<string, string>> = {
+  string: "String",
+  attributedString: "AttributedString",
+  boolean: "Bool",
+  date: "Date",
+  file: "[IntentFile]"
+};
+
+type EmittedProperty = Readonly<{ name: string; swiftType: string; optional: boolean }>;
+
+function schemaEntityForProperty(ir: ConfigIR, owner: string, reference: string | undefined): string {
+  if (reference === undefined) {
+    throw new Error(`IL1401: Schema entity '${owner}' has an entity property with no entity schema.`);
+  }
+  const entity = ir.entities.find((candidate) => candidate.schema === reference);
+  if (!entity) {
+    throw new Error(`IL1401: Schema entity '${owner}' names entity schema '${reference}', which the contract does not declare.`);
+  }
+  return `IntentLane${entity.swiftName}Entity`;
+}
+
+/**
+ * A schema-conformed entity takes its properties from the schema, not from the
+ * contract. The Apple metadata processor verifies the property list and its
+ * types, so the generator has to produce it rather than infer it from the display
+ * fields.
+ */
+function conformedProperties(ir: ConfigIR, entity: EntityIR): readonly EmittedProperty[] {
+  const entry = entity.schema === undefined ? undefined : findAppSchema("entity", entity.schema);
+  if (entry === undefined) {
+    throw new Error(`IL1401: Entity '${entity.id}' declares schema '${entity.schema ?? ""}', which the generator cannot satisfy.`);
+  }
+  const owner = entry.reference;
+  return [
+    { name: "id", swiftType: "String", optional: false },
+    ...entry.properties.map((property): EmittedProperty => {
+      const base =
+        property.type === "entity" || property.type === "entityArray"
+          ? schemaEntityForProperty(ir, owner, property.entity)
+          : SCHEMA_PROPERTY_TYPES[property.type] ?? "String";
+      const swiftType = property.type === "entityArray" ? `[${base}]` : base;
+      return {
+        name: property.name,
+        swiftType: property.optional === true ? `${swiftType}?` : swiftType,
+        optional: property.optional === true
+      };
+    })
+  ];
+}
+
+function basePropertyType(property: EmittedProperty): string {
+  return property.swiftType.endsWith("?") ? property.swiftType.slice(0, -1) : property.swiftType;
+}
+
+// `LocalizedStringResource(stringLiteral:)` takes a String. A bare `String(x)`
+// is ambiguous to the compiler for a non-String source, so each case names the
+// conversion it means. Both forms were checked against SDK 27A266a.
+function displayValueExpression(property: EmittedProperty, value: string): string {
+  const base = basePropertyType(property);
+  if (base === "AttributedString") return `String(${value}.characters)`;
+  if (base === "Date") return `String(describing: ${value})`;
+  return value;
+}
+
+function displayTitleExpression(property: EmittedProperty): string {
+  return displayValueExpression(property, property.name);
+}
+
+function displaySubtitleExpression(property: EmittedProperty): string {
+  if (!property.optional) return `LocalizedStringResource(stringLiteral: ${displayValueExpression(property, property.name)})`;
+  if (property.name === "id") return "";
+  return `${property.name}.map { LocalizedStringResource(stringLiteral: ${displayValueExpression(property, "$0")}) }`;
+}
+
+function emitEntity(ir: ConfigIR, entity: EntityIR, locale: string, targeted: boolean, reindexable: boolean, spotlightIndexName: string, availability: string): string {
   const typeName = `IntentLane${entity.swiftName}Entity`;
   const resolverName = `IntentLane${entity.swiftName}Resolver`;
   const queryName = `IntentLane${entity.swiftName}Query`;
@@ -127,8 +245,17 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
   const names = ["id", titleProperty, ...(subtitleProperty === undefined ? [] : [subtitleProperty])];
   const properties = [...new Set(names)].map((name) => ({ name, optional: name === subtitleProperty && name !== titleProperty && name !== "id" }));
   const conformed = entity.schema !== undefined;
-  const declarations = properties.map((property) => {
-    const type = `String${property.optional ? "?" : ""}`;
+  // A conformed entity declares the schema properties. A plain entity declares the
+  // display properties the contract named, as before.
+  const conformedPropertiesList = conformed ? conformedProperties(ir, entity) : [];
+  const titleEntry = conformedPropertiesList.find((property) => property.name === titleProperty);
+  const subtitleEntry = subtitleProperty === undefined ? undefined : conformedPropertiesList.find((property) => property.name === subtitleProperty);
+  if (conformed && (titleEntry === undefined || (subtitleProperty !== undefined && subtitleEntry === undefined))) {
+    throw new Error(`IL1401: Entity '${entity.id}' names a display property the schema '${entity.schema ?? ""}' does not declare.`);
+  }
+  const declarations = (conformed ? conformedPropertiesList : properties).map((property) => {
+    const optional = "optional" in property ? property.optional : false;
+    const type = "swiftType" in property ? property.swiftType : `String${optional ? "?" : ""}`;
     if (targeted && !conformed && property.name === titleProperty && property.name !== "id") {
       return `  @Property(title: ${localizedResource("Title")}, indexingKey: \\.title)\n  var ${property.name}: ${type}`;
     }
@@ -151,16 +278,25 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
   const typeDisplay = conformed
     ? ""
     : `  static var typeDisplayRepresentation: TypeDisplayRepresentation {\n    TypeDisplayRepresentation(name: ${localizedResource(localized(entity.title, locale))})\n  }\n\n`;
+  const titleExpression = conformed && titleEntry ? `LocalizedStringResource(stringLiteral: ${displayTitleExpression(titleEntry)})` : `LocalizedStringResource(stringLiteral: ${titleProperty})`;
   const subtitleExpression =
     subtitleProperty === undefined
       ? ""
-      : `,\n      subtitle: ${subtitleProperty === titleProperty || subtitleProperty === "id" ? `LocalizedStringResource(stringLiteral: ${subtitleProperty})` : `${subtitleProperty}.map { LocalizedStringResource(stringLiteral: $0) }`}`;
+      : conformed && subtitleEntry
+        ? `,\n      subtitle: ${subtitleProperty === titleProperty ? `LocalizedStringResource(stringLiteral: ${displayTitleExpression(subtitleEntry)})` : displaySubtitleExpression(subtitleEntry)}`
+        : `,\n      subtitle: ${subtitleProperty === titleProperty || subtitleProperty === "id" ? `LocalizedStringResource(stringLiteral: ${subtitleProperty})` : `${subtitleProperty}.map { LocalizedStringResource(stringLiteral: $0) }`}`;
   const initializerProperties = targeted && !conformed
     ? [...properties.filter((property) => property.name !== titleProperty), ...properties.filter((property) => property.name === titleProperty)]
     : properties;
-  const initializer = conformed || (targeted && !conformed)
-    ? `\n  init(${properties.map((property) => `${property.name}: String${property.optional ? "?" : ""}`).join(", ")}) {\n${initializerProperties.map((property) => `    self.${property.name} = ${property.name}`).join("\n")}\n  }`
-    : "";
+  // Every schema-conformed entity needs a hand-written initializer: the macro
+  // wraps each property in EntityProperty, which has no init(wrappedValue:), so
+  // the synthesized memberwise initializer cannot be called.
+  const conformedInitList = conformedPropertiesList;
+  const initializer = conformed
+    ? `\n  init(${conformedInitList.map((property) => `${property.name}: ${property.swiftType}${property.optional ? " = nil" : ""}`).join(", ")}) {\n${conformedInitList.map((property) => `    self.${property.name} = ${property.name}`).join("\n")}\n  }`
+    : targeted && !conformed
+      ? `\n  init(${properties.map((property) => `${property.name}: String${property.optional ? "?" : ""}`).join(", ")}) {\n${initializerProperties.map((property) => `    self.${property.name} = ${property.name}`).join("\n")}\n  }`
+      : "";
   const queryConformance = targeted
     ? reindexable ? "EntityQuery, EntityStringQuery, IndexedEntityQuery" : "EntityQuery, EntityStringQuery"
     : "EntityQuery";
@@ -173,17 +309,35 @@ function emitEntity(entity: EntityIR, locale: string, targeted: boolean, reindex
   const stringResolverRequirement = targeted
     ? `\n  func ${camelName}Entities(matching string: String) async throws -> [${typeName}]`
     : "";
-  return `${availability}${annotation}struct ${typeName}: ${conformance} {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}${searchableTitle}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: LocalizedStringResource(stringLiteral: ${titleProperty})${subtitleExpression}\n    )\n  }\n}\n\n${availability}protocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]${stringResolverRequirement}\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\n${availability}struct ${queryName}: ${queryConformance} {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }${stringResolution}\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }${reindexing}\n}`;
+  return `${availability}${annotation}struct ${typeName}: ${conformance} {\n${typeDisplay}  static let defaultQuery = ${queryName}()\n\n${declarations}${initializer}${searchableTitle}\n\n  var displayRepresentation: DisplayRepresentation {\n    DisplayRepresentation(\n      title: ${titleExpression}${subtitleExpression}\n    )\n  }\n}\n\n${availability}protocol ${resolverName}: Sendable {\n  func ${camelName}Entities(for identifiers: [String]) async throws -> [${typeName}]${stringResolverRequirement}\n  func suggested${entity.swiftName}Entities() async throws -> [${typeName}]\n}\n\n${availability}struct ${queryName}: ${queryConformance} {\n  func entities(for identifiers: [String]) async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.${camelName}Entities(for: identifiers)\n  }${stringResolution}\n\n  func suggestedEntities() async throws -> [${typeName}] {\n    guard let resolver = await IntentLaneEntityResolvers.${entity.id} else { return [] }\n    return try await resolver.suggested${entity.swiftName}Entities()\n  }${reindexing}\n}`;
+}
+
+/**
+ * An entity is targeted when a protocol-backed intent names it, or when a schema
+ * names its entity in one of the schema's own slots. The second case matters
+ * because Apple requires such an entity to be resolvable by the system.
+ */
+function targetedEntityIds(ir: ConfigIR): ReadonlySet<string> {
+  const schemaSlotEntities = new Set(
+    ir.intents.flatMap((intent) => {
+      const entry = intent.schema === undefined ? undefined : findAppSchema("intent", intent.schema);
+      return (entry?.parameters ?? []).map((parameter) => parameter.entity).filter((value): value is string => value !== undefined);
+    })
+  );
+  return new Set([
+    ...ir.intents.filter((intent) => protocolOf(intent) !== undefined).map((intent) => intent.target ?? ""),
+    ...ir.entities.filter((entity) => entity.schema !== undefined && schemaSlotEntities.has(entity.schema)).map((entity) => entity.id)
+  ]);
 }
 
 function entityDeclarations(ir: ConfigIR, locale: string): string {
   if (ir.entities.length === 0) return "";
-  const targeted = new Set(ir.intents.filter((intent) => protocolOf(intent) !== undefined).map((intent) => intent.target ?? ""));
+  const targeted = targetedEntityIds(ir);
   const reindexable = new Set(ir.intents.filter((intent) => intent.schema === "system.open").map((intent) => intent.target ?? ""));
   const entities = [...ir.entities].sort((left, right) => left.id.localeCompare(right.id));
   const registry = entities.map((entity) => `  static var ${entity.id}: (any IntentLane${entity.swiftName}Resolver)?`).join("\n");
   const availability = macOS27Availability(ir);
-  return `${entities.map((entity) => emitEntity(entity, locale, targeted.has(entity.id), reindexable.has(entity.id), `${ir.app.id}.${entity.id}`, availability)).join("\n\n")}\n\n${availability}@MainActor\nenum IntentLaneEntityResolvers {\n${registry}\n}\n\n`;
+  return `${entities.map((entity) => emitEntity(ir, entity, locale, targeted.has(entity.id), reindexable.has(entity.id), `${ir.app.id}.${entity.id}`, availability)).join("\n\n")}\n\n${availability}@MainActor\nenum IntentLaneEntityResolvers {\n${registry}\n}\n\n`;
 }
 
 function emitEnum(intent: IntentIR, parameter: ParameterIR, locale: string): string {
@@ -251,7 +405,7 @@ function nativeHandlerDeclarations(ir: ConfigIR): string {
   const availability = macOS27Availability(ir);
   const protocols = natives.map((intent) => {
     const parameters = schemaParameterDeclarations(ir, intent).map((parameter) => `${parameter.name}: ${parameter.swiftType}`).join(", ");
-    const returns = nativeReturnType(ir, intent);
+    const returns = nativeReturnType(ir, intent) ?? (schemaDeclaresParameters(intent) ? schemaResultEntity(ir, intent) : undefined);
     const handler = protocolOf(intent) === "open" ? openHandlerName(intent) : nativeHandlerName(intent);
     return `${availability}protocol ${handler}: Sendable {\n  func perform(${parameters}) async throws${returns ? ` -> ${returns}` : ""}\n}`;
   });
@@ -297,10 +451,15 @@ function emitSchemaIntent(ir: ConfigIR, intent: IntentIR, locale: string): strin
   const annotation = `${macOS27Availability(ir)}${intent.schema ? `@AppIntent(schema: .${intent.schema})\n` : ""}`;
   const parameters = schemaParameterDeclarations(ir, intent);
   const criteriaTypealias = intent.schema === "system.searchInApp" ? "\n  typealias Criteria = StringSearchCriteria" : "";
-  const declarations = parameters.map((parameter) => `  @Parameter(title: ${localizedResource(parameter.name)})\n  var ${parameter.name}: ${parameter.swiftType}`).join("\n\n");
+  const declarations = parameters.map((parameter) => schemaSlotAnnotation(parameter, parameter.name)).join("\n\n");
   const argumentsList = parameters.map((parameter) => `${parameter.name}: ${parameter.name}`).join(", ");
   const dialog = intent.dialog ? localized(intent.dialog, locale) : title;
-  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}${criteriaTypealias}\n\n${declarations}\n\n  func perform() async throws -> some IntentResult & ProvidesDialog {\n    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n    try await handler.perform(${argumentsList})\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))\n  }\n}`;
+  const returns = schemaResultEntity(ir, intent);
+  const signature = `some IntentResult & ProvidesDialog${returns ? ` & ReturnsValue<${returns}>` : ""}`;
+  const call = returns
+    ? `    let value = try await handler.perform(${argumentsList})\n    return .result(value: value, dialog: IntentDialog(${localizedResource(dialog)}))`
+    : `    try await handler.perform(${argumentsList})\n    return .result(dialog: IntentDialog(${localizedResource(dialog)}))`;
+  return `${annotation}struct ${intent.swiftName}: AppIntent {\n  static let title: LocalizedStringResource = ${localizedResource(title)}${description}${authentication}${criteriaTypealias}\n\n${declarations}\n\n  func perform() async throws -> ${signature} {\n    guard let handler = await IntentLaneIntentHandlers.${intent.id} else {\n      throw IntentLaneHandlerError.missingHandler(${swiftString(intent.id)})\n    }\n${call}\n  }\n}`;
 }
 
 function schemaDeclaresParameters(intent: IntentIR): boolean {
@@ -340,7 +499,12 @@ export function generateSwift(ir: ConfigIR): string {
   const handlers = nativeHandlerDeclarations(ir);
   const intents = ir.intents.map((intent) => emitIntent(ir, intent, locale, ir.app.urlScheme)).join("\n\n");
   const shortcuts = emitShortcuts(ir, locale);
-  const spotlight = ir.intents.some((intent) => protocolOf(intent) !== undefined) ? "import CoreSpotlight\n" : "";
+  // CoreSpotlight is needed by every targeted entity, and an entity a schema
+  // names in one of its slots is targeted.
+  const spotlightNeedsSpotlight =
+    ir.intents.some((intent) => protocolOf(intent) !== undefined) ||
+    ir.entities.some((entity) => targetedEntityIds(ir).has(entity.id));
+  const spotlight = spotlightNeedsSpotlight ? "import CoreSpotlight\n" : "";
   const shortcutsSection = shortcuts ? `\n\n${shortcuts}` : "";
   return `// Generated by IntentLane. Do not edit.\n// Source schema: ${ir.schemaVersion}\n\nimport AppIntents\nimport Foundation\n${spotlight}import SwiftUI\n\nenum IntentLaneRoute {\n  static func make(scheme: String, path: String, query: [String: String]) -> URL {\n    var components = URLComponents()\n    components.scheme = scheme\n    components.path = path\n    if !query.isEmpty {\n      components.queryItems = query.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }\n    }\n    return components.url ?? URL(string: "about:blank")!\n  }\n}\n\n${SNIPPET_VIEW}\n\n${enums}${entities}${handlers}${intents}${shortcutsSection}\n`;
 }

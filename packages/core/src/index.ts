@@ -2,8 +2,11 @@ import { readFile } from "node:fs/promises";
 import { parse } from "yaml";
 import { ZodError } from "zod";
 import { intentLaneConfigSchema, type IntentLaneConfig, type ParameterType } from "../../schema/src/index.js";
-import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSchemaKind } from "./app-schemas.js";
+import { APP_SCHEMA_DOMAINS, findAppSchema, isKnownSchemaReference, type AppSchemaEntry, type AppSchemaKind } from "./app-schemas.js";
+import { appleRoutingVerdict, type AppleEnvironment } from "./apple-environment.js";
 
+export * from "./app-schemas.js";
+export * from "./apple-environment.js";
 export * from "./audit.js";
 export * from "./audit-project.js";
 export * from "./audit-architecture.js";
@@ -148,6 +151,31 @@ function unavailableSchemaMessage(kind: AppSchemaKind, reference: string): strin
 function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const entityIds = new Set(config.entities.map((entity) => entity.id));
+  const declaredEntitySchemas = new Set(config.entities.map((entity) => entity.schema).filter((value): value is string => value !== undefined));
+  const requiresCatalyst = config.app.mac_catalyst === true;
+
+  function unavailableOnPlatform(reference: string, entry: AppSchemaEntry): string | undefined {
+    if (!requiresCatalyst) return undefined;
+    const platforms = (entry.unavailableOn ?? []).map((platform) => `'${platform}'`);
+    if (platforms.length === 0) return undefined;
+    return `Schema '${reference}' is not available on ${platforms.join(", ")}, and this app declares mac_catalyst: true.`;
+  }
+
+  function referencedSchemas(entry: AppSchemaEntry, owner: string, path: string): void {
+    const referenced = [
+      ...entry.properties.filter((property) => property.entity !== undefined).map((property) => property.entity as string),
+      ...entry.parameters.filter((parameter) => parameter.entity !== undefined).map((parameter) => parameter.entity as string),
+      ...(entry.result ? [entry.result.entity] : [])
+    ];
+    for (const reference of referenced) {
+      if (findAppSchema("entity", reference) === undefined) {
+        diagnostics.push(error("IL1401", `Schema '${owner}' names entity schema '${reference}', which Xcode 27 does not expose.`, path));
+      } else if (!declaredEntitySchemas.has(reference)) {
+        diagnostics.push(error("IL1401", `Schema '${owner}' requires an entity conforming to '${reference}', which the contract does not declare.`, path));
+      }
+    }
+  }
+
   for (const [index, entity] of config.entities.entries()) {
     const reference = entity.schema;
     if (!reference) continue;
@@ -161,10 +189,18 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       diagnostics.push(error("IL1401", unavailableSchemaMessage("entity", reference), path));
       continue;
     }
+    const platform = unavailableOnPlatform(reference, entry);
+    if (platform) {
+      diagnostics.push(error("IL1401", platform, path));
+    }
+    referencedSchemas(entry, reference, path);
     const declared = [entity.display.title, entity.display.subtitle].filter((name): name is string => Boolean(name));
-    if (!entry.properties.every((name, position) => declared[position] === name)) {
-      const expected = entry.properties.map((name) => `'${name}'`).join(", ");
-      diagnostics.push(error("IL1401", `Schema '${reference}' requires the properties ${expected}, declared in that order as display.title then display.subtitle.`, path));
+    // The schema owns the full property list and the generator emits all of it.
+    // The contract only selects which of those properties feed the display
+    // representation, so the declared names must be a prefix of the schema order.
+    if (!declared.every((name, position) => entry.properties[position]?.name === name)) {
+      const expected = entry.properties.map((property) => `'${property.name}'`).join(", ");
+      diagnostics.push(error("IL1401", `Schema '${reference}' declares ${expected} in that order, so display.title and display.subtitle must name them in that order and may stop early.`, path));
     }
     if (config.app.min_ios !== undefined && compareVersions(config.app.min_ios, `${entry.minIos}.0`) < 0) {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
@@ -184,6 +220,11 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       continue;
     }
     const intentPath = path.slice(0, -".schema".length);
+    const platform = unavailableOnPlatform(reference, entry);
+    if (platform) {
+      diagnostics.push(error("IL1401", platform, path));
+    }
+    referencedSchemas(entry, reference, path);
     if (entry.protocol) {
       if (!intent.target) {
         diagnostics.push(error("IL1401", `Schema '${reference}' declares a '${entry.protocol}' action, so intent '${intent.id}' must name the entity it acts on with 'target'.`, `${intentPath}.target`));
@@ -207,10 +248,13 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
           diagnostics.push(error("IL1401", `Schema '${reference}' target references unknown entity '${intent.target}'.`, `${intentPath}.target`));
         }
       } else if (intent.target !== undefined) {
-        diagnostics.push(error("IL1401", `Schema '${reference}' searches within the app, so intent '${intent.id}' must not name a target entity.`, `${intentPath}.target`));
+        diagnostics.push(error("IL1401", `Schema '${reference}' takes its own parameters and names no target entity, so intent '${intent.id}' must not name one.`, `${intentPath}.target`));
       }
       if (intent.execution.mode !== "native") {
         diagnostics.push(error("IL1401", `Schema '${reference}' takes parameters, so intent '${intent.id}' must use native execution with a handler.`, `${intentPath}.execution.mode`));
+      }
+      if (intent.parameters.length > 0) {
+        diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own parameters, so intent '${intent.id}' must declare none, which would otherwise be dropped without a word.`, `${intentPath}.parameters`));
       }
       if (intent.result !== undefined) {
         diagnostics.push(error("IL1401", `Schema '${reference}' supplies its own result, so intent '${intent.id}' must not declare one.`, `${intentPath}.result`));
@@ -461,6 +505,7 @@ export type DoctorFacts = Readonly<{
   xcrunAvailable: boolean;
   swiftcAvailable: boolean;
   pluginDeclared: boolean;
+  appleEnvironment?: AppleEnvironment;
 }>;
 
 const MINIMUM_NODE_MAJOR = 22;
@@ -517,6 +562,29 @@ export function collectDoctorChecks(facts: DoctorFacts): readonly DoctorCheck[] 
       ? { id: "plugin", status: "ok", message: "Expo config plugin is declared." }
       : { id: "plugin", status: "warning", message: "Expo config plugin is not declared in package.json.", hint: "Add '@intentlane/expo' to your app config plugins." }
   );
+
+  if (facts.appleEnvironment) {
+    const environment = facts.appleEnvironment;
+    const verdict = appleRoutingVerdict(environment);
+    const age = environment.enhancedSiriAgeDays === undefined ? "" : `, waitlist last read ${environment.enhancedSiriAgeDays} day(s) ago`;
+    const context = [
+      environment.osVersion ? `OS ${environment.osVersion}` : "OS unknown",
+      environment.sdkVersion ? `SDK ${environment.sdkVersion}` : "SDK unknown",
+      environment.siriLanguages.length > 0 ? `Siri ${environment.siriLanguages.join(", ")}` : "Siri languages unknown"
+    ].join(", ");
+    if (!verdict.testable) {
+      checks.push({
+        id: "apple-intelligence",
+        status: "warning",
+        message: `Schema-backed Siri evidence is not testable here because ${verdict.reason}. ${context}${age}.`,
+        hint: verdict.misleadingSignal
+          ? `The on-device language model reports available while Siri routing is ${environment.enhancedSiri === "blocked" ? "blocked" : "neither served nor readable"}. A failing intent observation is explained by that state and carries no information about the schema.`
+          : "Generation, compilation and metadata evidence are unaffected and remain valid on this machine. Restart the machine to force a fresh provisioning check."
+      });
+    } else {
+      checks.push({ id: "apple-intelligence", status: "ok", message: `Siri routing evidence is testable here. ${context}${age}.` });
+    }
+  }
 
   return checks;
 }

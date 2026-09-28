@@ -89,6 +89,20 @@ The program reports its version with `intentlane --version` (`-V`) and prints us
 
 - `--config <file>`: YAML source, default `intentlane.yaml`.
 - `--output <directory>`: generated-source directory, default `ios/IntentLaneGenerated`.
+- `--probe-model`: compile and run a Foundation Models availability probe, slower.
+
+`doctor` reports one Apple precondition beyond the toolchain: whether the
+enhanced Siri is served on this machine. Apple's Siri action routing ships in
+waves, and a machine that is not served cannot route a request to any App Intent
+whatever the quality of the implementation. Reading it matters because the
+on-device language model reports itself available on a waitlisted machine, so
+`SystemLanguageModel.isAvailable == true` is not a routing precondition. The
+check reports the OS version, the SDK version and the configured Siri languages
+alongside the state, and marks unavailable values rather than omitting them.
+
+A blocked routing state never changes the result of a build. Generation,
+compilation and metadata evidence stay valid on that machine, and only the Siri
+layer of a capability ledger becomes `blocked`.
 
 `intentlane verify`
 

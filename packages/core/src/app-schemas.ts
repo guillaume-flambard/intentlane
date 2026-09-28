@@ -9,11 +9,43 @@ export type AppSchemaParameterType =
   | "datetime"
   | "entity"
   | "entityArray"
-  | "searchCriteria";
+  | "searchCriteria"
+  | "attributedString"
+  | "file";
 
 export type AppSchemaParameter = Readonly<{
   name: string;
   type: AppSchemaParameterType;
+  optional?: boolean;
+  /**
+   * The schema of the entity an `entity` or `entityArray` slot holds. Absent means
+   * the slot holds the intent's own target entity, which is the older convention.
+   */
+  entity?: string;
+  /**
+   * UTType member names for a `file` parameter, as they appear on `UTType`. The
+   * Apple metadata processor refuses `public.item` itself and requires at least
+   * one concrete subtype of it, so a file parameter never renders without
+   * concrete types.
+   */
+  fileTypes?: readonly string[];
+}>;
+
+export type AppSchemaPropertyType =
+  | "string"
+  | "attributedString"
+  | "boolean"
+  | "date"
+  | "entity"
+  | "entityArray"
+  | "file";
+
+export type AppSchemaProperty = Readonly<{
+  name: string;
+  type: AppSchemaPropertyType;
+  optional?: boolean;
+  /** The schema of the entity an `entity` or `entityArray` property holds. */
+  entity?: string;
 }>;
 
 export type AppSchemaEntry = Readonly<{
@@ -21,10 +53,17 @@ export type AppSchemaEntry = Readonly<{
   reference: string;
   identifier: string;
   minIos: number;
+  /** Platforms Apple does not expose this schema on. */
+  unavailableOn?: readonly string[];
   protocol?: "open" | "delete";
   requiresTarget?: boolean;
+  /**
+   * The entity a schema returns, as another schema reference. A schema that
+   * creates an object returns one, and the contract does not declare it.
+   */
+  result?: Readonly<{ entity: string }>;
   parameters: readonly AppSchemaParameter[];
-  properties: readonly string[];
+  properties: readonly AppSchemaProperty[];
 }>;
 
 export const APP_SCHEMA_DOMAINS: readonly string[] = [
@@ -71,26 +110,31 @@ export const APP_SCHEMAS: readonly AppSchemaEntry[] = [
   { kind: "intent", reference: "spreadsheet.deleteSheet", identifier: "DeleteSheetIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "whiteboard.deleteBoard", identifier: "DeleteCanvasBoardIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
   { kind: "intent", reference: "whiteboard.deleteItem", identifier: "DeleteCanvasItemIntent", minIos: 18, protocol: "delete", parameters: [{ name: "entities", type: "entityArray" }], properties: [] },
-  { kind: "entity", reference: "audio.ambientSound", identifier: "AmbientSoundEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "audio.artist", identifier: "ArtistEntity", minIos: 27, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "audio.liveRadioStation", identifier: "LiveRadioStationEntity", minIos: 27, parameters: [], properties: ["title", "providerName"] },
-  { kind: "entity", reference: "audio.newsProvider", identifier: "NewsProviderEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "audio.podcastCollection", identifier: "PodcastCollectionEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "audio.podcastShow", identifier: "PodcastShowEntity", minIos: 27, parameters: [], properties: ["title", "showDescription"] },
-  { kind: "entity", reference: "audio.radioShow", identifier: "RadioShowEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "audio.songCollection", identifier: "SongCollectionEntity", minIos: 27, parameters: [], properties: ["title"] },
+  { kind: "entity", reference: "audio.ambientSound", identifier: "AmbientSoundEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "audio.artist", identifier: "ArtistEntity", minIos: 27, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "entity", reference: "audio.liveRadioStation", identifier: "LiveRadioStationEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }, { name: "providerName", type: "string" }] },
+  { kind: "entity", reference: "audio.newsProvider", identifier: "NewsProviderEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "audio.podcastCollection", identifier: "PodcastCollectionEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "audio.podcastShow", identifier: "PodcastShowEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }, { name: "showDescription", type: "string" }] },
+  { kind: "entity", reference: "audio.radioShow", identifier: "RadioShowEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "audio.songCollection", identifier: "SongCollectionEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
   { kind: "entity", reference: "audio.warmupAudioQueueResult", identifier: "WarmupAudioQueueResult", minIos: 27, parameters: [], properties: [] },
-  { kind: "entity", reference: "browser.tabGroup", identifier: "TabGroupEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "calendar.calendar", identifier: "CalendarEntity", minIos: 27, parameters: [], properties: ["title"] },
-  { kind: "entity", reference: "mail.account", identifier: "MailAccountEntity", minIos: 18, parameters: [], properties: ["name", "emailAddress"] },
+  { kind: "entity", reference: "browser.tabGroup", identifier: "TabGroupEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "calendar.calendar", identifier: "CalendarEntity", minIos: 27, parameters: [], properties: [{ name: "title", type: "string" }] },
+  { kind: "entity", reference: "mail.account", identifier: "MailAccountEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }, { name: "emailAddress", type: "string" }] },
   { kind: "entity", reference: "maps.currentLocation", identifier: "MapsCurrentLocationEntity", minIos: 27, parameters: [], properties: [] },
-  { kind: "entity", reference: "notes.account", identifier: "AccountEntity", minIos: 27, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "presentation.document", identifier: "PresentationEntity", minIos: 18, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "presentation.template", identifier: "PresentationTemplateEntity", minIos: 18, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "reader.page", identifier: "ReaderPageEntity", minIos: 18, parameters: [], properties: ["label"] },
-  { kind: "entity", reference: "spreadsheet.document", identifier: "SpreadsheetEntity", minIos: 18, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "spreadsheet.template", identifier: "SpreadsheetTemplateEntity", minIos: 18, parameters: [], properties: ["name"] },
-  { kind: "entity", reference: "wordProcessor.template", identifier: "WordProcessorDocumentTemplateEntity", minIos: 18, parameters: [], properties: ["name"] },
+  { kind: "entity", reference: "notes.account", identifier: "AccountEntity", minIos: 27, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "entity", reference: "presentation.document", identifier: "PresentationEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "entity", reference: "presentation.template", identifier: "PresentationTemplateEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "entity", reference: "reader.page", identifier: "ReaderPageEntity", minIos: 18, parameters: [], properties: [{ name: "label", type: "string" }] },
+  { kind: "entity", reference: "spreadsheet.document", identifier: "SpreadsheetEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "entity", reference: "spreadsheet.template", identifier: "SpreadsheetTemplateEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }] },
+  { kind: "intent", reference: "notes.createNote", identifier: "CreateNoteIntent", minIos: 27, unavailableOn: ["macCatalyst"], requiresTarget: false, result: { entity: "notes.note" }, parameters: [{ name: "name", type: "attributedString" }, { name: "content", type: "attributedString", optional: true }, { name: "attachments", type: "file", fileTypes: ["plainText", "image"] }, { name: "isPinned", type: "boolean" }, { name: "folder", type: "entity", optional: true, entity: "notes.folder" }], properties: [] },
+  { kind: "intent", reference: "notes.appendText", identifier: "NoteAppendTextIntent", minIos: 27, unavailableOn: ["macCatalyst"], result: { entity: "notes.note" }, parameters: [{ name: "content", type: "attributedString" }, { name: "target", type: "entity", entity: "notes.note" }], properties: [] },
+  { kind: "intent", reference: "notes.updateNote", identifier: "UpdateNoteIntent", minIos: 27, unavailableOn: ["macCatalyst"], result: { entity: "notes.note" }, parameters: [{ name: "target", type: "entity", entity: "notes.note" }, { name: "name", type: "attributedString", optional: true }, { name: "attachments", type: "file", optional: true, fileTypes: ["plainText", "image"] }, { name: "isPinned", type: "boolean", optional: true }, { name: "folder", type: "entity", optional: true, entity: "notes.folder" }], properties: [] },
+  { kind: "entity", reference: "notes.note", identifier: "NoteEntity", minIos: 27, unavailableOn: ["macCatalyst"], parameters: [], properties: [{ name: "name", type: "attributedString" }, { name: "content", type: "attributedString", optional: true }, { name: "attachments", type: "file" }, { name: "isPinned", type: "boolean" }, { name: "creationDate", type: "date", optional: true }, { name: "modificationDate", type: "date", optional: true }, { name: "folder", type: "entity", optional: true, entity: "notes.folder" }] },
+  { kind: "entity", reference: "notes.folder", identifier: "FolderEntity", minIos: 27, unavailableOn: ["macCatalyst"], parameters: [], properties: [{ name: "name", type: "string" }, { name: "parentFolder", type: "entity", optional: true, entity: "notes.folder" }, { name: "account", type: "entity", optional: true, entity: "notes.account" }] },
+  { kind: "entity", reference: "wordProcessor.template", identifier: "WordProcessorDocumentTemplateEntity", minIos: 18, parameters: [], properties: [{ name: "name", type: "string" }] },
 ];
 
 const KNOWN_SCHEMA_REFERENCES: readonly string[] = [

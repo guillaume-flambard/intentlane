@@ -81,6 +81,7 @@ export const intentLaneConfigSchema = z.object({
     url_scheme: z.string().regex(/^[a-z][a-z0-9+.-]*$/),
     min_ios: z.string().regex(/^\d+\.\d+$/).optional(),
     min_macos: z.string().regex(/^\d+\.\d+$/).optional(),
+    mac_catalyst: z.boolean().optional(),
     locales: z.array(z.string().min(1)).min(1).refine((values) => new Set(values).size === values.length, "Locales must be unique")
   })
     .strict()

@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, statSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { Command } from "commander";
 import { registerDeliverableCommand } from "./audit-deliverable-cli.js";
 import { parse } from "yaml";
-import { collectDoctorChecks, compareMetadataToContract, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
+import { collectDoctorChecks, compareMetadataToContract, readEnhancedSiriState, type AppleEnvironment, type OnDeviceModelState, defaultClaimSet, deriveScaffoldDefaults, evaluateReleaseVerification, parseConfigFile, parsePilotManifest, PILOT_CLAIMS, scaffoldConfig, validatePilotLedger, type ConfigIR, type Diagnostic, type DoctorFacts, type GateStatus, type ObservedStatus, type PilotClaimId, type PilotLedgerResult, type PilotManifest } from "../../core/src/index.js";
 import { ADAPTER_TEMPLATE_FILE, GENERATED_SWIFT_FILE, generateAdapterTemplate, generateArtifacts, generatedFileHash, type GeneratedArtifact } from "../../generator-apple/src/index.js";
 import { analyseContract, analyseDiscovery, applyAnalyse, applyImplement, applyPrepare, applyTest, evaluateImplement, evaluateTest, resolveSigning, PILOT_ADAPTER_DIRECTORIES, PILOT_BUILD_TARGETS, buildInvocation, discover, indexRepository, demoBuildOverrides, parseBuildOutcome, parsePilotRunJournal, planRun, readContract, retargetJournal, startRunJournal, type PilotRunJournal, type PrepareResult } from "../../core/src/index.js";
 import { compareCatalogueWithSdk, driftIsComplete, readSdkSymbolIndex } from "../../core/src/audit-drift.js";
@@ -168,8 +169,72 @@ async function generatedStatus(configFile: string, ir: ConfigIR | undefined, out
   }
 }
 
-async function doctorFacts(config: string, output: string): Promise<DoctorFacts> {
+const WAITLIST_PREFERENCE = "com.apple.CloudSubscriptionFeatures.waitlist";
+
+function commandOutput(command: string, args: readonly string[]): string | undefined {
+  const run = spawnSync(command, [...args], { encoding: "utf8" });
+  return run.status === 0 ? run.stdout.trim() : undefined;
+}
+
+function readWaitlistPayload(): string | undefined {
+  const home = process.env.HOME;
+  if (home === undefined || home.length === 0) return undefined;
+  const file = join(home, "Library", "Preferences", `${WAITLIST_PREFERENCE}.plist`);
+  if (!existsSync(file)) return undefined;
+  const extracted = commandOutput("plutil", ["-extract", "waitlistResults", "raw", "-o", "-", file]);
+  if (extracted === undefined || extracted.length === 0) return undefined;
+  try {
+    return Buffer.from(extracted, "base64").toString("utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function readSiriLanguages(): readonly string[] {
+  const raw = commandOutput("defaults", ["read", "-g", "AppleLanguages"]);
+  if (raw === undefined) return [];
+  return [...raw.matchAll(/"([^"]+)"/g)].map((match) => match[1]).filter((value): value is string => value !== undefined);
+}
+
+function probeOnDeviceModel(): OnDeviceModelState {
+  const directory = mkdtempSync(join(tmpdir(), "intentlane-model-"));
+  const source = join(directory, "probe.swift");
+  const binary = join(directory, "probe");
+  const sdk = commandOutput("xcrun", ["--sdk", "macosx", "--show-sdk-path"]);
+  if (sdk === undefined) return "unknown" as OnDeviceModelState;
+  try {
+    writeFileSync(
+      source,
+      'import FoundationModels\nprint(SystemLanguageModel.default.isAvailable ? "available" : "unavailable")\n',
+      "utf8"
+    );
+    const build = spawnSync("swiftc", ["-target", "arm64-apple-macosx27.0.0", "-sdk", sdk, "-o", binary, source], { stdio: "ignore" });
+    if (build.status !== 0) return "unknown" as OnDeviceModelState;
+    const run = spawnSync(binary, [], { encoding: "utf8" });
+    const answer = run.status === 0 ? run.stdout.trim() : "";
+    return answer === "available" || answer === "unavailable" ? answer : ("unknown" as OnDeviceModelState);
+  } catch {
+    return "unknown" as OnDeviceModelState;
+  }
+}
+
+function appleEnvironment(probeModel: boolean): AppleEnvironment | undefined {
+  if (process.platform !== "darwin") return undefined;
+  const waitlist = readEnhancedSiriState(readWaitlistPayload());
+  return {
+    enhancedSiri: waitlist.state,
+    enhancedSiriDetail: waitlist.detail,
+    ...(waitlist.ageDays === undefined ? {} : { enhancedSiriAgeDays: waitlist.ageDays }),
+    onDeviceModel: probeModel ? probeOnDeviceModel() : "not-probed",
+    ...(commandOutput("sw_vers", ["-productVersion"]) ? { osVersion: commandOutput("sw_vers", ["-productVersion"]) as string } : {}),
+    ...(commandOutput("xcrun", ["--sdk", "macosx", "--show-sdk-version"]) ? { sdkVersion: commandOutput("xcrun", ["--sdk", "macosx", "--show-sdk-version"]) as string } : {}),
+    siriLanguages: readSiriLanguages()
+  };
+}
+
+async function doctorFacts(config: string, output: string, probeModel: boolean): Promise<DoctorFacts> {
   const exists = existsSync(config);
+  const environment = appleEnvironment(probeModel);
   let diagnostics: Diagnostic[] = [];
   let schemaVersion: string | undefined;
   let intentCount: number | undefined;
@@ -196,7 +261,8 @@ async function doctorFacts(config: string, output: string): Promise<DoctorFacts>
     platform: process.platform,
     xcrunAvailable: process.platform === "darwin" ? commandAvailable("xcrun") : false,
     swiftcAvailable: process.platform === "darwin" ? commandAvailable("swiftc") : false,
-    pluginDeclared: await isPluginDeclared()
+    pluginDeclared: await isPluginDeclared(),
+    ...(environment ? { appleEnvironment: environment } : {})
   };
 }
 
@@ -226,8 +292,9 @@ program.command("init")
 program.command("doctor")
   .option("-c, --config <file>", "IntentLane YAML file", "intentlane.yaml")
   .option("-o, --output <directory>", "Generated source directory", "ios/IntentLaneGenerated")
-  .action(async (options: { config: string; output: string }) => {
-    const checks = collectDoctorChecks(await doctorFacts(configPath(options.config), resolve(options.output)));
+  .option("--probe-model", "Compile and run a Foundation Models availability probe", false)
+  .action(async (options: { config: string; output: string; probeModel: boolean }) => {
+    const checks = collectDoctorChecks(await doctorFacts(configPath(options.config), resolve(options.output), options.probeModel));
     for (const check of checks) {
       process.stdout.write(`${check.status === "ok" ? "ok" : check.status === "warning" ? "warn" : "fail"}  ${check.id}: ${check.message}\n`);
       if (check.hint) process.stdout.write(`      hint: ${check.hint}\n`);

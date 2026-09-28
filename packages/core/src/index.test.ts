@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
-import { DIAGNOSTIC_CODES, collectDoctorChecks, deriveScaffoldDefaults, parseConfig, scaffoldConfig } from "./index.js";
+import { DIAGNOSTIC_CODES, collectDoctorChecks, deriveScaffoldDefaults, parseConfig, scaffoldConfig, type AppleEnvironment } from "./index.js";
 import type { DoctorFacts } from "./index.js";
 
 const base = {
@@ -127,6 +127,56 @@ describe("collectDoctorChecks", () => {
     const checks = collectDoctorChecks({ ...facts, generatedStatus: "stale" });
     expect(checks.find((check) => check.id === "generated")?.status).toBe("warning");
     expect(checks.every((check) => check.status !== "error")).toBe(true);
+  });
+
+  const apple = (overrides: Partial<AppleEnvironment> = {}): AppleEnvironment => ({
+    enhancedSiri: "granted",
+    enhancedSiriDetail: "not listed in any waitlist entry",
+    onDeviceModel: "not-probed",
+    osVersion: "27.0",
+    sdkVersion: "27.0",
+    siriLanguages: ["en-US", "fr-FR"],
+    ...overrides
+  });
+
+  it("adds no Apple check when the environment was not read", () => {
+    expect(collectDoctorChecks(facts).some((check) => check.id === "apple-intelligence")).toBe(false);
+  });
+
+  it("reports Siri evidence as testable when the enhanced Siri is served", () => {
+    const check = collectDoctorChecks({ ...facts, appleEnvironment: apple() }).find((item) => item.id === "apple-intelligence");
+    expect(check?.status).toBe("ok");
+    expect(check?.message).toContain("Siri en-US, fr-FR");
+  });
+
+  it("refuses to interpret a failure when the enhanced Siri is not served", () => {
+    const check = collectDoctorChecks({
+      ...facts,
+      appleEnvironment: apple({ enhancedSiri: "blocked", enhancedSiriDetail: "waitlist reports enqueued" })
+    }).find((item) => item.id === "apple-intelligence");
+    expect(check?.status).toBe("warning");
+    expect(check?.message).toContain("not testable here");
+    expect(check?.message).toContain("waitlist reports enqueued");
+    expect(check?.hint).toContain("unaffected");
+  });
+
+  it("names the trap when the model runs while routing is blocked", () => {
+    const check = collectDoctorChecks({
+      ...facts,
+      appleEnvironment: apple({ enhancedSiri: "blocked", enhancedSiriDetail: "waitlist reports enqueued", onDeviceModel: "available" })
+    }).find((item) => item.id === "apple-intelligence");
+    expect(check?.hint).toContain("on-device language model reports available");
+    expect(check?.hint).toContain("carries no information about the schema");
+  });
+
+  it("marks unknown values instead of omitting them", () => {
+    const check = collectDoctorChecks({
+      ...facts,
+      appleEnvironment: { enhancedSiri: "unknown", enhancedSiriDetail: "no waitlist state on this machine", onDeviceModel: "not-probed", siriLanguages: [] }
+    }).find((item) => item.id === "apple-intelligence");
+    expect(check?.message).toContain("OS unknown");
+    expect(check?.message).toContain("SDK unknown");
+    expect(check?.message).toContain("Siri languages unknown");
   });
 });
 
@@ -502,7 +552,7 @@ describe("app schemas", () => {
   });
 
   it("rejects a known schema that the generated shape cannot satisfy", () => {
-    const result = parseConfig(withSchema("notes.note", "notes.createNote"));
+    const result = parseConfig(withSchema("audio.playlist", "audio.playAudio"));
     expect(result.ir).toBeUndefined();
     expect(result.diagnostics).toContainEqual(
       expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("cannot conform to it") })
@@ -523,12 +573,28 @@ describe("app schemas", () => {
     );
   });
 
-  it("rejects an entity whose display does not follow the schema properties", () => {
-    const result = parseConfig(withSchema("audio.liveRadioStation", undefined));
+  it("rejects an entity whose display does not follow the schema property order", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      entities: [{ ...sound, display: { title: "providerName" }, schema: "audio.liveRadioStation" }],
+      intents: [{ ...base.intents[0], parameters: [], execution: { mode: "open_app", route: "/stop" } }]
+    });
     expect(result.ir).toBeUndefined();
     expect(result.diagnostics).toContainEqual(
       expect.objectContaining({ code: "IL1401", path: "entities[0].schema", message: expect.stringContaining("'providerName'") })
     );
+  });
+
+  it("accepts a display that stops before the end of the schema properties", () => {
+    const result = parseConfig({
+      ...base,
+      app: { ...base.app, min_ios: "27.0" },
+      entities: [{ ...sound, display: { title: "title" }, schema: "audio.liveRadioStation" }],
+      intents: [{ ...base.intents[0], parameters: [], execution: { mode: "open_app", route: "/stop" } }]
+    });
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ir?.entities[0]?.schema).toBe("audio.liveRadioStation");
   });
 
   it("rejects an intent that declares a parameter under a schema", () => {

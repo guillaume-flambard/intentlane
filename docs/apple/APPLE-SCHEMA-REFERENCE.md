@@ -124,8 +124,49 @@ automatisation seulement, à ne pas vendre comme Siri AI primaire.
 
 ### Notes
 
-- `notes.appendText`, `notes.createNote`, `notes.updateNote`. **R**.
-- Objets : compte **G**, dossier, note. Les autres sont **R**.
+- `notes.appendText`, `notes.createNote`, `notes.updateNote`. **G**.
+- Objets : compte **G**, dossier **G**, note **G**. Les autres sont **R**.
+
+`G` porte sur la capacité du générateur, pas sur une preuve vocale. Les couches
+sont tenues séparées et le statut de chacune est dans le ledger de capacité.
+
+| Couche | `notes.note` et les trois intentions |
+| --- | --- |
+| Documentation | publishée, **Beta** |
+| Contrat SDK | `AppIntentSchemas.sqlite`, relu et concorde avec les exemples Apple |
+| Expansion du macro | `@AppEntity` n'ajoute que la conformance, chaque propriété devient un `EntityProperty` |
+| Metadata de build | `assistantDefinedSchemas` porte `notes.note`, `notes.createNote`, `NoteAppendTextIntent`, `UpdateNoteIntent` |
+| Compilation | vérifié sur un app macOS 27 réel, `appintentsmetadataprocessor` accepté |
+| Exécution runtime | indexation **title-only** par défaut, voir ci-dessous |
+| Preuve vocale | **blocked**, `enhanced-siri` non servi sur la machine de preuve |
+
+Le domaine n'existe pas sur Mac Catalyst, ce qu'Apple publie par `macCatalyst: -`
+sur chaque page symbole. La table des schémas porte cette indisponibilité et la
+validation la refuse quand le contrat déclare `mac_catalyst: true`.
+
+Trois détails que seule la compilation a révélés, et qu'aucune page ne donne:
+
+- une entité conforme au schéma exige un `init` écrit à la main, `EntityProperty`
+  n'a pas d'`init(wrappedValue:)`;
+- une entité de schéma utilisée comme paramètre doit être résolvable, donc nommer
+  une `EntityStringQuery` unique, faute de quoi le processeur de metadata échoue;
+- un paramètre `file` doit nommer un sous-type concret de `public.item`,
+  `public.item` lui-même est refusé.
+
+Sur l'indexation, la déclaration du schéma, le metadata de build et l'exécution
+runtime ne sont pas d'accord, et l'écart est le résultat:
+
+| Couche | `content` devient |
+| --- | --- |
+| Déclaration `AppIntentSchemas.sqlite` | `textContent` |
+| Metadata de build | `spotlightAttributeKey: textContent` |
+| `attributeSet` au runtime | non peuplé |
+
+Formulation autorisée, la seule que la preuve soutient: le `attributeSet` par
+défaut d'une `NoteEntity` conforme ne peuple pas `textContent` sur macOS 27, SDK
+27A266a. Non soutenu, et à ne pas vendre: qu'Apple garantit que le corps n'est
+jamais indexé. La représentation effectivement indexée reste non mesurée, le
+round trip `CSSearchQuery` ayant été bloqué.
 
 ### Téléphone
 
