@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-09-28
+# This change records a decision about a recorded baseline and changes no
+# requirement: the Shortcuts-only classification of the reader domain was already
+# a requirement in `pilot-access-contract`, and the baseline is data, not
+# behaviour. `openspec validate` rejects a change with no delta unless it says so
+# here, and saying so is the honest description of this one.
+skip_specs: true
