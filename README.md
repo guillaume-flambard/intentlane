@@ -36,6 +36,8 @@ node packages/cli/dist/index.cjs doctor
 
 `pnpm build` writes `packages/cli/dist/index.cjs`, which is the same bundle the published CLI ships, so these commands run the artifact a consumer runs. `validate` checks the reference contract, `generate` writes the Swift, and `doctor` reports the toolchain, the config, the generated output, and whether this machine is served by the enhanced Siri.
 
+`pnpm install` prints one warning about a missing `intentlane` bin under `apps/example-expo`. The example depends on a bundle that `pnpm build` has not written yet, so the warning is expected and the build resolves it.
+
 To generate into your own project, the whole configuration is one YAML file:
 
 ```sh
