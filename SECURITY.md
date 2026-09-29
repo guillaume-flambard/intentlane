@@ -2,16 +2,21 @@
 
 ## How to report
 
-Use GitHub private vulnerability reporting. Go to `Security` then `Report a
-vulnerability` on this repository. The channel is enabled, so the form exists.
+GitHub private vulnerability reporting is not enabled on this repository, so do
+not look for a report form. The route that works today is:
 
-If you cannot use it, open a regular issue containing only the words "security
-report, please open a private channel", with no technical detail, and wait.
+Open a regular issue whose entire body is the words "security report, please
+open a private channel". Nothing else. No detail in the title, no code, no
+logs, no screenshot. That opens a public thread carrying no technical content,
+and it is answered privately.
 
 Never put exploit detail, credentials, or audit data belonging to a third party
-in a public issue. IntentLane reads an app's intent surface; a report that
+in that first issue. IntentLane reads an app's intent surface, and a report that
 inadvertently includes a customer's Siri or Shortcuts configuration is a report
 that has already leaked.
+
+If the issue tracker is not an option, the same applies to whatever private
+channel you can reach.
 
 ## What happens next
 
