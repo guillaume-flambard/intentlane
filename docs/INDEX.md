@@ -63,13 +63,28 @@ The macOS environment for App Intents, built on the engine rather than beside it
 with the requirements that are already true of the product. `openspec/changes/`
 is the work in flight, and `openspec/changes/archive/` is the work that landed.
 
+## Reference
+
+What the CLI, the contract and the two examples actually do. The landing page is
+[README.md](../README.md); these are the pages behind it.
+
+| File | What it is |
+| --- | --- |
+| [docs/reference/CLI.md](reference/CLI.md) | Every `intentlane` command, every option, and what each one reports. |
+| [docs/reference/CONTRACT-REFERENCE.md](reference/CONTRACT-REFERENCE.md) | The `intentlane.yaml` contract, field by field, and the Swift each field emits. |
+| [docs/reference/EXAMPLE-APP.md](reference/EXAMPLE-APP.md) | `apps/example-expo` end to end, and running the generated App Intents on a device. |
+| [docs/reference/MACOS-EXAMPLE.md](reference/MACOS-EXAMPLE.md) | `apps/example-macos`: the macOS compile and the metadata extraction, with no Xcode project. |
+| [docs/reference/VERIFICATION.md](reference/VERIFICATION.md) | The commands that gate a change, and the four CI jobs. |
+| [docs/reference/OPEN-RISKS.md](reference/OPEN-RISKS.md) | Every known limit of the current version, as measured. |
+
 ## Apple 27
 
 Read the SDK before trusting any of this. It records what was verified, and
 when it contradicts the installed SDK the SDK wins.
 
 | File | What it is |
-|---|---|
+| --- | --- |
+| [docs/apple/SIRI-27-CONTENT-INTEGRATION.md](apple/SIRI-27-CONTENT-INTEGRATION.md) | The System App Schema path for a macOS 27 app, and what the report adds about it. |
 | [docs/apple/APPLE-27-APP-INTENTS-RESEARCH.md](apple/APPLE-27-APP-INTENTS-RESEARCH.md) | The App Intents surface of SDK 27. |
 | [docs/apple/APPLE-27-OFFICIAL-SOURCE-UPDATE.md](apple/APPLE-27-OFFICIAL-SOURCE-UPDATE.md) | Revalidation against the installed SDK, the contract floor and surface gating. |
 | [docs/apple/APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md](apple/APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md) | The system search and open path. |

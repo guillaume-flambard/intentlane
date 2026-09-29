@@ -64,7 +64,7 @@ Decided 2026-09-27 in the `finish-the-studio-app` change, and recorded here beca
 
 ## Verification
 
-Run the narrowest focused tests first. Before calling an integration batch complete, run the applicable commands from `README.md`:
+Run the narrowest focused tests first. Before calling an integration batch complete, run the applicable commands from `docs/reference/VERIFICATION.md`:
 
 ```sh
 pnpm test
