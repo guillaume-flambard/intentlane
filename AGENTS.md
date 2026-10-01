@@ -20,8 +20,10 @@ The current commercial sequence is: fixed-scope audit, bounded implementation wh
 6. Load only the Apple research or pilot runbook needed by the task. Do not inject every research file into a small change.
 
 `docs/INDEX.md` maps every document that is not at the root, by theme. The
-repository root holds six files and nothing else: if a document is not one of
-them, look it up in that index rather than guessing a path.
+repository root holds seven files and nothing else: `AGENT-GUIDE.md`, `AGENTS.md`,
+`CONTRIBUTING.md`, `README.md`, `ROADMAP.md`, `SECURITY.md` and `SPEC.md`. If a
+document is not one of them, look it up in that index rather than guessing a
+path.
 
 For Apple 27 audits and pilots, start with `docs/apple/APPLE-27-APP-INTENTS-RESEARCH.md`, then the relevant files among `docs/apple/APPLE-SCHEMA-REFERENCE.md`, `docs/apple/APPLE-27-SYSTEM-SEARCH-OPEN-IMPLEMENTATION-RESEARCH.md`, `docs/spec/AUDITOR-SPEC.md`, `docs/apple/SIRI-27-ROADMAP.md`, `docs/pilots/PILOT-PLAYBOOK.md`, and the pilot-specific runbook.
 

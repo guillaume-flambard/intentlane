@@ -9,7 +9,10 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", ".
 const IGNORED_DIRECTORIES = new Set(["node_modules", ".git", "dist", ".intentlane", "build"]);
 const DOCUMENT = /\.md$/;
 const MARKDOWN_LINK = /\]\(([^)\s]+)\)/g;
-const ROOT_DOCUMENTS = ["AGENT-GUIDE.md", "AGENTS.md", "CONTRIBUTING.md", "README.md", "ROADMAP.md", "SPEC.md"];
+// SECURITY.md joined the six on 2026-09-29 with the private vulnerability
+// reporting policy. It is read by convention too: GitHub resolves a security
+// policy at the root, so a document anywhere else would not be found.
+const ROOT_DOCUMENTS = ["AGENT-GUIDE.md", "AGENTS.md", "CONTRIBUTING.md", "README.md", "ROADMAP.md", "SECURITY.md", "SPEC.md"];
 
 function markdownFiles(directory: string): readonly string[] {
   const found: string[] = [];
@@ -52,7 +55,7 @@ describe("documentation links", () => {
     expect(brokenLinks()).toEqual([]);
   });
 
-  it("keeps the repository root to the six documents that are read by convention", () => {
+  it("keeps the repository root to the documents that are read by convention", () => {
     const atRoot = markdownFiles(repositoryRoot)
       .map((path) => relative(repositoryRoot, path))
       .filter((path) => !path.includes("/"))
