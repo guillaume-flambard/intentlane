@@ -25,11 +25,25 @@
 
 ## 4. NetNewsWire proof
 
-- [ ] 4.1 Replace the Reader pilot contract with system search/open.
-- [ ] 4.2 Complete the NetNewsWire article adapter and lifecycle hooks.
-- [ ] 4.3 Build, inspect metadata, verify Spotlight, and run the Siri AI and
-  negative journeys on macOS 27.
+- [x] 4.1 Replace the Reader pilot contract with system search/open.
+  `pilots/netnewswire/contract.yaml` declares `.system.open` and
+  `.system.searchInApp` with one article entity and no Reader schema. Evidence:
+  `pnpm exec tsx packages/cli/src/index.ts validate -c pilots/netnewswire/contract.yaml`.
+- [x] 4.2 Complete the NetNewsWire article adapter and lifecycle hooks.
+  `pilots/netnewswire/integration/IntentLanePilot.swift` implements the resolver,
+  open, search and mark-read handlers against NetNewsWire's own APIs, and
+  `integration/apply-hooks.py` registers them at launch and exposes the two entry
+  points. Evidence: `sh pilots/netnewswire/reproduce.sh` builds the pinned app.
+- [x] 4.3a Machine proof: build, extract metadata, run the machine gates.
+  The pinned app builds and the extracted metadata carries the three actions and
+  the entity. Evidence: `sh pilots/netnewswire/tests/run-all-tests.sh`.
+- [ ] 4.3b Human proof: verify Spotlight, the Siri AI journeys and the negative
+  journey on macOS 27. Requires a person. Target build is macOS 27.0.1 (26A434);
+  the 26A428 result is historical. Protocol:
+  `docs/pilots/MANUAL-SIRI-ACCEPTANCE.md`.
 - [ ] 4.4 Obtain an independent reproduction before any customer-facing claim.
+  Requires a second person. `reviewer-b` is a pending placeholder, not a
+  reproduction.
 
 ## 5. Documentation
 
