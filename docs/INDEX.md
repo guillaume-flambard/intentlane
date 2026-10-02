@@ -101,6 +101,7 @@ when it contradicts the installed SDK the SDK wins.
 | [docs/pilots/PILOT-IINA-DISCOVERY.md](pilots/PILOT-IINA-DISCOVERY.md) | The IINA discovery pilot. |
 | [docs/pilots/NETNEWSWIRE-ACTION-BACKLOG.md](pilots/NETNEWSWIRE-ACTION-BACKLOG.md) | The actions the NetNewsWire pilot still owes. |
 | [docs/pilots/MANUAL-SIRI-ACCEPTANCE.md](pilots/MANUAL-SIRI-ACCEPTANCE.md) | The manual acceptance steps automation cannot replace. |
+| [docs/pilots/HUMAN-GATES-PREP.md](pilots/HUMAN-GATES-PREP.md) | What is prepared for gates 4 to 7, and what still needs a person. |
 
 ## Also in the repository
 

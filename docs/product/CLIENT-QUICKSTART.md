@@ -41,18 +41,24 @@ Tests de l'app (votre target)    # test métier du contrat
 ## Commandes locales
 
 ```sh
-npx intentlane init                          # contrat minimal, ne touche à rien d'autre
-npx intentlane validate                      # YAML valide (diagnostics IL)
-npx intentlane generate -c intentlane.yaml \
+npx @memolabs-apps/intentlane init                          # contrat minimal, ne touche à rien d'autre
+npx @memolabs-apps/intentlane validate                      # YAML valide (diagnostics IL)
+npx @memolabs-apps/intentlane generate -c intentlane.yaml \
   -o Mac/IntentLaneGenerated \
   --adapter-output Mac/IntentLaneAdapter.swift   # Swift + squelette d'adaptateur
-npx intentlane doctor                        # environnement
-npx intentlane verify \
+npx @memolabs-apps/intentlane doctor                        # environnement
+npx @memolabs-apps/intentlane verify \
   -c intentlane.yaml \
   -o Mac/IntentLaneGenerated \
   --app-test "xcodebuild -project Client.xcodeproj -scheme Client -destination 'platform=macOS' test" \
   --metadata build/.../Client.app/Metadata.appintents
 ```
+
+`--adapter-output` n'écrit un squelette que si le contrat déclare un intent de
+schéma système (`system.open`) visant une entité, ou un handler de recherche.
+Sur le contrat minimal produit par `init`, qui n'en déclare aucun, la génération
+refuse d'inventer un adapter et s'arrête; la commande réussit une fois l'étape 2
+faite.
 
 Pour une app Expo : `npx expo prebuild`, puis le plugin `@intentlane/expo` relance
 la génération à chaque prebuild ; `apps/example-expo` est la référence complète.
@@ -82,9 +88,10 @@ suivante refuse de l'écraser sans `--overwrite-adapter`.
 # .github/workflows/intentlane.yml
 steps:
   - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
-      with: { node-version: 22 }
-  - run: npx intentlane verify --pilot intentlane.pilot.yaml --strict
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
+  - run: npx @memolabs-apps/intentlane verify --pilot intentlane.pilot.yaml --strict
 ```
 
 Le manifeste `intentlane.pilot.yaml` déclare ce que le client revendique et la
@@ -105,7 +112,7 @@ gates:
 `Any claim not listed here is not certified`. `--strict` sort non nul tant qu'une
 revendication de l'ensemble n'est pas certifiée. Le ledger n'est lu que si une
 revendication observée, comme `siri-conversation`, est effectivement revendiquée.
-`npx intentlane claims` affiche le catalogue complet.
+`npx @memolabs-apps/intentlane claims` affiche le catalogue complet.
 
 ## Test automatique ≠ preuve visuelle Siri/Spotlight
 

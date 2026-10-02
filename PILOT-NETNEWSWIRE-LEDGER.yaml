@@ -40,5 +40,3 @@ reproduction:
   status: fail
 artifacts:
   notes: ./docs/pilots/PILOT-NETNEWSWIRE.md
-  baseline: ./audit-baseline.json
-  delta: ./audit-delta.json

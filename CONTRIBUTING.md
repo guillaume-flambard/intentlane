@@ -12,7 +12,7 @@ IntentLane compiles a versioned YAML contract into Apple App Intents for Expo ap
 
 ## Before you open an issue
 
-Include the contract excerpt, the IntentLane version, your Expo, React Native and Xcode versions, the output of `npx intentlane doctor`, and the diagnostics you got. If the generated Swift failed to compile, paste the compiler error and the generated file. A report without the contract is hard to act on.
+Include the contract excerpt, the IntentLane version, your Expo, React Native and Xcode versions, the output of `npx @memolabs-apps/intentlane doctor`, and the diagnostics you got. If the generated Swift failed to compile, paste the compiler error and the generated file. A report without the contract is hard to act on.
 
 ## Development
 

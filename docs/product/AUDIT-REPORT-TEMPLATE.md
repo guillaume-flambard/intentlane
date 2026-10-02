@@ -36,7 +36,7 @@ catalogue ______ (____)
 Mandatory context lines, copied verbatim:
 
 - audited revision: full SHA and date, plus repo URL or fork provenance.
-- command run (exact flags from `npx intentlane audit ...`, including
+- command run (exact flags from `npx @memolabs-apps/intentlane audit ...`, including
   `--platform`, `--min-macos`/`--min-ios`, `--sdk-path` when provided).
 - Xcode version and OS version of the machine that ran the audit.
 - licence and build path recorded at baselining.

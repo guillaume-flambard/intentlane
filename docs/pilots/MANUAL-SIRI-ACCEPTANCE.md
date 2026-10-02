@@ -10,6 +10,29 @@ Ce protocole est l'étape de preuve **humaine** du runbook. Les 22 tests App Int
 verts (2026-09-23_20-30-38) sont des tests de contrat hors processus ; ils ne
 remplacent pas l'observation Siri/Spotlight faite par une personne.
 
+## Fixture déterministe
+
+La fixture n'est plus un fichier éphémère. [fixtures/pilot-feed.xml](fixtures/pilot-feed.xml)
+est versionnée et sert exactement trois articles : Alpha, Beta et Gamma. Le XML
+versionné est la source de vérité de la fixture ; la base locale de
+l'application ne fait pas partie du protocole et ne doit pas être nécessaire
+pour reconstruire un run.
+
+Servir la fixture sur le port attendu :
+
+```sh
+sh docs/pilots/fixtures/serve.sh
+# vérifier : curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/pilot-feed.xml
+```
+
+Démarrer ce serveur, reconstruire l'application ou réparer un refresh est de la
+préparation d'environnement. Cela ne constitue jamais une observation Siri,
+Spotlight ou Raccourcis.
+
+Le prochain passage est une nouvelle observation, sous macOS 27.0.1 (build
+26A434). Les résultats déjà enregistrés sous 26A428 restent inchangés et ne sont
+pas réécrits.
+
 ## Ce qui est testable par la voix / la recherche, et ce qui ne l'est pas
 
 | Surface | Actions réellement invocables | Actions NON invocables (entraînement uniquement) |

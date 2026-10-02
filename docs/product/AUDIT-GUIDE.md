@@ -12,7 +12,7 @@ of the auditor itself is [AUDITOR-SPEC.md](../spec/AUDITOR-SPEC.md).
 ## Run the audit
 
 ```sh
-npx intentlane audit ./path/to/app --platform macos --format json --output audit.json
+npx @memolabs-apps/intentlane audit ./path/to/app --platform macos --format json --output audit.json
 ```
 
 | Option | Meaning |
@@ -131,9 +131,9 @@ a run that trusts a malformed record will skip a step it never did.
    JSON reports without re-reading the repository:
 
    ```sh
-   npx intentlane audit-diff baseline.json candidate.json
-   npx intentlane audit-diff baseline.json candidate.json --format json --output delta.json
-   npx intentlane audit-diff baseline.json candidate.json --fail-on regression
+   npx @memolabs-apps/intentlane audit-diff baseline.json candidate.json
+   npx @memolabs-apps/intentlane audit-diff baseline.json candidate.json --format json --output delta.json
+   npx @memolabs-apps/intentlane audit-diff baseline.json candidate.json --fail-on regression
    ```
 
    The join key is the platform and capability pair, so a fork compares

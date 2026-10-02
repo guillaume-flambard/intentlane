@@ -41,9 +41,9 @@ node packages/cli/dist/index.cjs doctor
 To generate into your own project, the whole configuration is one YAML file:
 
 ```sh
-npx intentlane init
-npx intentlane validate
-npx intentlane generate
+npx @memolabs-apps/intentlane init
+npx @memolabs-apps/intentlane validate
+npx @memolabs-apps/intentlane generate
 ```
 
 `init` writes a two-intent `intentlane.yaml` derived from the directory name and refuses to overwrite an existing file unless you pass `--force`. It refuses at the root of this repository, where the reference fixture already lives. Every option is in the [CLI reference](docs/reference/CLI.md).

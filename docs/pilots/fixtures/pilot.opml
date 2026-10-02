@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.1">
+  <head>
+    <title>IntentLane NetNewsWire Pilot</title>
+  </head>
+  <body>
+    <outline text="IntentLane NetNewsWire Pilot" title="IntentLane NetNewsWire Pilot" description="Deterministic pilot feed" type="rss" version="RSS" htmlUrl="https://example.invalid/intentlane-pilot" xmlUrl="http://127.0.0.1:8765/pilot-feed.xml"/>
+  </body>
+</opml>

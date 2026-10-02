@@ -1,0 +1,31 @@
+# IntentLane NetNewsWire pilot: what this integration claims, and what proves each claim.
+#
+# Paths and gate commands resolve from this file's own directory, so the manifest
+# is self-contained wherever the repository is checked out. The NetNewsWire
+# working copy is produced by reproduce.sh and located through NETNEWSWIRE_DIR,
+# defaulting to .build/netnewswire.
+#
+# Only claims a versioned command in this directory actually settles are
+# declared. Three claims the old disposable fork carried are deliberately NOT
+# declared, because no versioned command settles them: applicationTests,
+# integrationTests and indexSync. Their suites lived in the throwaway fork and
+# were never committed. A claim no command produces is worse than no claim.
+#
+# Registration needs a graphical session, and the Siri conversation and the
+# Spotlight result need a person, so none of them is a default claim.
+
+version: intentlane-pilot/1.0
+
+contract: contract.yaml
+generated: .build/netnewswire/Mac/IntentLanePilot
+metadata: .build/netnewswire/.intentlane/derived/Build/Products/Debug/NetNewsWire.app/Contents/Resources/Metadata.appintents
+
+claims:
+  - contract
+  - generated
+  - metadata
+
+gates:
+  contract: bash tests/run-contract-tests.sh
+  generated: bash tests/run-generated-tests.sh
+  metadata: bash tests/run-metadata-tests.sh

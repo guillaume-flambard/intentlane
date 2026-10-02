@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>IntentLane NetNewsWire Pilot</title>
+    <link>https://example.invalid/intentlane-pilot</link>
+    <description>Deterministic fixture feed for the IntentLane NetNewsWire macOS pilot. Exactly three articles: Alpha is found and opened, Beta is a distinct article, Gamma is the negative case and must never be matched.</description>
+    <language>en</language>
+    <item>
+      <title>Alpha article about feed readers</title>
+      <link>https://example.invalid/intentlane-pilot/alpha</link>
+      <guid isPermaLink="false">intentlane-alpha</guid>
+      <pubDate>Tue, 01 Sep 2026 09:00:00 GMT</pubDate>
+      <description>Alpha fixture for Spotlight and Siri validation.</description>
+    </item>
+    <item>
+      <title>Beta article about RSS</title>
+      <link>https://example.invalid/intentlane-pilot/beta</link>
+      <guid isPermaLink="false">intentlane-beta</guid>
+      <pubDate>Wed, 02 Sep 2026 09:00:00 GMT</pubDate>
+      <description>Beta fixture for a distinct article.</description>
+    </item>
+    <item>
+      <title>Gamma article about feeds</title>
+      <link>https://example.invalid/intentlane-pilot/gamma</link>
+      <guid isPermaLink="false">intentlane-gamma</guid>
+      <pubDate>Thu, 03 Sep 2026 09:00:00 GMT</pubDate>
+      <description>Gamma fixture for negative matching validation.</description>
+    </item>
+  </channel>
+</rss>

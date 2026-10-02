@@ -19,7 +19,7 @@ function generatorResolutionError(missing, projectRoot, cause) {
 function resolveGeneratorInvocation({ projectRoot, configFile, outputDirectory, resolveModule }) {
   const config = resolve(projectRoot, configFile);
   if (!existsSync(config)) {
-    throw new Error(`IntentLane configuration not found: ${config}. Run 'npx intentlane init' in ${projectRoot}.`);
+    throw new Error(`IntentLane configuration not found: ${config}. Run 'npx @memolabs-apps/intentlane init' in ${projectRoot}.`);
   }
 
   let cliEntry;
