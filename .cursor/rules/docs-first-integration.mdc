@@ -1,0 +1,28 @@
+---
+description: Require the matching official documentation before technical work
+alwaysApply: true
+---
+
+# Documentation-first execution gate
+
+Before diagnosing, planning, or changing anything that depends on a platform, SDK, framework,
+API, format, or external tool:
+
+1. Identify the project's installed, declared, or target version. Read the latest official
+   documentation when the project tracks current releases; otherwise read the official
+   documentation that matches the project's deliberately pinned version.
+2. Verify prerequisites, public permissions, lifecycle rules, deployment limits, and the whole
+   user journey. Do not infer requirements from a neighbouring or older API.
+3. Record the authoritative sources and the resulting requirements in the technical report or
+   implementation summary.
+4. If the official source or installed SDK contradicts the working assumption, stop, revise the
+   plan, then continue.
+
+When an official runnable sample or maintained public implementation covers the same workflow,
+start from it. Establish an explicit gap table for target membership, lifecycle registration,
+metadata, data, permissions, and real-device behavior before writing custom integration code. If
+no such example exists, record that fact and create a minimal reproducer before changing the main
+project.
+
+Do not label an issue as a system fault or request an environment repair until this gate has been
+completed and the application-side requirements have been checked.

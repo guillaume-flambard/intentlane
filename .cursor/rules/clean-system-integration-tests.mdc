@@ -1,0 +1,20 @@
+---
+description: Require a clean, identified environment for every system-integration test
+alwaysApply: true
+---
+
+# Clean system-integration test gate
+
+Before every test involving Siri, Spotlight, App Intents, Shortcuts, signing, installation, or
+another operating-system service:
+
+1. Inventory running related processes, installed test bundles, bundle identifiers, versions, and
+   launch paths.
+2. Quit only the identified test processes and remove or isolate only validated duplicate test
+   bundles. Never touch a user's normal production application.
+3. Keep exactly one named test bundle per experiment and record its path, bundle identifier,
+   version, signing state, and launch state.
+4. Launch that bundle cleanly, confirm its runtime registration/index status, then run one
+   documented test phrase or interaction.
+5. Treat evidence from a mixed or stale environment as invalid. Do not request a user retest
+   until this preflight is recorded.
