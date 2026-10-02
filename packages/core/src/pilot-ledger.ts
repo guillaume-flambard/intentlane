@@ -4,6 +4,20 @@ import { isNonEmptyString, isRecord } from "./guards.js";
 
 export const PILOT_LEDGER_VERSION = "pilot-evidence/1.0";
 
+// A ledger that records more than one observation of the same pilot carries them
+// as an array, and names the one whose result is current. Layers were always
+// optional, so a first observation stays a valid 1.0 ledger; 1.1 is the same
+// document with observations around it.
+export const PILOT_LEDGER_VERSION_OBSERVATIONS = "pilot-evidence/1.1";
+
+export const PILOT_LEDGER_VERSIONS = [PILOT_LEDGER_VERSION, PILOT_LEDGER_VERSION_OBSERVATIONS] as const;
+
+// The id given to the single observation of a 1.0 ledger, so the internal shape
+// is always a list of observations.
+const PILOT_LEDGER_IMPLICIT_OBSERVATION = "observation-1";
+
+export type PilotLedgerSchema = (typeof PILOT_LEDGER_VERSIONS)[number];
+
 export const PILOT_LEDGER_PLATFORMS = ["macos", "ios"] as const;
 
 export type PilotLedgerPlatform = (typeof PILOT_LEDGER_PLATFORMS)[number];
@@ -60,15 +74,36 @@ export type PilotLedgerReproduction = Readonly<{
   status: PilotLedgerLayerStatus;
 }>;
 
-export type PilotLedger = Readonly<{
-  schema: typeof PILOT_LEDGER_VERSION;
-  pilot: string;
-  platform: PilotLedgerPlatform;
+export type PilotLedgerArtifacts = Readonly<{ baseline?: string; delta?: string }>;
+
+/**
+ * One observation of a pilot: the environment it ran under and what it saw.
+ * A ledger holds one (schema 1.0) or several (schema 1.1); see `current`.
+ */
+export type PilotLedgerObservation = Readonly<{
+  id: string;
   revision: string;
   conditions: Readonly<Record<string, string>>;
   journeys: readonly PilotLedgerJourney[];
   reproduction: PilotLedgerReproduction;
-  artifacts?: Readonly<{ baseline?: string; delta?: string }>;
+  artifacts?: PilotLedgerArtifacts;
+}>;
+
+export type PilotLedger = Readonly<{
+  schema: PilotLedgerSchema;
+  pilot: string;
+  platform: PilotLedgerPlatform;
+  /** The observation whose result the ledger reports. */
+  current: string;
+  /** Every observation, in recorded order. Earlier ones are preserved history. */
+  observations: readonly PilotLedgerObservation[];
+  // The current observation, flattened, so a single-observation reader keeps
+  // reading the same fields it always did.
+  revision: string;
+  conditions: Readonly<Record<string, string>>;
+  journeys: readonly PilotLedgerJourney[];
+  reproduction: PilotLedgerReproduction;
+  artifacts?: PilotLedgerArtifacts;
 }>;
 
 export type PilotLedgerStatus = "verified" | "unverified";
@@ -89,6 +124,10 @@ export type PilotLedgerResult = Readonly<{
 
 function invalid(code: PilotLedgerDiagnosticCode, message: string, path: string): PilotLedgerDiagnostic {
   return { code, message, path };
+}
+
+function at(prefix: string, suffix: string): string {
+  return prefix === "" ? suffix : `${prefix}.${suffix}`;
 }
 
 function checkLayers(value: unknown, path: string, errors: PilotLedgerDiagnostic[]): Record<PilotLedgerLayer, PilotLedgerLayerStatus> | undefined {
@@ -231,74 +270,90 @@ function checkJourney(value: unknown, path: string, errors: PilotLedgerDiagnosti
   return journey;
 }
 
-function checkReproduction(value: unknown, errors: PilotLedgerDiagnostic[]): PilotLedgerReproduction | undefined {
+function checkReproduction(value: unknown, path: string, errors: PilotLedgerDiagnostic[]): PilotLedgerReproduction | undefined {
   if (value === undefined) {
-    errors.push(invalid("ILA175", "A ledger needs an independent reproduction before it can read verified.", "reproduction"));
+    errors.push(invalid("ILA175", "A ledger needs an independent reproduction before it can read verified.", at(path, "reproduction")));
     return undefined;
   }
   if (!isRecord(value)) {
-    errors.push(invalid("ILA173", "A reproduction must be an object.", "reproduction"));
+    errors.push(invalid("ILA173", "A reproduction must be an object.", at(path, "reproduction")));
     return undefined;
   }
   let valid = true;
   if (!isNonEmptyString(value["by"])) {
-    errors.push(invalid("ILA173", "A reproduction must name who reproduced it.", "reproduction.by"));
+    errors.push(invalid("ILA173", "A reproduction must name who reproduced it.", at(path, "reproduction.by")));
     valid = false;
   }
   const status = value["status"];
   if (typeof status !== "string" || !(PILOT_LEDGER_LAYER_STATUSES as readonly string[]).includes(status)) {
-    errors.push(invalid("ILA173", `A reproduction status must be one of: ${PILOT_LEDGER_LAYER_STATUSES.join(", ")}.`, "reproduction.status"));
+    errors.push(invalid("ILA173", `A reproduction status must be one of: ${PILOT_LEDGER_LAYER_STATUSES.join(", ")}.`, at(path, "reproduction.status")));
     valid = false;
   }
   if (!valid || !isNonEmptyString(value["by"])) return undefined;
   return { by: value["by"], status: status as PilotLedgerLayerStatus };
 }
 
-function checkLedger(value: unknown, errors: PilotLedgerDiagnostic[]): PilotLedger | undefined {
+function checkArtifacts(value: unknown, path: string, errors: PilotLedgerDiagnostic[]): PilotLedgerArtifacts | undefined {
+  if (value === undefined) return undefined;
   if (!isRecord(value)) {
-    errors.push(invalid("ILA173", "A pilot evidence ledger must be an object.", "root"));
+    errors.push(invalid("ILA173", "Artifact references must be an object.", at(path, "artifacts")));
+    return undefined;
+  }
+  const refs: { baseline?: string; delta?: string } = {};
+  for (const key of ["baseline", "delta"] as const) {
+    const entry = value[key];
+    if (entry === undefined) continue;
+    if (!isNonEmptyString(entry)) {
+      errors.push(invalid("ILA173", `Artifact reference '${key}' must be a non-empty relative path.`, at(path, `artifacts.${key}`)));
+      continue;
+    }
+    if (entry.startsWith("/")) {
+      errors.push(invalid("ILA173", `Artifact reference '${key}' must stay relative to the ledger.`, at(path, `artifacts.${key}`)));
+      continue;
+    }
+    refs[key] = entry;
+  }
+  return refs;
+}
+
+type ObservationFields = Omit<PilotLedgerObservation, "id">;
+
+function checkObservation(value: unknown, path: string, errors: PilotLedgerDiagnostic[]): ObservationFields | undefined {
+  if (!isRecord(value)) {
+    errors.push(invalid("ILA173", "An observation must be an object.", path));
     return undefined;
   }
   let valid = true;
-  if (value["schema"] !== PILOT_LEDGER_VERSION) {
-    errors.push(invalid("ILA173", `A ledger schema must be '${PILOT_LEDGER_VERSION}'.`, "schema"));
-    valid = false;
-  }
-  if (!isNonEmptyString(value["pilot"])) {
-    errors.push(invalid("ILA173", "A ledger must name a non-empty pilot.", "pilot"));
-    valid = false;
-  }
-  if (typeof value["platform"] !== "string" || !(PILOT_LEDGER_PLATFORMS as readonly string[]).includes(value["platform"])) {
-    errors.push(invalid("ILA173", `A ledger platform must be one of: ${PILOT_LEDGER_PLATFORMS.join(", ")}.`, "platform"));
-    valid = false;
-  }
   if (!isNonEmptyString(value["revision"])) {
-    errors.push(invalid("ILA173", "A ledger must name the observed upstream revision.", "revision"));
+    errors.push(invalid("ILA173", "A ledger must name the observed upstream revision.", at(path, "revision")));
     valid = false;
   }
   const conditions = value["conditions"];
+  const recorded: Record<string, string> = {};
   if (!isRecord(conditions) || Object.keys(conditions).length === 0) {
-    errors.push(invalid("ILA173", "A ledger must record observed conditions.", "conditions"));
+    errors.push(invalid("ILA173", "A ledger must record observed conditions.", at(path, "conditions")));
     valid = false;
   } else {
     for (const [key, entry] of Object.entries(conditions)) {
       if (!isNonEmptyString(entry)) {
-        errors.push(invalid("ILA173", `Condition '${key}' must record a non-empty observation.`, `conditions.${key}`));
+        errors.push(invalid("ILA173", `Condition '${key}' must record a non-empty observation.`, at(path, `conditions.${key}`)));
         valid = false;
+        continue;
       }
+      recorded[key] = entry;
     }
   }
   const journeysRaw = value["journeys"];
   const journeys: PilotLedgerJourney[] = [];
   if (!Array.isArray(journeysRaw) || journeysRaw.length === 0) {
-    errors.push(invalid("ILA173", "A ledger must describe at least one journey.", "journeys"));
+    errors.push(invalid("ILA173", "A ledger must describe at least one journey.", at(path, "journeys")));
     valid = false;
   } else if (journeysRaw.length > 3) {
-    errors.push(invalid("ILA173", "A ledger holds at most three journeys.", "journeys"));
+    errors.push(invalid("ILA173", "A ledger holds at most three journeys.", at(path, "journeys")));
     valid = false;
   } else {
     journeysRaw.forEach((entry, index) => {
-      const journey = checkJourney(entry, `journeys[${index}]`, errors);
+      const journey = checkJourney(entry, at(path, `journeys[${index}]`), errors);
       if (journey === undefined) {
         valid = false;
         return;
@@ -307,61 +362,121 @@ function checkLedger(value: unknown, errors: PilotLedgerDiagnostic[]): PilotLedg
     });
     const ids = journeys.map((journey) => journey.id);
     if (new Set(ids).size !== ids.length) {
-      errors.push(invalid("ILA173", "Journey ids must be unique.", "journeys"));
+      errors.push(invalid("ILA173", "Journey ids must be unique.", at(path, "journeys")));
       valid = false;
     }
   }
-  const artifacts = value["artifacts"];
-  let artifactRefs: Readonly<{ baseline?: string; delta?: string }> | undefined;
-  if (artifacts !== undefined) {
-    if (!isRecord(artifacts)) {
-      errors.push(invalid("ILA173", "Artifact references must be an object.", "artifacts"));
-      valid = false;
-    } else {
-      const refs: { baseline?: string; delta?: string } = {};
-      for (const key of ["baseline", "delta"] as const) {
-        const entry = artifacts[key];
-        if (entry === undefined) continue;
-        if (!isNonEmptyString(entry)) {
-          errors.push(invalid("ILA173", `Artifact reference '${key}' must be a non-empty relative path.`, `artifacts.${key}`));
-          valid = false;
-          continue;
-        }
-        if (entry.startsWith("/")) {
-          errors.push(invalid("ILA173", `Artifact reference '${key}' must stay relative to the ledger.`, `artifacts.${key}`));
-          valid = false;
-          continue;
-        }
-        refs[key] = entry;
-      }
-      artifactRefs = refs;
-    }
-  }
-  const reproduction = checkReproduction(value["reproduction"], errors);
+  const artifacts = checkArtifacts(value["artifacts"], path, errors);
+  const reproduction = checkReproduction(value["reproduction"], path, errors);
   if (reproduction === undefined) valid = false;
-  if (
-    !valid ||
-    !isNonEmptyString(value["pilot"]) ||
-    !isNonEmptyString(value["revision"]) ||
-    !isRecord(conditions) ||
-    reproduction === undefined
-  ) {
-    return undefined;
-  }
-  const platform = value["platform"] as PilotLedgerPlatform;
-  const recorded: Record<string, string> = {};
-  for (const [key, entry] of Object.entries(conditions)) {
-    if (isNonEmptyString(entry)) recorded[key] = entry;
-  }
+  if (!valid || !isNonEmptyString(value["revision"]) || reproduction === undefined) return undefined;
   return {
-    schema: PILOT_LEDGER_VERSION,
-    pilot: value["pilot"],
-    platform,
     revision: value["revision"],
     conditions: recorded,
     journeys,
     reproduction,
-    ...(artifactRefs ? { artifacts: artifactRefs } : {})
+    ...(artifacts ? { artifacts } : {})
+  };
+}
+
+function checkLedger(value: unknown, errors: PilotLedgerDiagnostic[]): PilotLedger | undefined {
+  if (!isRecord(value)) {
+    errors.push(invalid("ILA173", "A pilot evidence ledger must be an object.", "root"));
+    return undefined;
+  }
+  const schema = value["schema"];
+  if (typeof schema !== "string" || !(PILOT_LEDGER_VERSIONS as readonly string[]).includes(schema)) {
+    errors.push(invalid("ILA173", `A ledger schema must be one of: ${PILOT_LEDGER_VERSIONS.join(", ")}.`, "schema"));
+    return undefined;
+  }
+  let valid = true;
+  if (!isNonEmptyString(value["pilot"])) {
+    errors.push(invalid("ILA173", "A ledger must name a non-empty pilot.", "pilot"));
+    valid = false;
+  }
+  if (typeof value["platform"] !== "string" || !(PILOT_LEDGER_PLATFORMS as readonly string[]).includes(value["platform"])) {
+    errors.push(invalid("ILA173", `A ledger platform must be one of: ${PILOT_LEDGER_PLATFORMS.join(", ")}.`, "platform"));
+    valid = false;
+  }
+
+  const observations: PilotLedgerObservation[] = [];
+  let current = "";
+  const FLAT_KEYS = ["revision", "conditions", "journeys", "reproduction", "artifacts"] as const;
+
+  if (schema === PILOT_LEDGER_VERSION_OBSERVATIONS) {
+    for (const key of FLAT_KEYS) {
+      if (value[key] !== undefined) {
+        errors.push(
+          invalid(
+            "ILA173",
+            `A multi-observation ledger records '${key}' inside each observation, not at the root.`,
+            key
+          )
+        );
+        valid = false;
+      }
+    }
+    const raw = value["observations"];
+    if (!Array.isArray(raw) || raw.length === 0) {
+      errors.push(invalid("ILA173", "A multi-observation ledger must hold at least one observation.", "observations"));
+      valid = false;
+    } else {
+      raw.forEach((entry, index) => {
+        const path = `observations[${index}]`;
+        if (!isRecord(entry) || !isNonEmptyString(entry["id"])) {
+          errors.push(invalid("ILA173", "An observation must name a non-empty id.", `${path}.id`));
+          valid = false;
+          return;
+        }
+        const fields = checkObservation(entry, path, errors);
+        if (fields === undefined) {
+          valid = false;
+          return;
+        }
+        observations.push({ id: entry["id"], ...fields });
+      });
+      const ids = observations.map((observation) => observation.id);
+      if (new Set(ids).size !== ids.length) {
+        errors.push(invalid("ILA173", "Observation ids must be unique.", "observations"));
+        valid = false;
+      }
+    }
+    const currentRaw = value["current"];
+    if (currentRaw === undefined) {
+      current = observations.length > 0 ? (observations[observations.length - 1] as PilotLedgerObservation).id : "";
+    } else if (!isNonEmptyString(currentRaw)) {
+      errors.push(invalid("ILA173", "A ledger current observation must be a non-empty id.", "current"));
+      valid = false;
+    } else if (!observations.some((observation) => observation.id === currentRaw)) {
+      errors.push(invalid("ILA173", `The current observation '${currentRaw}' is not recorded.`, "current"));
+      valid = false;
+    } else {
+      current = currentRaw;
+    }
+  } else {
+    const fields = checkObservation(value, "", errors);
+    if (fields === undefined) {
+      valid = false;
+    } else {
+      observations.push({ id: PILOT_LEDGER_IMPLICIT_OBSERVATION, ...fields });
+      current = PILOT_LEDGER_IMPLICIT_OBSERVATION;
+    }
+  }
+
+  if (!valid || !isNonEmptyString(value["pilot"]) || observations.length === 0) return undefined;
+  const active = observations.find((observation) => observation.id === current);
+  if (active === undefined) return undefined;
+  return {
+    schema: schema as PilotLedgerSchema,
+    pilot: value["pilot"],
+    platform: value["platform"] as PilotLedgerPlatform,
+    current,
+    observations,
+    revision: active.revision,
+    conditions: active.conditions,
+    journeys: active.journeys,
+    reproduction: active.reproduction,
+    ...(active.artifacts ? { artifacts: active.artifacts } : {})
   };
 }
 
@@ -372,10 +487,21 @@ function requiredLayers(journey: PilotLedgerJourney): PilotLedgerLayer[] {
 function summarizeVerified(ledger: PilotLedger): string {
   const layers = [...new Set(ledger.journeys.flatMap((journey) => requiredLayers(journey)))];
   const names = ledger.journeys.map((journey) => `'${journey.id}'`).join(", ");
+  const currentNote =
+    ledger.observations.length > 1 ? ` Current observation: '${ledger.current}'.` : "";
+  const history =
+    ledger.observations.length > 1
+      ? ` ${ledger.observations.length - 1} earlier observation(s) preserved: ${ledger.observations
+          .filter((observation) => observation.id !== ledger.current)
+          .map((observation) => `'${observation.id}'`)
+          .join(", ")}.`
+      : "";
   return (
     `Pilot '${ledger.pilot}' (${ledger.platform}): verified. ` +
     `${ledger.journeys.length} journey(s) ${names} pass required layers ${layers.join(", ")} ` +
-    `and independent reproduction passes (by ${ledger.reproduction.by}).`
+    `and independent reproduction passes (by ${ledger.reproduction.by}).` +
+    currentNote +
+    history
   );
 }
 
@@ -383,9 +509,18 @@ function summarizeUnverified(
   ledger: PilotLedger | undefined,
   diagnostics: readonly PilotLedgerDiagnostic[]
 ): string {
-  const head = ledger ? `Pilot '${ledger.pilot}' (${ledger.platform}): unverified.` : "Pilot evidence ledger: unverified.";
+  const head = ledger
+    ? `Pilot '${ledger.pilot}' (${ledger.platform}): unverified.` +
+      (ledger.observations.length > 1 ? ` Current observation: '${ledger.current}'.` : "")
+    : "Pilot evidence ledger: unverified.";
   const blocking = diagnostics.map((item) => `${item.path}: ${item.message}`).join(" ");
   return `${head} Blocking: ${blocking}`;
+}
+
+function currentObservationPrefix(ledger: PilotLedger): string {
+  if (ledger.schema !== PILOT_LEDGER_VERSION_OBSERVATIONS) return "";
+  const index = ledger.observations.findIndex((observation) => observation.id === ledger.current);
+  return index < 0 ? "" : `observations[${index}]`;
 }
 
 export function validatePilotLedger(value: unknown): PilotLedgerResult {
@@ -394,8 +529,14 @@ export function validatePilotLedger(value: unknown): PilotLedgerResult {
   if (ledger === undefined) {
     return { status: "unverified", diagnostics: structural, summary: summarizeUnverified(undefined, structural) };
   }
+  // Structural problems in any observation make the whole document unusable.
+  // Layer and reproduction results are read from the current observation only:
+  // an earlier observation is history, kept and checked for shape, not a gate on
+  // the present one.
   const diagnostics: PilotLedgerDiagnostic[] = [...structural];
-  for (const journey of ledger.journeys) {
+  const prefix = currentObservationPrefix(ledger);
+  const active = ledger.observations.find((observation) => observation.id === ledger.current);
+  for (const journey of active?.journeys ?? []) {
     for (const layer of requiredLayers(journey)) {
       const status = journey.layers[layer];
       if (status !== "pass") {
@@ -403,7 +544,7 @@ export function validatePilotLedger(value: unknown): PilotLedgerResult {
           invalid(
             "ILA174",
             `Journey '${journey.id}' needs layer '${layer}' at pass, found '${status ?? "missing"}'.`,
-            `journeys.${journey.id}.layers.${layer}`
+            at(prefix, `journeys.${journey.id}.layers.${layer}`)
           )
         );
       }
@@ -416,7 +557,7 @@ export function validatePilotLedger(value: unknown): PilotLedgerResult {
           invalid(
             "ILA174",
             `Risky journey '${journey.id}' misses risk evidence: ${missing.join(", ")}.`,
-            `journeys.${journey.id}.riskEvidence`
+            at(prefix, `journeys.${journey.id}.riskEvidence`)
           )
         );
       }
@@ -427,7 +568,7 @@ export function validatePilotLedger(value: unknown): PilotLedgerResult {
       invalid(
         "ILA175",
         `Independent reproduction by '${ledger.reproduction.by}' is '${ledger.reproduction.status}', expected pass.`,
-        "reproduction.status"
+        at(prefix, "reproduction.status")
       )
     );
   }

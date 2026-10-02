@@ -157,3 +157,41 @@ describe("pilot ledger validation", () => {
     expect(validatePilotLedger(ledger)).toEqual(validatePilotLedger(loadFixture("siri-blocked.yaml")));
   });
 });
+
+describe("pilot ledger observations", () => {
+  it("reads a multi-observation ledger and reports the current one", () => {
+    const result = validatePilotLedger(loadFixture("multi-observation.yaml"));
+    expect(result.status).toBe("verified");
+    expect(result.diagnostics).toEqual([]);
+    expect(result.summary).toContain("26a434");
+  });
+
+  it("preserves a failed earlier observation without gating the current one", () => {
+    const result = validatePilotLedger(loadFixture("multi-observation.yaml"));
+    // The 26A428 observation failed Siri and reproduction, and is still recorded.
+    expect(result.status).toBe("verified");
+    expect(result.summary).toContain("macos-26a428");
+  });
+
+  it("fails when the current observation fails, even if an earlier one passed", () => {
+    const result = validatePilotLedger(loadFixture("multi-observation-current-fails.yaml"));
+    expect(result.status).toBe("unverified");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "ILA174", path: expect.stringContaining("observations[1]") })
+    );
+  });
+
+  it("rejects flat fields beside observations", () => {
+    const ledger = loadFixture("multi-observation.yaml") as Record<string, unknown>;
+    const result = validatePilotLedger({ ...ledger, revision: "duplicate" });
+    expect(result.status).toBe("unverified");
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "ILA173", path: "revision" }));
+  });
+
+  it("rejects a current that names no observation", () => {
+    const ledger = loadFixture("multi-observation.yaml") as Record<string, unknown>;
+    const result = validatePilotLedger({ ...ledger, current: "macos-99" });
+    expect(result.status).toBe("unverified");
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({ code: "ILA173", path: "current" }));
+  });
+});

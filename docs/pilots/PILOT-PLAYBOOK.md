@@ -59,7 +59,7 @@ then repeat a negative or unsafe case. Check Shortcuts only when it is claimed
 as a separate automation surface. Then export the audit delta and evidence
 ledger. Export the delta between the pinned
 baseline and the post-implementation report with
-`npx intentlane audit-diff baseline.json candidate.json --fail-on regression`,
+`npx @memolabs-apps/intentlane audit-diff baseline.json candidate.json --fail-on regression`,
 keep the rendered delta next to the evidence ledger, and treat any regression
 entry as a release blocker until a person explains it.
 
@@ -117,3 +117,53 @@ artifacts:
 `siri` are required only when claimed. A risky journey also documents
 confirmation, authentication and ownership. Use harmless local fixture data
 only, never credentials or production content.
+
+## A second observation of the same pilot
+
+A ledger records one observation. When the same pilot is observed again, for
+example under a new system build, add the new observation beside the first and
+move `current` to it. Do not edit the earlier observation: it is historical
+evidence, and its layers are what the pilot actually saw then. Use schema
+`pilot-evidence/1.1`:
+
+```yaml
+schema: pilot-evidence/1.1
+pilot: ledgerapp-macos
+platform: macos
+current: macos-26a434
+observations:
+  - id: macos-26a428
+    revision: ledgerapp-2.7.1
+    conditions:
+      osBuild: macOS 27.0 build 26A428
+      locale: en-US
+    journeys:
+      - id: find-alpha
+        claimed: [spotlight, siri]
+        layers: { contract: pass, build: pass, spotlight: pass, siri: fail }
+        risky: false
+    reproduction:
+      by: pending-second-reviewer
+      status: fail
+  - id: macos-26a434
+    revision: ledgerapp-2.7.1
+    conditions:
+      osBuild: macOS 27.0.1 build 26A434
+      locale: en-US
+    journeys:
+      - id: find-alpha
+        claimed: [spotlight, siri]
+        layers: { contract: pass, build: pass, spotlight: pass, siri: pass }
+        risky: false
+    reproduction:
+      by: reviewer-b
+      status: pass
+```
+
+The status follows `current` alone: a failure in an earlier observation does not
+gate the new one, and a failure in the current one does, whatever the history
+recorded. A malformed observation anywhere still makes the whole ledger
+`unverified`, because a document you cannot trust about its own shape cannot be
+trusted about which observation is current. A `pilot-evidence/1.0` ledger is
+read as a single observation and keeps producing the same diagnostics, so no
+existing ledger has to change.

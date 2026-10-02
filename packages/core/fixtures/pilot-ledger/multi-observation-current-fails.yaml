@@ -1,0 +1,38 @@
+schema: pilot-evidence/1.1
+pilot: netnewswire-macos
+platform: macos
+current: macos-26a434
+observations:
+  - id: macos-26a428
+    revision: 0184ca38c586078117a21f96f68eef78d39b8f68
+    conditions:
+      osBuild: macOS 27.0 build 26A428
+      locale: C.UTF-8
+    journeys:
+      - id: search-and-open-alpha
+        claimed: [spotlight]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+        risky: false
+    reproduction:
+      by: reviewer-b
+      status: pass
+  - id: macos-26a434
+    revision: 0184ca38c586078117a21f96f68eef78d39b8f68
+    conditions:
+      osBuild: macOS 27.0.1 build 26A434
+      locale: C.UTF-8
+    journeys:
+      - id: search-and-open-alpha
+        claimed: [spotlight, siri]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+          siri: blocked
+        risky: false
+    reproduction:
+      by: reviewer-b
+      status: pass

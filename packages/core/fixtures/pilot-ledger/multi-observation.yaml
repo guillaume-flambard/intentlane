@@ -1,0 +1,75 @@
+schema: pilot-evidence/1.1
+pilot: netnewswire-macos
+platform: macos
+current: macos-26a434
+observations:
+  - id: macos-26a428
+    revision: 0184ca38c586078117a21f96f68eef78d39b8f68
+    conditions:
+      osBuild: macOS 27.0 build 26A428
+      xcode: Xcode 27.0 build 27A266a
+      locale: C.UTF-8
+      device: local Mac
+    journeys:
+      - id: search-and-open-alpha
+        claimed: [spotlight, siri]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+          siri: fail
+        risky: false
+      - id: mark-beta-read
+        claimed: [shortcuts, siri]
+        layers:
+          contract: pass
+          build: pass
+          shortcuts: fail
+          siri: fail
+        risky: false
+      - id: invented-title-does-not-resolve
+        claimed: [spotlight, siri]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+          siri: fail
+        risky: false
+    reproduction:
+      by: pending-second-reviewer
+      status: fail
+  - id: macos-26a434
+    revision: 0184ca38c586078117a21f96f68eef78d39b8f68
+    conditions:
+      osBuild: macOS 27.0.1 build 26A434
+      xcode: Xcode 27.0 build 27A266a
+      locale: C.UTF-8
+      device: local Mac
+    journeys:
+      - id: search-and-open-alpha
+        claimed: [spotlight, siri]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+          siri: pass
+        risky: false
+      - id: mark-beta-read
+        claimed: [shortcuts, siri]
+        layers:
+          contract: pass
+          build: pass
+          shortcuts: pass
+          siri: pass
+        risky: false
+      - id: invented-title-does-not-resolve
+        claimed: [spotlight, siri]
+        layers:
+          contract: pass
+          build: pass
+          spotlight: pass
+          siri: pass
+        risky: false
+    reproduction:
+      by: reviewer-b
+      status: pass
