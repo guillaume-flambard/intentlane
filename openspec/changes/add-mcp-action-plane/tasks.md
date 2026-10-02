@@ -30,6 +30,28 @@
 - [ ] 2.4 Vérifier les tools contre un inspecteur MCP et des tests qui
   comparent l'appel du tool au même résultat métier que l'App Intent.
 
+## 2 bis. UI projection, dormant until 2.1 lands
+
+- [ ] 2b.1 Étendre le contrat canonique avec des hints `presentation`
+  optionnels sur la structure existante `intents` / `parameters`:
+  `control` par paramètre, `preview`, `diff` et `success`. Aucun champ
+  `fallback`: le comportement textuel est implicite. Le contrat 0.1 reste
+  accepté sans `presentation`, et la valeur par défaut est le rendu texte.
+- [ ] 2b.2 Émettre pour chaque action activée une ressource `ui://` déterministe
+  et hors ligne, servie en `text/html;profile=mcp-app`, ainsi que le
+  `_meta.ui.resourceUri` correspondant. Le contenu dérive du contrat canonique,
+  jamais de l'AppIntent généré.
+- [ ] 2b.3 Vérifier la dégradation SEP-2133: un client qui n'a pas négocié
+  `io.modelcontextprotocol/ui` reçoit un résultat texte signifiant et sans
+  perte, et aucun appel de tool ne dépend de la présence de l'UI.
+- [ ] 2b.4 Tester que la confirmation d'une mutation est portée par le tool et
+  l'hôte, qu'une iframe ne valide jamais seule une mutation, et que la parité
+  multi-surface tient sur l'effet observé et non sur la présence d'une iframe.
+- [ ] 2b.5 Tester que retirer tout le bloc `presentation` d'un contrat ne
+  change ni l'effet, ni les paramètres, ni les exigences de l'intention. Un
+  `presentation` dont la suppression change l'exécution est une sémantique mal
+  placée et échoue ce test.
+
 ## 3. Gateway and authentication
 
 - [ ] 3.1 Spécifier la passerelle MCP distante : OAuth, scopes par outil,
