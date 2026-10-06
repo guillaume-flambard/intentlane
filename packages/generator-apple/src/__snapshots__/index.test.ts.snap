@@ -237,14 +237,6 @@ struct OpenIdea: AppIntent {
     )
   }
 }
-
-struct IntentLaneShortcuts: AppShortcutsProvider {
-  static var appShortcuts: [AppShortcut] {
-      AppShortcut(intent: OpenIdea(), phrases: [
-        "Open an idea in \\(.applicationName)"
-      ], shortTitle: LocalizedStringResource("Open an idea", table: "IntentLane"), systemImageName: "sparkles")
-  }
-}
 "
 `;
 
@@ -1224,14 +1216,6 @@ struct CreateIdea: AppIntent {
       dialog: IntentDialog(LocalizedStringResource("Your idea is ready", table: "IntentLane")),
       view: IntentLaneSnippetView(title: LocalizedStringResource("Create an idea", table: "IntentLane"), fields: [(LocalizedStringResource("title", table: "IntentLane"), title), (LocalizedStringResource("effort", table: "IntentLane"), String(effort)), (LocalizedStringResource("ratio", table: "IntentLane"), String(ratio)), (LocalizedStringResource("pinned", table: "IntentLane"), pinned ? "true" : "false"), (LocalizedStringResource("due", table: "IntentLane"), String(format: "%04d-%02d-%02d", due.year ?? 0, due.month ?? 0, due.day ?? 0)), (LocalizedStringResource("at", table: "IntentLane"), at.ISO8601Format()), (LocalizedStringResource("priority", table: "IntentLane"), priority.rawValue)])
     )
-  }
-}
-
-struct IntentLaneShortcuts: AppShortcutsProvider {
-  static var appShortcuts: [AppShortcut] {
-      AppShortcut(intent: CreateIdea(), phrases: [
-        "Create an idea in \\(.applicationName)"
-      ], shortTitle: LocalizedStringResource("Create an idea", table: "IntentLane"), systemImageName: "sparkles")
   }
 }
 "

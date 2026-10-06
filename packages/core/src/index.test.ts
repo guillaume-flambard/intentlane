@@ -849,6 +849,147 @@ describe("schema parameters", () => {
   });
 });
 
+describe("mixed schema domain rejection", () => {
+  const page = {
+    id: "page",
+    title: { en: "Page" },
+    identifier: "id",
+    display: { title: "label" },
+    query: { mode: "static" },
+    exposure: { rules: ["source_disabled"] },
+    schema: "reader.page"
+  };
+
+  const baseApp = {
+    id: "dev.intentlane.test",
+    name: "Test",
+    url_scheme: "test",
+    min_ios: "27.0",
+    locales: ["en"]
+  };
+
+  it("rejects a contract mixing reader schema with system.open", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: baseApp,
+      entities: [page],
+      intents: [
+        {
+          id: "open_page",
+          title: { en: "Open page" },
+          parameters: [],
+          execution: { mode: "native" },
+          schema: "system.open",
+          target: "page"
+        },
+        {
+          id: "delete_pages",
+          title: { en: "Delete pages" },
+          parameters: [],
+          execution: { mode: "native", handler: "DeletePagesHandler" },
+          schema: "reader.deletePages",
+          target: "page"
+        }
+      ]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents", message: expect.stringContaining("cannot mix Siri AI schemas") })
+    );
+  });
+
+  it("rejects a contract mixing reader schema with system.searchInApp", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: baseApp,
+      entities: [page],
+      intents: [
+        {
+          id: "search_pages",
+          title: { en: "Search pages" },
+          parameters: [],
+          execution: { mode: "native", handler: "SearchHandler" },
+          schema: "system.searchInApp"
+        },
+        {
+          id: "open_page",
+          title: { en: "Open page" },
+          parameters: [],
+          execution: { mode: "native" },
+          schema: "reader.openPage",
+          target: "page"
+        }
+      ]
+    });
+    expect(result.ir).toBeUndefined();
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "IL1401", path: "intents", message: expect.stringContaining("cannot mix Siri AI schemas") })
+    );
+  });
+
+  it("accepts a contract with only reader schema", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: baseApp,
+      entities: [page],
+      intents: [
+        {
+          id: "open_page",
+          title: { en: "Open page" },
+          parameters: [],
+          execution: { mode: "native" },
+          schema: "reader.openPage",
+          target: "page"
+        },
+        {
+          id: "delete_pages",
+          title: { en: "Delete pages" },
+          parameters: [],
+          execution: { mode: "native", handler: "DeletePagesHandler" },
+          schema: "reader.deletePages",
+          target: "page"
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("accepts a contract with only system schemas", () => {
+    const result = parseConfig({
+      schema: "0.1",
+      app: baseApp,
+      entities: [
+        {
+          id: "article",
+          title: { en: "Article" },
+          identifier: "id",
+          display: { title: "title" },
+          query: { mode: "static" },
+          exposure: { rules: ["source_disabled"] }
+        }
+      ],
+      intents: [
+        {
+          id: "open_article",
+          title: { en: "Open article" },
+          parameters: [],
+          execution: { mode: "native" },
+          schema: "system.open",
+          target: "article"
+        },
+        {
+          id: "search_articles",
+          title: { en: "Search articles" },
+          parameters: [],
+          execution: { mode: "native", handler: "SearchHandler" },
+          schema: "system.searchInApp"
+        }
+      ]
+    });
+    expect(result.diagnostics).toEqual([]);
+  });
+});
+
 describe("diagnostic codes", () => {
   it("publishes the documented contract in order", () => {
     expect([...DIAGNOSTIC_CODES]).toEqual([

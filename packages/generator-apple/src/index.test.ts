@@ -4,7 +4,7 @@ import { generateAdapterTemplate, generateArtifacts, generateStrings, generateSw
 
 const config = {
   schema: "0.1",
-  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", locales: ["en", "fr"] },
+  app: { id: "dev.intentlane.example", name: "Example", url_scheme: "example", min_ios: "18.0", shortcuts: true, locales: ["en", "fr"] },
   intents: [{
     id: "create_idea",
     title: { en: "Create an idea", fr: "Créer une idée" },

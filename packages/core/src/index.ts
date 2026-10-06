@@ -96,7 +96,7 @@ export type EntityIR = Readonly<{
 }>;
 export type ConfigIR = Readonly<{
   schemaVersion: "0.1";
-  app: Readonly<{ id: string; name: string; urlScheme: string; minIos?: string; minMacos?: string; locales: readonly string[] }>;
+  app: Readonly<{ id: string; name: string; urlScheme: string; minIos?: string; minMacos?: string; shortcuts?: boolean; locales: readonly string[] }>;
   intents: readonly IntentIR[];
   entities: readonly EntityIR[];
 }>;
@@ -274,6 +274,18 @@ function schemaDiagnostics(config: IntentLaneConfig): Diagnostic[] {
       diagnostics.push(error("IL1401", `Schema '${reference}' requires iOS ${entry.minIos} or newer, and the app declares min_ios: ${config.app.min_ios}.`, path));
     }
   }
+
+  // Shortcuts-only schema validation: reject reader schema when Siri AI schemas are present
+  const hasSystemSchema = config.intents.some((intent) =>
+    intent.schema && (intent.schema.startsWith("system.") || intent.schema.startsWith("visualIntelligence."))
+  );
+  const hasReaderSchema = config.intents.some((intent) =>
+    intent.schema && intent.schema.startsWith("reader.")
+  );
+  if (hasSystemSchema && hasReaderSchema) {
+    diagnostics.push(error("IL1401", "A contract cannot mix Siri AI schemas (system.*, visualIntelligence.*) with the Shortcuts-only reader schema domain. Choose one.", "intents"));
+  }
+
   return diagnostics;
 }
 
@@ -368,6 +380,7 @@ export function parseConfig(value: unknown): ParseResult {
       urlScheme: parsed.data.app.url_scheme,
       ...(parsed.data.app.min_ios ? { minIos: parsed.data.app.min_ios } : {}),
       ...(parsed.data.app.min_macos ? { minMacos: parsed.data.app.min_macos } : {}),
+      ...(parsed.data.app.shortcuts !== undefined ? { shortcuts: parsed.data.app.shortcuts } : {}),
       locales: [...parsed.data.app.locales]
     },
     entities: [...parsed.data.entities].sort((left, right) => left.id.localeCompare(right.id)).map((entity) => ({
@@ -437,6 +450,7 @@ export function scaffoldConfig(input: ScaffoldInput): string {
     `  name: ${yamlDoubleQuoted(input.appName)}`,
     `  url_scheme: ${yamlDoubleQuoted(input.urlScheme)}`,
     '  min_ios: "18.0"',
+    "  shortcuts: false",
     "  locales: [en]",
     "",
     "intents:",
