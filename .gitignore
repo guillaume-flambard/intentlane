@@ -14,3 +14,4 @@ pilots/*/fixtures/media/
 __pycache__/
 pilots/*/.build/
 pilots/*/VERIFICATION-CHECKLIST-*.md
+.impeccable/

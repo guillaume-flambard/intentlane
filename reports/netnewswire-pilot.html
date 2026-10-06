@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetNewsWire × IntentLane — rapport de pilote</title>
+  <style>
+    :root { --ink:#172536; --paper:#f7f8f5; --line:#cbd4d7; --sea:#0a6075; --sky:#d9edf0; --ok:#176b48; --open:#a75916; --muted:#506270; }
+    * { box-sizing:border-box } body { margin:0; color:var(--ink); background:var(--paper); font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif }
+    main { max-width:1120px; margin:auto; padding:36px 24px 72px } header { border-bottom:4px solid var(--sea); padding:32px 0 38px; display:grid; grid-template-columns:1.5fr .8fr; gap:32px }
+    h1,h2,h3 { font-family:Georgia,"Times New Roman",serif; line-height:1.08; margin:0 0 .5rem } h1 { font-size:clamp(2.7rem,7vw,5.6rem); letter-spacing:-.055em } h2 { font-size:2rem; margin-top:3.8rem } h3 { font-size:1.25rem } p { max-width:70ch } .kicker { color:var(--sea); font-weight:700; letter-spacing:.08em; font-size:.77rem; text-transform:uppercase }
+    .summary { align-self:end; padding:20px; background:var(--sky); border-left:5px solid var(--sea) }.summary strong { font-size:1.12rem }.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:24px 0 }.card { padding:20px; border:1px solid var(--line); background:white }.card b { display:block; color:var(--sea); font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px }.number { display:block; font:3.2rem/1 Georgia,serif; color:var(--sea); margin-bottom:7px }
+    .flow { display:grid; grid-template-columns:repeat(4,1fr); margin:28px 0; border:1px solid var(--line); background:white }.flow div { padding:18px; border-right:1px solid var(--line) }.flow div:last-child { border:0 }.flow span { color:var(--sea); font:bold 1.5rem Georgia,serif; display:block }
+    table { width:100%; border-collapse:collapse; margin:20px 0; background:white } th,td { padding:13px 12px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top } th { font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted) }.state { display:inline-block; padding:3px 8px; border-radius:99px; font-size:.78rem; font-weight:700 }.pass { background:#dff3e7; color:var(--ok) }.open { background:#fff0dd; color:var(--open) }
+    details { background:white; border:1px solid var(--line); padding:16px 18px; margin-top:20px } summary { cursor:pointer; font-weight:700 } code { background:#e9eef0; padding:2px 5px; border-radius:3px } .note { color:var(--muted); font-size:.92rem }.footer { border-top:1px solid var(--line); margin-top:56px; padding-top:20px; color:var(--muted); font-size:.9rem }
+    @media (max-width:720px) { header,.grid { grid-template-columns:1fr }.flow { grid-template-columns:1fr }.flow div { border-right:0; border-bottom:1px solid var(--line) }.flow div:last-child { border-bottom:0 } main { padding:20px 16px 48px } }
+  </style>
+</head>
+<body><main>
+  <header>
+    <div><div class="kicker">Rapport de pilote · état local</div><h1>NetNewsWire<br>devient cherchable.</h1><p>Nous avons pris une application RSS existante et lui avons ajouté le raccord moderne pour la recherche et l’ouverture d’articles via Siri AI sur macOS 27.</p></div>
+    <aside class="summary"><strong>Conclusion actuelle</strong><br>Le code et les tests sont prêts. La preuve finale dans Spotlight et Siri reste à réaliser et à reproduire indépendamment. Ce n’est pas encore une promesse publique.</aside>
+  </header>
+
+  <section class="grid">
+    <div class="card"><b>Application pilote</b><span class="number">RSS</span>NetNewsWire, lecteur open source macOS et iOS.</div>
+    <div class="card"><b>Parcours introduit</b><span class="number">2</span>Rechercher dans l’app, puis ouvrir un article exact.</div>
+    <div class="card"><b>Qualité vérifiée</b><span class="number">8/8</span>Tests du pilote passent, sans échec.</div>
+  </section>
+
+  <section><h2>Ce que le pilote apporte</h2><p>Au lieu de fabriquer des phrases Siri isolées, l’intégration décrit à Apple le contenu réel de l’application : un article a un identifiant stable, un titre, une méthode de recherche et un chemin d’ouverture. Cela donne au système une structure fiable, sans lui donner accès à la base de données entière.</p>
+    <div class="flow"><div><span>1</span>Le flux de test contient Alpha, Beta et Gamma.</div><div><span>2</span>NetNewsWire expose une projection minimale de chaque article.</div><div><span>3</span>Spotlight reçoit uniquement les articles explicitement autorisés.</div><div><span>4</span>Siri peut demander une recherche ou l’ouverture d’un article résolu.</div></div>
+  </section>
+
+  <section><h2>Ce qui a été introduit</h2><table><thead><tr><th>Élément</th><th>Rôle</th><th>Protection</th></tr></thead><tbody>
+    <tr><td><code>system.searchInApp</code></td><td>Transmet une recherche textuelle à l’écran de recherche existant.</td><td>Une recherche sans résultat ne sélectionne ni n’ouvre un autre article.</td></tr>
+    <tr><td><code>system.open</code></td><td>Décrit l’ouverture d’un article déjà résolu.</td><td>L’URL transporte l’identifiant exact, jamais un titre approximatif.</td></tr>
+    <tr><td>Entité Article</td><td>Expose l’identifiant et le titre nécessaires à l’expérience.</td><td>Pas de token, contenu d’article, identifiant de compte ou donnée privée.</td></tr>
+    <tr><td>Index Spotlight</td><td>Indexe le flux de fixture du pilote après abonnement.</td><td>Portée limitée au flux de test, suppression prévue par identifiants exacts.</td></tr>
+  </tbody></table></section>
+
+  <section><h2>État de preuve</h2><table><thead><tr><th>Étape</th><th>État</th><th>Ce que cela signifie</th></tr></thead><tbody>
+    <tr><td>Contrat et génération</td><td><span class="state pass">pass</span></td><td>Les schémas macOS 27 sont générés à partir d’un contrat lisible.</td></tr>
+    <tr><td>Compilation et tests ciblés</td><td><span class="state pass">pass</span></td><td>Le fork compile ; huit tests du pilote passent, dont les cas d’identifiant introuvable.</td></tr>
+    <tr><td>Spotlight réel</td><td><span class="state open">à prouver</span></td><td>Alpha doit apparaître comme résultat NetNewsWire dans l’interface système.</td></tr>
+    <tr><td>Siri AI réel</td><td><span class="state open">à prouver</span></td><td>Recherche, ouverture et titre inventé doivent être vérifiés en conditions réelles.</td></tr>
+    <tr><td>Seconde reproduction</td><td><span class="state open">à prouver</span></td><td>Une autre personne doit reproduire le parcours avant toute affirmation externe.</td></tr>
+  </tbody></table></section>
+
+  <section><h2>Passage technique</h2><p>Le générateur IntentLane produit les déclarations App Intents et un template d’adaptateur. NetNewsWire remplit le seul morceau qu’un outil générique ne peut pas deviner : retrouver l’article dans son modèle métier, afficher la recherche existante et router l’article exact dans sa fenêtre.</p><details><summary>Voir les règles de sécurité appliquées</summary><p>Le pilote est en lecture seule. Il utilise le flux Alpha/Beta/Gamma, indexe une projection minimale, n’a aucun fallback et ne déclenche aucune action d’écriture. Les tests et journaux ne contiennent ni compte réel, ni secret, ni contenu privé.</p></details></section>
+
+  <section><h2>Ce qui suit</h2><p>Nous validons Spotlight et Siri manuellement, puis faisons reproduire le parcours. Ensuite seulement, nous préparons une proposition ciblée à NetNewsWire : petite PR réversible, explication de la portée, résultats de test et demande explicite de retour. L’objectif n’est pas de vendre une commande vocale universelle, mais une capacité précise et prouvée.</p></section>
+  <p class="footer">État local au 23 septembre 2026. Référence technique : registre de preuve <code>PILOT-NETNEWSWIRE-LEDGER.yaml</code>. Ce rapport n’affirme pas une compatibilité Spotlight ou Siri tant que les étapes ouvertes ne sont pas passées.</p>
+</main></body></html>

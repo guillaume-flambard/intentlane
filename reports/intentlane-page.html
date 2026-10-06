@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IntentLane, ce que fait la méthode</title>
+<style>
+  :root{
+    --bg:#08090b;
+    --panel:#0f1114;
+    --line:#20242b;
+    --ink:#f3f5f8;
+    --dim:#aab2bd;
+    --faint:#8b95a3;
+    --ok:#4fe0a4;
+    --wait:#f7bf55;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--font);
+    line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(1100px 520px at 14% -10%,rgba(79,224,164,.07),transparent 64%);
+  }
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:0 28px 120px}
+
+  header{padding:100px 0 66px;border-bottom:1px solid var(--line)}
+  h1{
+    font-size:clamp(38px,6vw,70px);line-height:1.04;letter-spacing:-.035em;
+    font-weight:600;max-width:18ch
+  }
+  h1 em{font-style:normal;color:var(--ok)}
+  .lede{margin-top:30px;font-size:21px;color:var(--dim);max-width:58ch}
+  .lede strong{color:var(--ink);font-weight:500}
+
+  nav{
+    position:sticky;top:0;z-index:20;background:rgba(8,9,11,.9);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--line)
+  }
+  nav .inner{max-width:1120px;margin:0 auto;padding:0 28px;display:flex;gap:34px;overflow-x:auto}
+  nav a{
+    color:var(--dim);text-decoration:none;font-size:16px;padding:17px 0;
+    white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s
+  }
+  nav a:hover{color:var(--ink)}
+  nav a.on{color:var(--ink);border-bottom-color:var(--ok)}
+
+  section{padding:86px 0;border-bottom:1px solid var(--line)}
+  section:last-of-type{border-bottom:0}
+  h2{
+    font-size:12px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;
+    color:var(--faint);margin-bottom:20px;font-weight:500
+  }
+  h3{font-size:clamp(28px,3.6vw,38px);letter-spacing:-.025em;font-weight:600;line-height:1.12;max-width:22ch}
+  .sub{margin-top:18px;color:var(--dim);max-width:62ch;font-size:21px}
+
+  .grid{display:grid;gap:16px;margin-top:46px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:860px){.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px 26px}
+  .card h4{font-size:21px;font-weight:600;letter-spacing:-.012em;margin-bottom:11px}
+  .card p{font-size:16px;color:var(--dim)}
+
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:46px}
+  @media(max-width:860px){.ba{grid-template-columns:1fr}}
+  .pane{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#0b0d10}
+  .pane .bar{
+    display:flex;align-items:center;gap:10px;padding:14px 18px;
+    border-bottom:1px solid var(--line);font-size:16px;font-weight:500
+  }
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .pane.before .bar{color:var(--faint)}
+  .pane.before .dot{background:#454b55}
+  .pane.after{border-color:rgba(79,224,164,.36)}
+  .pane.after .bar{color:var(--ok)}
+  .pane.after .dot{background:var(--ok)}
+  .pane .screen{
+    aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:30px
+  }
+  .pane.before .screen{background:repeating-linear-gradient(45deg,#0c0e11,#0c0e11 11px,#0e1114 11px,#0e1114 22px)}
+  .pane.after .screen{background:radial-gradient(520px 280px at 50% 44%,rgba(79,224,164,.10),transparent 68%),#0a0f0d}
+  .ph{font-family:var(--mono);font-size:12px;color:var(--faint);line-height:1.8}
+  .pane.after .ph{color:#8fdcb9}
+  .say{margin-top:20px;padding:20px 22px;border-top:1px solid var(--line);font-size:16px;color:var(--dim)}
+  .say b{color:var(--ink);font-weight:500}
+
+  .claims{margin-top:42px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .row{
+    display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;
+    padding:16px 22px;border-bottom:1px solid var(--line);background:var(--panel)
+  }
+  .row:last-child{border-bottom:0}
+  .row .nm{font-size:16px;font-family:var(--mono)}
+  .row .ds{font-size:16px;color:var(--faint);margin-top:4px}
+  .pill{font-family:var(--mono);font-size:12px;letter-spacing:.05em;padding:6px 12px;border-radius:99px;white-space:nowrap}
+  .pill.ok{background:rgba(79,224,164,.12);color:var(--ok);border:1px solid rgba(79,224,164,.3)}
+  .pill.wait{background:rgba(247,191,85,.11);color:var(--wait);border:1px solid rgba(247,191,85,.3)}
+
+  table{width:100%;border-collapse:collapse;margin-top:40px}
+  th{
+    text-align:left;padding:13px 18px;font-family:var(--mono);font-size:12px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+    border-bottom:1px solid var(--line);font-weight:500
+  }
+  td{padding:17px 18px;border-bottom:1px solid var(--line);color:var(--dim);vertical-align:top;font-size:16px}
+  td:first-child{color:var(--ink);font-family:var(--mono);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+
+  .note{
+    margin-top:36px;padding:24px 26px;border-left:2px solid var(--wait);
+    background:rgba(247,191,85,.05);border-radius:0 10px 10px 0
+  }
+  .note p{font-size:16px;color:var(--dim)}
+  .note b{color:var(--wait);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:42px}
+  @media(max-width:860px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 22px}
+  .stat .v{font-size:clamp(30px,4.2vw,42px);font-weight:600;letter-spacing:-.03em;line-height:1}
+  .stat .l{margin-top:11px;font-size:16px;color:var(--faint);line-height:1.45}
+
+  footer{padding:72px 0 0;color:var(--faint);font-size:16px;line-height:1.75;max-width:66ch}
+  footer b{color:var(--dim);font-weight:500}
+
+  @media(max-width:600px){.wrap{padding:0 20px 80px}header{padding:66px 0 46px}}
+</style>
+</head>
+<body>
+
+<nav><div class="inner">
+  <a href="#methode" class="on">La méthode</a>
+  <a href="#avant">Avant / après</a>
+  <a href="#preuve">Sur quoi</a>
+  <a href="#cout">Le coût</a>
+</div></nav>
+
+<div class="wrap">
+
+<header>
+  <h1>Donner à une application macOS une surface <em>Siri et Spotlight</em>, puis prouver ce qui marche.</h1>
+  <p class="lede">On branche une application tierce à Siri et Spotlight, puis on ne déclare <strong>que ce qu'une commande peut prouver</strong>. Le reste est marqué comme demandeur d'une personne, en toutes lettres, plutôt que présenté comme acquis.</p>
+</header>
+
+<section id="methode">
+  <h2>Ce qu'on fait</h2>
+  <h3>Un contrat d'abord, le code ensuite.</h3>
+  <p class="sub">Chaque intégration part d'un contrat qui déclare l'objet, les règles d'éligibilité, et l'enveloppe de l'identifiant. Le code généré vient de ce contrat, jamais l'inverse. Une revendication est soit prouvée par une commande, soit elle n'est pas demandée.</p>
+
+  <div class="grid g3">
+    <div class="card">
+      <h4>On lit l'application avant d'écrire</h4>
+      <p>L'objet retenu vient du modèle réel, pas d'une intuition. Sur Transmission, l'identifiant est l'info hash du torrent, parce qu'un chemin ne survit ni à un renommage ni à un déplacement.</p>
+    </div>
+    <div class="card">
+      <h4>Le test attaque la vraie application</h4>
+      <p>La suite de suppression compile l'application elle-même et appelle son vrai chemin de suppression. Sur FSNotes, 233 fichiers, l'entonnoir réel, sous un HOME isolé pour ne pas écrire sur le disque du développeur.</p>
+    </div>
+    <div class="card">
+      <h4>Ce que la commande ne prouve pas est écrit</h4>
+      <p>Une revendication que personne ne peut reproduire n'est pas une revendication, c'est du marketing. Elle sort du lot par défaut et attend une personne avec un écran.</p>
+    </div>
+  </div>
+</section>
+
+<section id="avant">
+  <h2>Avant / après</h2>
+  <h3>Même application, même phrase.</h3>
+  <p class="sub">C'est la démonstration. Le build d'origine n'a pas d'action, le build branché en a une. Rien d'autre ne change à l'écran, c'est ce qui rend la comparaison lisible en cinq secondes.</p>
+
+  <div class="ba">
+    <div class="pane before">
+      <div class="bar"><span class="dot"></span>Transmission, build d'origine</div>
+      <div class="screen">
+        <div class="ph">capture à placer ici<br>rien ne se passe</div>
+      </div>
+      <div class="say">
+        <b>Ce qu'on voit.</b> On demande l'action, Transmission ne répond pas. Pas d'erreur, pas de message, juste l'application qui reste là. C'est l'état de la plupart des apps macOS aujourd'hui, et c'est exactement pour ça que ça se démontre si mal à l'écran.
+      </div>
+    </div>
+
+    <div class="pane after">
+      <div class="bar"><span class="dot"></span>Transmission, build branché</div>
+      <div class="screen">
+        <div class="ph">capture à placer ici<br>l'action répond</div>
+      </div>
+      <div class="say">
+        <b>Ce qu'on voit.</b> Même phrase, l'action existe, le torrent est sélectionné et visible. Rien n'a été ajouté à l'interface, la sélection passe par la méthode que le clic appelle déjà.
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><b>À savoir avant de présenter.</b> La surface de l'action est prouvée par commande aujourd'hui. Sa résolution par la voix, elle, demande une personne qui parle. Ce sont deux affirmations distinctes et la page les sépare volontairement, parce que c'est la même règle qui produit les six revendications vérifiées.</p>
+  </div>
+</section>
+
+<section id="preuve">
+  <h2>Sur quoi</h2>
+  <h3>Six affirmations, et leur preuve.</h3>
+  <p class="sub">Une intégration certifiée n'affiche rien de spécial. Elle sort d'une commande qui nomme chaque affirmation, ce qui la prouve, et ce qui reste à une personne.</p>
+
+  <div class="claims">
+    <div class="row"><div><div class="nm">contract</div><div class="ds">Le contrat d'intégration est valide</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">generated</div><div class="ds">Le fichier généré correspond au contrat</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">applicationTests</div><div class="ds">Les règles d'éligibilité et l'identifiant tiennent</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">integrationTests</div><div class="ds">Résolution, ouverture et routage fonctionnent</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">metadata</div><div class="ds">Les métadonnées extraites annoncent ce que le contrat déclare</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">indexSync</div><div class="ds">Un objet supprimé quitte l'index, testé sur le vrai chemin de suppression</div></div><span class="pill ok">prouvé par commande</span></div>
+    <div class="row"><div><div class="nm">siri</div><div class="ds">Une phrase orale ouvre le bon objet</div></div><span class="pill wait">demande une personne</span></div>
+    <div class="row"><div><div class="nm">spotlightResult</div><div class="ds">Un résultat Spotlight est attribué et s'ouvre</div></div><span class="pill wait">demande une personne</span></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Application</th><th>Langage</th><th>État</th><th>Ce qui a été mesuré</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>FSNotes</td><td>Swift</td>
+        <td><span class="pill ok">6 sur 6</span></td>
+        <td>63 vérifications, plus 13 sur le chemin de suppression réel. Test de suppression : 138 s, dont la majeure partie du temps passe à compiler l'application.</td>
+      </tr>
+      <tr>
+        <td>HandBrake</td><td>Objective-C</td>
+        <td><span class="pill ok">6 sur 6</span></td>
+        <td>53 vérifications, plus 13 sur le vrai arbre de presets. Test de suppression : 10 s. Quatorze fois moins cher, et l'écart vient du langage, pas de la méthode.</td>
+      </tr>
+      <tr>
+        <td>Transmission</td><td>Objective-C++</td>
+        <td><span class="pill wait">en cours</span></td>
+        <td>Modèle lu et point d'insertion identifié. La cible est prête, la mesure du coût de build reste à faire.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="cout">
+  <h2>Le coût</h2>
+  <h3>On mesure au lieu de promettre.</h3>
+  <p class="sub">Chaque étape d'un pilote a une ligne de minutes, et une étape non mesurée est écrite comme non mesurée. Un chiffre de mémoire est pire qu'un trou, parce que le trou se voit.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">368</div><div class="l">tests du moteur de certification, verts</div></div>
+    <div class="stat"><div class="v">8</div><div class="l">suites de pilote au vert, deux applications</div></div>
+    <div class="stat"><div class="v">138 s</div><div class="l">test le plus lourd, pilote Swift</div></div>
+    <div class="stat"><div class="v">10 s</div><div class="l">même test, pilote Objective&#8209;C</div></div>
+  </div>
+
+  <div class="note">
+    <p><b>Sur la promesse d'une heure.</b> Les chiffres ci-dessus sont mesurés. Le total d'un pilote n'est pas encore mesuré de bout en bout, parce que cinq étapes sur neuf n'ont pas de minuteur sur les deux applications existantes. Le troisième pilote est lancé précisément pour fermer ce trou : c'est le premier où chaque étape est chronométrée. Le chiffre donné à un client sera mesuré, pas estimé.</p>
+  </div>
+</section>
+
+<footer>
+  <p><b>Ce que nous ne faisons pas.</b> Nous n'écrivons pas dans une application sans laisser de patch relisible, et nous ne remplaçons pas une interface par la nôtre. Nous ajoutons une surface, nous gardons le comportement existant, et nous documentons ce qui n'a pas été fait.</p>
+  <p style="margin-top:20px">Les chiffres de cette page viennent d'une exécution réelle de la commande de certification. Ils sont datés du jour où la page a été produite, pas d'une estimation.</p>
+</footer>
+
+</div>
+
+<script>
+  const links = [...document.querySelectorAll('nav a')];
+  const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  secs.forEach(s => io.observe(s));
+</script>
+</body>
+</html>
