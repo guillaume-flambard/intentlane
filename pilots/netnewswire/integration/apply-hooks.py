@@ -56,6 +56,9 @@ SEARCH_PATCHED = (
     + SEARCH_ANCHOR
 )
 
+IMPORT_ANCHOR = "import UserNotifications\nimport os"
+IMPORT_PATCHED = "import CoreSpotlight\nimport UserNotifications\nimport os"
+
 
 def apply(path: Path, anchor: str, patched: str, label: str) -> bool:
     text = path.read_text()
@@ -81,6 +84,7 @@ def main() -> None:
     changed = False
     changed |= apply(ad, REGISTER_ANCHOR, REGISTER_PATCHED, "registration")
     changed |= apply(ad, METHODS_ANCHOR, METHODS_PATCHED, "appdelegate-methods")
+    changed |= apply(ad, IMPORT_ANCHOR, IMPORT_PATCHED, "import-corespotlight")
     changed |= apply(mwc, SEARCH_ANCHOR, SEARCH_PATCHED, "mainwindow-search")
     print("changed" if changed else "no changes")
 

@@ -15,6 +15,9 @@ import CoreSpotlight
 import Foundation
 import Account
 import Articles
+import os
+
+private let logger = Logger(subsystem: "dev.memolabs.intentlane.netnewswire-pilot", category: "indexing")
 
 enum IntentLanePilotError: Error {
 	case articleNotFound(String)
@@ -141,6 +144,34 @@ final class IntentLaneMarkArticleReadImplementation: MarkArticleReadHandler {
 	}
 }
 
+// MARK: - Indexing
+
+@available(macOS 27.0, *)
+@MainActor
+private func indexAllArticles() async {
+	let indexName = "dev.memolabs.intentlane.netnewswire-pilot.article"
+	var allEntities = [IntentLaneArticleEntity]()
+	
+	for account in AccountManager.shared.activeAccounts {
+		let articles = account.fetchArticles(.all)
+		for article in articles {
+			allEntities.append(intentLaneEntity(for: article))
+		}
+	}
+	
+	guard !allEntities.isEmpty else {
+		logger.info("No articles to index")
+		return
+	}
+	
+	do {
+		try await CSSearchableIndex(name: indexName).indexAppEntities(allEntities)
+		logger.info("Indexed \(allEntities.count) articles to Spotlight")
+	} catch {
+		logger.error("Failed to index articles: \(error)")
+	}
+}
+
 // MARK: - Registration
 
 @available(macOS 27.0, *)
@@ -148,6 +179,7 @@ final class IntentLaneMarkArticleReadImplementation: MarkArticleReadHandler {
 enum IntentLanePilotIntegration {
 
 	private static var registered = false
+	private static var refreshObserver: NSObjectProtocol?
 
 	/// Idempotent: registering twice keeps the first handlers.
 	static func register() {
@@ -157,5 +189,19 @@ enum IntentLanePilotIntegration {
 		IntentLaneIntentHandlers.open_article = IntentLaneOpenArticleImplementation()
 		IntentLaneIntentHandlers.search_articles = IntentLaneSearchArticlesImplementation()
 		IntentLaneIntentHandlers.mark_article_read = IntentLaneMarkArticleReadImplementation()
+		
+		// Observe feed refresh completion to re-index articles
+		refreshObserver = NotificationCenter.default.addObserver(forName: .AccountRefreshDidFinish, object: nil, queue: .main) { _ in
+			Task {
+				await indexAllArticles()
+			}
+		}
+	}
+	
+	static func unregister() {
+		if let observer = refreshObserver {
+			NotificationCenter.default.removeObserver(observer)
+			refreshObserver = nil
+		}
 	}
 }

@@ -29,3 +29,6 @@ gates:
   contract: bash tests/run-contract-tests.sh
   generated: bash tests/run-generated-tests.sh
   metadata: bash tests/run-metadata-tests.sh
+  appintents_testing: xcodebuild test -scheme NetNewsWire -destination 'platform=macOS' -only-testing:NetNewsWire/IntentLanePilotTests
+  spotlight_index: bash tests/run-spotlight-index-tests.sh
+  shortcuts_donation: bash tests/run-shortcuts-donation-tests.sh
