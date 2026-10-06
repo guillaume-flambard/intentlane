@@ -9,7 +9,7 @@
 # instead and checks the diff, which is what makes a removal provable. The
 # application's own removal stays verified by review, and the pilot record says so.
 set -euo pipefail
-LULU_DIR="${LULU_DIR:-$HOME/projects/intentlane-lulu}"
+LULU_DIR="${LULU_DIR:-$HOME/projects/experiments/intentlane-lulu}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$LULU_DIR/IntentLane"
 OUT="$HERE/.build/indextests"

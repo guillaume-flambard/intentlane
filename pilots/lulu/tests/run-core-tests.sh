@@ -8,7 +8,7 @@
 # grew a field to hold either would put a home directory into a client report with
 # no line of code saying so. Mirror is the only way that stays a test.
 set -euo pipefail
-LULU_DIR="${LULU_DIR:-$HOME/projects/intentlane-lulu}"
+LULU_DIR="${LULU_DIR:-$HOME/projects/experiments/intentlane-lulu}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CORE="$LULU_DIR/IntentLane/RuleCore.swift"
 OUT="$HERE/.build/coretests"

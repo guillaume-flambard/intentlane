@@ -9,7 +9,7 @@
 # split: the file that speaks Objective-C is not part of what these tests exercise,
 # and on this application it could not be, because it needs the privileged helper.
 set -euo pipefail
-LULU_DIR="${LULU_DIR:-$HOME/projects/intentlane-lulu}"
+LULU_DIR="${LULU_DIR:-$HOME/projects/experiments/intentlane-lulu}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 INTENTLANE="$LULU_DIR/IntentLane"
 OUT="$HERE/.build/integrationtests"
