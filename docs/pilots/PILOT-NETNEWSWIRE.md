@@ -6,9 +6,18 @@ remains unproven. NetNewsWire is a third-party application; nothing here
 suggests that its authors reviewed, endorsed or accepted any of this work, and
 the fork was never pushed upstream.
 
-## Current pilot state, 2026-09-23
+## Versioned machine package, 2026-10-02
 
-This section supersedes the historical Reader-only notes below.
+The current package's bounded machine results are recorded in
+[PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md](PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md).
+They cover only `contract`, `generated` and `metadata` from
+`pilots/netnewswire/pilot.yaml`. The earlier 26A428 observation below remains
+historical and unchanged; the current human gates 4 and 5 remain open.
+
+## Historical fork state, 2026-09-23
+
+This section records the earlier fork state and supersedes its Reader-only
+notes below. The versioned package's current machine evidence is linked above.
 
 The fork now uses the primary macOS 27 schemas `.system.searchInApp` and
 `.system.open`, an `IndexedEntity` article model, and a direct app-navigation

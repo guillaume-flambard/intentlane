@@ -1,50 +1,44 @@
-# Migrate the NetNewsWire pilot to the contract convention
+# Migrer le pilote NetNewsWire vers la convention de contrat
 
 ## Why
 
-Three of the four pilots in `pilots/` describe themselves the same way: a
-`contract.yaml` a `pilot.yaml` declares, and test scripts in `tests/` that a
-command runs. NetNewsWire was the exception. It had a hand-written integration
-proved in a fork and recorded as prose under `docs/pilots/`, with no contract and
-no machine-checkable gates.
+Le texte initial de cette proposition décrivait un brouillon de contrat sans
+scripts de preuve. Cet état est périmé. Le paquet versionné existe maintenant
+dans `pilots/netnewswire/`, avec un contrat, un manifeste, une intégration
+reproductible et trois commandes de test.
 
-That prose is a real proof and is not being touched. `PILOT-NETNEWSWIRE-LEDGER.yaml`
-points at it, and it records five of five integration tests passing on build
-26A428. This change is about giving the same pilot the same shape as the others,
-so that what a client reads is declared rather than narrated.
+La migration doit aligner la qualification et cette liste de tâches sur le
+paquet réellement versionné, sans transformer une preuve machine en preuve
+humaine ni reprendre les anciens nombres de tests qui n'ont pas de suites
+versionnées.
 
-**The contract is a migration, and it replaces a certified artefact.** That is
-why nothing here is committed to `pilots/` yet. A migration that lands before it
-is proved would leave two NetNewsWire pilots at the same revision, one certified
-and one not, and a ledger pointing into that contradiction.
+## État vérifié
 
-## What this change holds, and what it does not
+`pilots/netnewswire/pilot.yaml` déclare exactement `contract`, `generated` et
+`metadata`, avec une commande versionnée pour chaque claim. Le paquet épingle
+NetNewsWire à `0184ca38c586078117a21f96f68eef78d39b8f68`. Les résultats machine
+et leurs limites sont consignés dans
+[`PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md`](../../../docs/pilots/PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md).
 
-It holds the material, the review, and the work. It does not certify anything.
+Les anciens comptes rendus de fork et le ledger racine
+`PILOT-NETNEWSWIRE-LEDGER.yaml`, qui porte l'observation historique macOS 27.0
+build 26A428, restent des archives distinctes. Ils ne sont ni réécrits ni
+remplacés par ce relevé. Les gates humaines 4 et 5 restent ouvertes.
 
-The three files moved here from an untracked `pilots/netnewswire/` draft:
+## Portée et limites
 
-- `contract.yaml` — validates. `Valid IntentLane 0.1: 3 intent(s) ready.`
-- `pilot.yaml` — **its three gates point at scripts that do not exist.**
-- `QUALIFICATION.md` — **its proof column states test counts for tests that do not
-  exist**: 24, 30 and 9, every one of them marked in progress.
+- Cette réconciliation porte sur les documents du changement et la preuve du
+  paquet versionné. Elle ne modifie aucun code produit ni contrat de capacité.
+- Les suites historiques `applicationTests`, `integrationTests` et `indexSync`
+  n'ont jamais été versionnées. Aucun résultat des gates `contract`, `generated`
+  ou `metadata` ne les valide.
+- Les exigences proposées pour ASRi sont décrites dans la spécification delta active
+  [`asri-adapter-templates`](../add-asri-adapter-templates/specs/asri-adapter-templates/spec.md).
+  Ce changement incomplet ne devient pas une promesse normative; ses tâches
+  inachevées restent ouvertes.
+- Aucun résultat Siri, Spotlight ou de reproduction humaine indépendante n'est
+  ajouté ici. Voir `docs/pilots/HUMAN-GATES-PREP.md` pour les gates 4 et 5.
 
-Both defects are recorded as tasks rather than quietly corrected, because the
-second one is the failure this campaign exists to prevent: a number in a column
-headed "proof" for work that has not happened.
-
-## What the review found, and what it did not decide
-
-The review could not tell whether this contract **replaces** the documented
-pilot or **duplicates** it. Same application, same revision
-(`0184ca38c586078117a21f96f68eef78d39b8f68`), same object (an article, with
-`guid` as the identifier), and a different claim set. The owner decided it is a
-migration, which is recorded here as a decision and not as a fact the review
-established.
-
-## Impact
-
-No product code, no output format, no existing pilot. `pilots/netnewswire/` is
-recreated only when the gates pass. The documented pilot and its ledger are
-unchanged, and if the migration is never finished, the only loss is this
-directory.
+Le changement conserve `skip_specs: true`: cette réconciliation documentaire
+n'introduit pas de nouveau comportement produit. Il reste ouvert jusqu'à
+l'acceptation humaine prévue par les gates existantes.

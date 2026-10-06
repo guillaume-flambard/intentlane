@@ -19,8 +19,9 @@
 
 ## 3. Documentation
 
-- [ ] 3.1 Record in the pilot playbook how to add an observation and move
+- [x] 3.1 Record in the pilot playbook how to add an observation and move
   `current` without touching an earlier one.
+  (Done: `docs/pilots/PILOT-PLAYBOOK.md` § "A second observation of the same pilot")
 - [ ] 3.2 When the 26A434 observation is actually made, convert
   `PILOT-NETNEWSWIRE-LEDGER.yaml` to 1.1 with the 26A428 observation preserved
   verbatim and the new one current. This step is not done until the observation

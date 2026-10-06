@@ -32,8 +32,6 @@ const KNOWN_DEBT: Readonly<Record<string, number>> = {
   "docs/product/CLIENT-READY-V1.md": 3,
   "docs/product/MARKET-STUDY.md": 4,
   "docs/product/PRD.md": 1,
-  "openspec/changes/migrate-netnewswire-to-the-contract/QUALIFICATION.md": 4,
-  "openspec/changes/migrate-netnewswire-to-the-contract/proposal.md": 3,
   "pilots/iina/README.md": 8,
   "pilots/iina/RUNBOOK.md": 1,
   "research/analysis-optimisation-2026-09-27.md": 18

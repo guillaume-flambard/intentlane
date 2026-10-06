@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
-const IGNORED_DIRECTORIES = new Set(["node_modules", ".git", "dist", ".intentlane", "build"]);
+const IGNORED_DIRECTORIES = new Set(["node_modules", ".git", "dist", ".intentlane", "build", ".build"]);
 const DOCUMENT = /\.md$/;
 const MARKDOWN_LINK = /\]\(([^)\s]+)\)/g;
 // SECURITY.md joined the six on 2026-09-29 with the private vulnerability

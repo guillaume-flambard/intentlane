@@ -2,9 +2,9 @@
 
 - [x] 1.1 Add an explicit ASRi integration mode for `.system.searchInApp` and
   `.system.open`.
-- [ ] 1.2 Make all Shortcuts output opt-in and reject a Shortcuts-only schema
+- [x] 1.2 Make all Shortcuts output opt-in and reject a Shortcuts-only schema
   when a contract claims Siri AI.
-- [ ] 1.3 Add positive, negative, and mixed-domain validation fixtures.
+- [x] 1.3 Add positive, negative, and mixed-domain validation fixtures.
 
 ## 2. Generated integration seam
 
@@ -18,9 +18,9 @@
 
 - [x] 3.1 Generate `.system.searchInApp` and `.system.open` declarations from a
   validated ASRi contract.
-- [ ] 3.2 Add `IndexedEntity` lifecycle support for upsert, refresh, and
+- [x] 3.2 Add `IndexedEntity` lifecycle support for upsert, refresh, and
   deletion.
-- [ ] 3.3 Add AppIntentsTesting fixtures for exact, missing, and ambiguous
+- [x] 3.3 Add AppIntentsTesting fixtures for exact, missing, and ambiguous
   titles.
 
 ## 4. NetNewsWire proof

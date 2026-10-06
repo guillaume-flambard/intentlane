@@ -1,4 +1,4 @@
-# NetNewsWire pilot — qualification
+# NetNewsWire pilot - qualification
 
 - **Application**: NetNewsWire, a macOS RSS/feed reader
 - **Revision**: `0184ca38`, tag `v8.0`, shallow clone, no submodules
@@ -31,25 +31,38 @@ pas de summary. Le guid est l'identifiant.
 
 ### SearchController
 
-- `SearchController.search(string, ArticleArray)` — prend une query et un périmètre
-- `SearchController.articlesMatchingSearch(string)` — retourne un tableau
+- `SearchController.search(string, ArticleArray)` - prend une query et un périmètre
+- `SearchController.articlesMatchingSearch(string)` - retourne un tableau
 
 ## Sensibilité
 
-NetNewsWire lit des articles de sources variées. Le corps d'un article (content) est
-le payload sensible. L'index expose uniquement le title et le feed name — rien
-d'autre. La règle d'exclusion `source_disabled` empêche d'offrir des articles d'un
-feed qui n'a jamais synced.
+NetNewsWire lit des articles de sources variées. Le contrat déclare l'identifiant,
+le titre et le nom du feed pour l'entité, et exclut le corps et les URL des champs
+déclarés. Il déclare aussi les règles `source_disabled` et `item_missing`. Ces
+déclarations ne prouvent pas le comportement réel de l'index: les gates
+versionnées valident le contrat, sa génération et les métadonnées, pas les règles
+d'exposition à l'exécution, la résolution exacte ou le cycle de vie de l'index.
 
-## Claims
+## Claims machine versionnés
 
-| Claim | Preuve | Statut |
+Le manifeste `pilots/netnewswire/pilot.yaml` déclare exactement les trois
+claims ci-dessous. Résultats et limites: [preuve machine du 2026-10-02](../../../docs/pilots/PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md).
+
+| Claim | Gate versionné | Statut |
 | --- | --- | --- |
-| `contract` | YAML valide, `intentlane validate` | ✅ |
-| `generated` | Swift compilable, `intentlane generate --check` | 🔄 |
-| `applicationTests` | 24 tests pure logique | 🔄 |
-| `integrationTests` | 30 tests avec AppIntents SDK | 🔄 |
-| `metadata` | `Metadata.appintents` contient les 3 actions et 1 entité | 🔄 |
-| `indexSync` | Index CoreSpotlight, 9 tests cycle de vie | 🔄 |
-| `siri-conversation` | Observation directe, besoin humain + écran | 📋 |
-| `spotlight-ui-result` | Observation directe, besoin humain + écran | 📋 |
+| `contract` | `bash tests/run-contract-tests.sh` | ✅ Vérifié le 2026-10-02 |
+| `generated` | `bash tests/run-generated-tests.sh` | ✅ Vérifié le 2026-10-02 |
+| `metadata` | `bash tests/run-metadata-tests.sh` | ✅ Vérifié le 2026-10-02 |
+
+## Hors du claim set courant
+
+Les anciennes suites `applicationTests`, `integrationTests` et `indexSync`
+étaient dans un fork jetable et ne sont pas versionnées dans le paquet actuel.
+Elles restent non prouvées et non revendiquées. Les anciens nombres associés à
+ces suites ne sont pas des résultats validés et sont retirés de cette
+qualification.
+
+Les interactions Siri et le résultat visible dans Spotlight restent des gates
+humaines. La gate 4 attend les étapes manuelles 1 à 6 sur macOS 27.0.1 build
+26A434; la gate 5 attend ensuite un second testeur indépendant. L'observation
+historique macOS 27.0 build 26A428 est conservée sans modification.

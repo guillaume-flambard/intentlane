@@ -96,7 +96,8 @@ when it contradicts the installed SDK the SDK wins.
 | File | What it is |
 |---|---|
 | [docs/pilots/PILOT-PLAYBOOK.md](pilots/PILOT-PLAYBOOK.md) | How to select, isolate and scale a pilot. |
-| [docs/pilots/PILOT-NETNEWSWIRE.md](pilots/PILOT-NETNEWSWIRE.md) | The NetNewsWire pilot contract. |
+| [docs/pilots/PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md](pilots/PILOT-NETNEWSWIRE-MACHINE-EVIDENCE-2026-10-02.md) | The bounded machine evidence for the versioned NetNewsWire package, with the claims and human gates it does not satisfy. |
+| [docs/pilots/PILOT-NETNEWSWIRE.md](pilots/PILOT-NETNEWSWIRE.md) | The NetNewsWire pilot history, including the earlier fork evidence and manual acceptance boundary. |
 | [docs/pilots/PILOT-NETNEWSWIRE-VALIDATION-RUNBOOK.md](pilots/PILOT-NETNEWSWIRE-VALIDATION-RUNBOOK.md) | Its measured validation runbook. |
 | [docs/pilots/PILOT-IINA-DISCOVERY.md](pilots/PILOT-IINA-DISCOVERY.md) | The IINA discovery pilot. |
 | [docs/pilots/NETNEWSWIRE-ACTION-BACKLOG.md](pilots/NETNEWSWIRE-ACTION-BACKLOG.md) | The actions the NetNewsWire pilot still owes. |
