@@ -8,9 +8,12 @@
 #   bash pilots/iina/reproduce.sh
 #
 # Environment:
-#   IINA_DIR           workspace to create or reuse (default ~/projects/_worktrees/iina-pilot).
+#   IINA_DIR           workspace to create or reuse (default ~/projects/_worktrees/iina-pilot/iina).
 #                      It is a throwaway checkout. Never point it at a clone you work in.
+#                      Its folder must be named `iina`: IINA's own download_libs.sh finds the repository
+#                      root by that name and refuses any other.
 #   IINA_UPSTREAM_URL  where to clone IINA from (default https://github.com/iina/iina.git).
+#   IINA_LIBS_ARGS     arguments for IINA's own other/download_libs.sh (default: --arch arm64 --skip-plugins).
 #   BUILD=1            also run IINA's own library download and an xcodebuild, then extract
 #                      the App Intents metadata into out/metadata. Heavy: it downloads mpv
 #                      libraries and compiles IINA. Without it the `metadata` claim cannot be
@@ -24,7 +27,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 INTEGRATION="$HERE/integration"
 BASE="$(tr -d '[:space:]' < "$INTEGRATION/UPSTREAM-REVISION")"
-IINA_DIR="${IINA_DIR:-$HOME/projects/_worktrees/iina-pilot}"
+IINA_DIR="${IINA_DIR:-$HOME/projects/_worktrees/iina-pilot/iina}"
 UPSTREAM_URL="${IINA_UPSTREAM_URL:-https://github.com/iina/iina.git}"
 INTENTLANE=(pnpm exec tsx "$REPO/packages/cli/src/index.ts")
 
@@ -65,7 +68,8 @@ cp "$HERE/out/IntentLaneGenerated.swift" "$IINA_DIR/iina/IntentLane/IntentLaneGe
 if [ "${BUILD:-0}" = "1" ]; then
   say "4. build IINA and extract the App Intents metadata (BUILD=1)"
   cd "$IINA_DIR"
-  [ -d deps/lib ] || bash other/download_libs.sh
+  # arm64 only and no official plugins: this machine is Apple silicon and the claims do not need them.
+  [ -d deps/lib ] || bash other/download_libs.sh ${IINA_LIBS_ARGS:---arch arm64 --skip-plugins}
   xcodebuild build -project iina.xcodeproj -scheme iina -configuration Debug \
     -destination 'platform=macOS' -derivedDataPath "$IINA_DIR/.derived" CODE_SIGNING_ALLOWED=NO
   APP="$(find "$IINA_DIR/.derived/Build/Products/Debug" -maxdepth 1 -name 'IINA*.app' | head -1)"

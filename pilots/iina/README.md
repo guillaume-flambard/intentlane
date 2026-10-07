@@ -57,7 +57,7 @@ The integration is carried here, not in a fork: `integration/*.swift` (the four
 hand written files) and `integration/upstream.patch` (the three small edits to
 IINA's own files and its project file), applied to the upstream revision named in
 `integration/UPSTREAM-REVISION`. The script clones a throwaway workspace
-(`IINA_DIR`, default `~/projects/_worktrees/iina-pilot`), applies the integration,
+(`IINA_DIR`, default `~/projects/_worktrees/iina-pilot/iina`, a folder that must be named `iina`), applies the integration,
 regenerates `out/`, and runs `intentlane verify`.
 
 The `metadata` claim reads App Intents metadata that only a built IINA produces.
