@@ -18,7 +18,9 @@ const ARCHITECTURE_SIGNALS: readonly Readonly<{
 }>[] = [
   {
     architecture: "synced",
-    pattern: /\bCloudKit\b|\bCKContainer\b|\bCKRecord\b|\bCKDatabase\b|NSPersistentCloudKitContainer|\bSyncableEntity\b|\bentitySync\b/
+    // Not \bCloudKit\b: an import is not a use. Nextcloud imports CloudKit in one file
+    // that never touches it, and that line made a server-synced app "synced (high)".
+    pattern: /\bCKContainer\b|\bCKRecord\b|\bCKDatabase\b|NSPersistentCloudKitContainer|\bSyncableEntity\b|\bentitySync\b/
   },
   {
     // Data stores only. FileManager and UserDefaults are deliberately absent: almost

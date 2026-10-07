@@ -127,6 +127,28 @@ describe("detectDataArchitecture", () => {
     expect(detectDataArchitecture([tests.path, product.path], [tests, product]).architecture).toBe("local");
   });
 
+  it("does not read an unused import CloudKit as a synced store", () => {
+    const share = source("Sources/App/Share.swift", [
+      "import UIKit",
+      "import CloudKit",
+      "let task = URLSession.shared.dataTask(with: request)"
+    ]);
+    expect(detectDataArchitecture(["Sources/App/Share.swift"], [share]).architecture).toBe("remote");
+  });
+
+  it("still reads real CloudKit use as synced", () => {
+    const use = source("Sources/App/Cloud.swift", ["import CloudKit", "let database = CKContainer.default().privateCloudDatabase"]);
+    expect(detectDataArchitecture(["Sources/App/Cloud.swift"], [use]).architecture).toBe("synced");
+  });
+
+  it("does not read a mention of SQLite in a doc comment as a local store", () => {
+    const doc = source("Sources/App/Doc.swift", [
+      "/// Owns the shared SQLite database used for local state.",
+      "let task = URLSession.shared.dataTask(with: request)"
+    ]);
+    expect(detectDataArchitecture(["Sources/App/Doc.swift"], [doc]).architecture).toBe("remote");
+  });
+
   it("reports unknown with the confidence the evidence allows", () => {
     expect(detectDataArchitecture(["README.md"], []).architecture).toBe("unknown");
     expect(detectDataArchitecture(["README.md"], []).confidence).toBe("medium");
