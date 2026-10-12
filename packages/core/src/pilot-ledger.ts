@@ -120,6 +120,7 @@ export type PilotLedgerResult = Readonly<{
   status: PilotLedgerStatus;
   diagnostics: readonly PilotLedgerDiagnostic[];
   summary: string;
+  ledger?: PilotLedger;
 }>;
 
 function invalid(code: PilotLedgerDiagnosticCode, message: string, path: string): PilotLedgerDiagnostic {
@@ -573,7 +574,7 @@ export function validatePilotLedger(value: unknown): PilotLedgerResult {
     );
   }
   if (diagnostics.length > 0) {
-    return { status: "unverified", diagnostics, summary: summarizeUnverified(ledger, diagnostics) };
+    return { status: "unverified", diagnostics, summary: summarizeUnverified(ledger, diagnostics), ledger };
   }
-  return { status: "verified", diagnostics: [], summary: summarizeVerified(ledger) };
+  return { status: "verified", diagnostics: [], summary: summarizeVerified(ledger), ledger };
 }

@@ -33,6 +33,7 @@ export * from "./discovery.js";
 export * from "./contract-analysis.js";
 export * from "./metadata-contract.js";
 export * from "./claim-confidence.js";
+export * from "./journey-view.js";
 export * from "./observe.js";
 export * from "./claims.js";
 export * from "./release-verification.js";
