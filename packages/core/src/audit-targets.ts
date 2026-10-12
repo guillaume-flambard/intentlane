@@ -90,11 +90,25 @@ function identifiers(body: string, name: string): readonly string[] {
   return [...(match[1] ?? "").matchAll(new RegExp(IDENTIFIER, "g"))].map((entry) => entry[0]);
 }
 
-function platformOf(sdkroot: string | undefined): AuditPlatform | undefined {
-  if (!sdkroot) return undefined;
-  if (sdkroot.startsWith("macosx")) return "macos";
-  if (sdkroot.startsWith("iphoneos") || sdkroot.startsWith("iphonesimulator")) return "ios";
-  return undefined;
+function platformOf(sdkroot: string | undefined, supported?: string): AuditPlatform | undefined {
+  if (sdkroot) {
+    if (sdkroot.startsWith("macosx")) return "macos";
+    if (sdkroot.startsWith("iphoneos") || sdkroot.startsWith("iphonesimulator")) return "ios";
+  }
+  return platformOfSupported(supported);
+}
+
+// Modern Xcode projects, Nextcloud among them, state the platform with
+// SUPPORTED_PLATFORMS and leave SDKROOT out or set it to "auto". Exactly one of the
+// two platforms the audit knows is a declaration. Both, or none, is not: the target
+// stays undeclared, and an undeclared target is never dropped from the inspection.
+function platformOfSupported(supported: string | undefined): AuditPlatform | undefined {
+  if (!supported) return undefined;
+  const names = supported.split(/\s+/).filter(Boolean);
+  const macos = names.some((name) => name === "macosx");
+  const ios = names.some((name) => name === "iphoneos" || name === "iphonesimulator");
+  if (macos === ios) return undefined;
+  return macos ? "macos" : "ios";
 }
 
 function resolveSdkRoot(readFile: TargetFileReader, path: string, seen: Set<string>): string | undefined {
@@ -140,6 +154,7 @@ export function readTargetMembership(contents: string, readFile?: TargetFileRead
       entry.id,
       {
         sdkroot: field(entry.body, "SDKROOT"),
+        supported: field(entry.body, "SUPPORTED_PLATFORMS"),
         base: field(entry.body, "baseConfigurationReference"),
         anchor: field(entry.body, "baseConfigurationReferenceAnchor"),
         relative: field(entry.body, "baseConfigurationReferenceRelativePath")
@@ -222,7 +237,11 @@ export function readTargetMembership(contents: string, readFile?: TargetFileRead
         }
       }
     }
-    const platform = platformOf(sdkroot);
+    const supported = levels
+      .flat()
+      .map((setting) => setting?.supported)
+      .find((value) => value !== undefined);
+    const platform = platformOf(sdkroot, supported);
     targets.push({
       name: target.name ?? field(target.body, "name") ?? "Target",
       ...(platform ? { platform } : {}),
@@ -256,7 +275,9 @@ export function filesForPlatform(
       for (const target of memberships) {
         if (!owns(target, file, base)) continue;
         owned = true;
-        if (target.platform === platform) return true;
+        // A target with no declared platform may compile for this one. Dropping its
+        // files made a 440 file app disappear from an audit that named one extension.
+        if (target.platform === platform || target.platform === undefined) return true;
       }
       return !owned;
     })
@@ -265,12 +286,17 @@ export function filesForPlatform(
 
 export function describeTargets(targets: readonly AuditBuildTarget[], platform: AuditPlatform): AuditTargetsReport {
   const matching = targets.filter((target) => target.platform === platform);
+  const undeclared = targets.filter((target) => target.platform === undefined);
   const scoped = matching.length > 0;
+  const undeclaredNote =
+    undeclared.length > 0
+      ? ` ${undeclared.map((target) => target.name).join(", ")} ${undeclared.length === 1 ? "has" : "have"} no declared platform and ${undeclared.length === 1 ? "was" : "were"} inspected too.`
+      : "";
   const nextAction =
     targets.length === 0
       ? "No Xcode target was found, so every Swift file in the tree was inspected."
       : scoped
-        ? `Only the Swift files that ${matching.map((target) => target.name).join(", ")} compile were inspected for ${platform}.`
+        ? `Only the Swift files that ${matching.map((target) => target.name).join(", ")} compile were inspected for ${platform}.${undeclaredNote}`
         : `No target declares ${platform}, so the report describes the whole tree.`;
   return { targets, scoped, nextAction };
 }

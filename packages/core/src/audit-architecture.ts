@@ -18,17 +18,37 @@ const ARCHITECTURE_SIGNALS: readonly Readonly<{
 }>[] = [
   {
     architecture: "synced",
-    pattern: /\bCloudKit\b|\bCKContainer\b|\bCKRecord\b|\bCKDatabase\b|NSPersistentCloudKitContainer|\bSyncableEntity\b|\bentitySync\b/
+    // Not \bCloudKit\b: an import is not a use. Nextcloud imports CloudKit in one file
+    // that never touches it, and that line made a server-synced app "synced (high)".
+    pattern: /\bCKContainer\b|\bCKRecord\b|\bCKDatabase\b|NSPersistentCloudKitContainer|\bSyncableEntity\b|\bentitySync\b/
   },
   {
+    // Data stores only. FileManager and UserDefaults are deliberately absent: almost
+    // every app touches them for caches and preferences, so they say nothing about
+    // where the entities come from. They used to decide "local (high)" for a client
+    // of a remote server, and the next action then promised a Siri journey "end to
+    // end" that the app cannot deliver without its server.
     architecture: "local",
-    pattern: /\bCoreData\b|\bSwiftData\b|@Model\b|NSPersistentContainer|\bFileManager\b|\bUserDefaults\b|\bSQLite\b|\bsqlite3\b/
+    pattern: /\bCoreData\b|\bSwiftData\b|@Model\b|NSPersistentContainer|\bSQLite\b|\bsqlite3\b/
   },
   {
     architecture: "remote",
-    pattern: /\bURLSession\b|\bURLRequest\b|\bfetch\(|\baxios\b|useQuery\(|\bapollo\b|\bgraphql\b|\bGraphQL\b|https?:\/\//
+    // Network client APIs only. A bare https:// literal is not here: every app has
+    // links to its site, its donation page or its update feed, and a text editor with
+    // an About panel is not a client of a remote server.
+    pattern: /\bURLSession\b|\bURLRequest\b|\bfetch\(|\baxios\b|useQuery\(|\bapollo\b|\bgraphql\b|\bGraphQL\b|\bAlamofire\b|\bMoya\b/
   }
 ];
+
+// Tests, samples and vendored code describe how the app is verified or built, not where
+// its entities come from. A text editor's URL-detection tests made it look like a
+// network client.
+const NON_PRODUCT_PATH = /(^|\/)(Tests?|UITests|Samples?|Fixtures?|Pods|Carthage|Checkouts|\.build)(\/|$)|Tests?\.swift$/;
+
+function isCommentLine(line: string): boolean {
+  const trimmed = line.trimStart();
+  return trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*");
+}
 
 export function detectDataArchitecture(
   files: readonly string[],
@@ -39,8 +59,12 @@ export function detectDataArchitecture(
   const seen = new Set<string>();
 
   for (const source of sources) {
+    if (NON_PRODUCT_PATH.test(source.path)) continue;
     const lines = source.contents.split("\n");
     for (const [index, line] of lines.entries()) {
+      // A comment is not evidence. Licence headers carry https:// URLs in every file
+      // of a GPL project, which made any such app look like a network client.
+      if (isCommentLine(line)) continue;
       for (const signal of ARCHITECTURE_SIGNALS) {
         if (!signal.pattern.test(line)) continue;
         found.add(signal.architecture);

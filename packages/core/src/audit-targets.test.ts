@@ -472,3 +472,80 @@ describe("platform inherited from the project build configuration", () => {
     ]);
   });
 });
+
+/**
+ * Nextcloud iOS declares no SDKROOT on most of its targets. Modern Xcode projects
+ * state the platform with SUPPORTED_PLATFORMS, and the audit used to read only
+ * SDKROOT, so the main app (440 files), the share extension, the widgets and the
+ * File Provider vanished from an iOS audit that claimed to inspect "the targets".
+ */
+const withSettings = (project: string, replacements: Readonly<Record<string, string>>): string =>
+  Object.entries(replacements).reduce((text, [from, to]) => text.replace(from, to), project);
+
+describe("platform declared by SUPPORTED_PLATFORMS", () => {
+  it("reads iOS from the device and simulator SDK names", () => {
+    const project = withSettings(INHERITED, {
+      "SDKROOT = macosx;": 'SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";',
+      "SDKROOT = iphoneos;": 'SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";'
+    });
+    expect(readTargetMembership(project).map((target) => target.platform)).toEqual(["ios", "ios"]);
+  });
+
+  it("reads macOS from macosx", () => {
+    const project = withSettings(INHERITED, {
+      "SDKROOT = macosx;": 'SUPPORTED_PLATFORMS = "macosx";',
+      "SDKROOT = iphoneos;": 'SUPPORTED_PLATFORMS = "macosx";'
+    });
+    expect(readTargetMembership(project).map((target) => target.platform)).toEqual(["macos", "macos"]);
+  });
+
+  it("reads the platform behind SDKROOT = auto", () => {
+    const project = withSettings(INHERITED, {
+      "SDKROOT = macosx;": 'SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";',
+      "SDKROOT = iphoneos;": 'SDKROOT = auto; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";'
+    });
+    expect(readTargetMembership(project).map((target) => target.platform)).toEqual(["ios", "ios"]);
+  });
+
+  it("leaves a multiplatform target undeclared instead of picking one", () => {
+    const project = withSettings(INHERITED, {
+      "SDKROOT = macosx;": 'SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";',
+      "SDKROOT = iphoneos;": 'SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";'
+    });
+    expect(readTargetMembership(project).map((target) => target.platform)).toEqual([undefined, undefined]);
+  });
+
+  it("lets SDKROOT win when both are declared", () => {
+    const project = withSettings(INHERITED, {
+      "SDKROOT = macosx;": 'SUPPORTED_PLATFORMS = "iphoneos";',
+      "SDKROOT = iphoneos;": 'SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "macosx";'
+    });
+    expect(readTargetMembership(project).map((target) => target.platform)).toEqual(["ios", "ios"]);
+  });
+});
+
+describe("a target whose platform is unknown is not an absent target", () => {
+  const memberships = [
+    { name: "App", files: ["App.swift"], folders: [] },
+    { name: "Extension", platform: "ios", files: ["Extension.swift"], folders: [] },
+    { name: "MacOnly", platform: "macos", files: ["Mac.swift"], folders: [] }
+  ] as const;
+  const files = ["App.swift", "Extension.swift", "Mac.swift", "README.md"];
+
+  it("keeps the files of a target with no declared platform in every platform scope", () => {
+    expect([...filesForPlatform(memberships, "ios", files)].sort()).toEqual(["App.swift", "Extension.swift", "README.md"]);
+    expect([...filesForPlatform(memberships, "macos", files)].sort()).toEqual(["App.swift", "Mac.swift", "README.md"]);
+  });
+
+  it("still drops a file that only another declared platform compiles", () => {
+    expect([...filesForPlatform(memberships, "ios", files)]).not.toContain("Mac.swift");
+  });
+
+  it("names the targets whose platform is undeclared instead of claiming only the declared ones were read", () => {
+    const report = describeTargets(memberships, "ios");
+    expect(report.scoped).toBe(true);
+    expect(report.nextAction).toContain("Extension");
+    expect(report.nextAction).toContain("App");
+    expect(report.nextAction).toContain("no declared platform");
+  });
+});
