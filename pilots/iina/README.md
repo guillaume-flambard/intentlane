@@ -47,6 +47,27 @@ on the branch `intentlane/pilot-playedmedia`. Set `IINA_DIR` to point the tests
 elsewhere. Manifest paths and gate commands resolve from the manifest's own
 directory, so the pilot verifies the same way from anywhere.
 
+## Reproduce from a clean checkout
+
+```sh
+bash pilots/iina/reproduce.sh
+```
+
+The integration is carried here, not in a fork: `integration/*.swift` (the four
+hand written files) and `integration/upstream.patch` (the three small edits to
+IINA's own files and its project file), applied to the upstream revision named in
+`integration/UPSTREAM-REVISION`. The script clones a throwaway workspace
+(`IINA_DIR`, default `~/projects/_worktrees/iina-pilot/iina`, a folder that must be named `iina`), applies the integration,
+regenerates `out/`, and runs `intentlane verify`.
+
+The `metadata` claim reads App Intents metadata that only a built IINA produces.
+Run `BUILD=1 bash pilots/iina/reproduce.sh` to download IINA's libraries, build,
+and extract it. Without a build that claim fails, and it says so.
+
+`tests/compare-with-pilot-branch.sh <workspace> <clone>` checks the reproduced
+workspace against the pilot branch tip file by file. `integration/PILOT-BRANCH-TIP`
+names that tip. The branch itself lives in a private repository.
+
 The branch matters as much as the path, and the failure when it is wrong is
 silent: the core gate then reports `error opening input file ... PlayedMediaCore.swift`
 and the cause is a checkout on `intentlane/from-scratch`, not a missing file. The

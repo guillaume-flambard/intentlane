@@ -1,0 +1,109 @@
+diff --git a/iina.xcodeproj/project.pbxproj b/iina.xcodeproj/project.pbxproj
+index c4b9839a..cd0bbc8d 100644
+--- a/iina.xcodeproj/project.pbxproj
++++ b/iina.xcodeproj/project.pbxproj
+@@ -241,6 +241,11 @@
+ 		84E5221323FF3D080006FDA1 /* JavascriptAPIPlaylist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E5221223FF3D080006FDA1 /* JavascriptAPIPlaylist.swift */; };
+ 		84E745D61DFDD4FD00588DED /* KeyCodeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E745D51DFDD4FD00588DED /* KeyCodeHelper.swift */; };
+ 		84EB1EDA1D2F51D3004FA5A1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EB1ED91D2F51D3004FA5A1 /* AppDelegate.swift */; };
++		1A0000000000000000000002 /* PlayedMediaCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000001 /* PlayedMediaCore.swift */; };
++		1A0000000000000000000004 /* PlayedMediaHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000003 /* PlayedMediaHandlers.swift */; };
++		1A0000000000000000000006 /* IntentLaneGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000005 /* IntentLaneGenerated.swift */; };
++		1A0000000000000000000008 /* PlayedMediaIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000009 /* PlayedMediaIndex.swift */; };
++		1A0000000000000000000011 /* PlayedMediaIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0000000000000000000010 /* PlayedMediaIntegration.swift */; };
+ 		84EB1EDC1D2F51D3004FA5A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 84EB1EDB1D2F51D3004FA5A1 /* Assets.xcassets */; };
+ 		84EB1F051D2F5C5B004FA5A1 /* AppData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EB1F041D2F5C5B004FA5A1 /* AppData.swift */; };
+ 		84EB1F071D2F5E76004FA5A1 /* Utility.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EB1F061D2F5E76004FA5A1 /* Utility.swift */; };
+@@ -531,6 +536,11 @@
+ /* End PBXCopyFilesBuildPhase section */
+ 
+ /* Begin PBXFileReference section */
++		1A0000000000000000000001 /* PlayedMediaCore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayedMediaCore.swift; sourceTree = "<group>"; };
++		1A0000000000000000000003 /* PlayedMediaHandlers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayedMediaHandlers.swift; sourceTree = "<group>"; };
++		1A0000000000000000000005 /* IntentLaneGenerated.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IntentLaneGenerated.swift; sourceTree = "<group>"; };
++		1A0000000000000000000009 /* PlayedMediaIndex.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayedMediaIndex.swift; sourceTree = "<group>"; };
++		1A0000000000000000000010 /* PlayedMediaIntegration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PlayedMediaIntegration.swift; sourceTree = "<group>"; };
+ 		0507C25E2B5617650043AD05 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/MainMenu.strings; sourceTree = "<group>"; };
+ 		0507C25F2B5617660043AD05 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/MainWindowController.strings; sourceTree = "<group>"; };
+ 		0507C2622B5617660043AD05 /* he */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = he; path = he.lproj/InspectorWindowController.strings; sourceTree = "<group>"; };
+@@ -1902,6 +1912,18 @@
+ /* End PBXFrameworksBuildPhase section */
+ 
+ /* Begin PBXGroup section */
++		1A0000000000000000000007 /* IntentLane */ = {
++			isa = PBXGroup;
++			children = (
++				1A0000000000000000000001 /* PlayedMediaCore.swift */,
++				1A0000000000000000000003 /* PlayedMediaHandlers.swift */,
++				1A0000000000000000000009 /* PlayedMediaIndex.swift */,
++				1A0000000000000000000010 /* PlayedMediaIntegration.swift */,
++				1A0000000000000000000005 /* IntentLaneGenerated.swift */,
++			);
++			path = IntentLane;
++			sourceTree = "<group>";
++		};
+ 		49542976216C34950058F680 /* OpenInIINA */ = {
+ 			isa = PBXGroup;
+ 			children = (
+@@ -2403,6 +2425,7 @@
+ 				E3A239A62FC6D3F000CE6ACC /* MainWindow */,
+ 				E3A239AF2FCB4CE800CE6ACC /* Sidebar */,
+ 				84A0BAA31D2FAEA000BC8DA1 /* Views */,
++				1A0000000000000000000007 /* IntentLane */,
+ 				E360A5CB2C23C181006EA412 /* Settings */,
+ 				8452DD7F1D3A1F2A008A543A /* Preference */,
+ 				E3CAD4AD2146DB23000B373A /* Javascript */,
+@@ -3005,6 +3028,11 @@
+ 				E3BBBBBB0000000000000004 /* SettingsPageAudio.swift in Sources */,
+ 				84AABE981DBFB62F00D138FD /* FixedFontManager.m in Sources */,
+ 				84EB1EDA1D2F51D3004FA5A1 /* AppDelegate.swift in Sources */,
++				1A0000000000000000000002 /* PlayedMediaCore.swift in Sources */,
++				1A0000000000000000000004 /* PlayedMediaHandlers.swift in Sources */,
++				1A0000000000000000000006 /* IntentLaneGenerated.swift in Sources */,
++				1A0000000000000000000008 /* PlayedMediaIndex.swift in Sources */,
++				1A0000000000000000000011 /* PlayedMediaIntegration.swift in Sources */,
+ 				84CFC92623F8DDE000381E5B /* PlayerWindowController.swift in Sources */,
+ 				E353070521496CE4008FE492 /* PrefPluginViewController.swift in Sources */,
+ 				840820111ECF6C1800361416 /* FileGroup.swift in Sources */,
+diff --git a/iina/AppDelegate.swift b/iina/AppDelegate.swift
+index dea48f86..0d934d99 100644
+--- a/iina/AppDelegate.swift
++++ b/iina/AppDelegate.swift
+@@ -361,6 +361,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate {
+   func applicationDidFinishLaunching(_ aNotification: Notification) {
+     Logger.log("App launched")
+ 
++    // IntentLane pilot: register the PlayedMedia resolver and handlers, then keep
++    // the named Spotlight index reconciled with IINA's playback history.
++    if #available(macOS 27.0, *) {
++      IntentLanePlayedMediaAdapter.register()
++      Task { @MainActor in try? await IntentLanePlayedMediaAdapter.refreshIndex() }
++    }
++
+     if !isReady {
+       getReady()
+     }
+diff --git a/iina/HistoryWindowController.swift b/iina/HistoryWindowController.swift
+index f013c499..f543d28c 100644
+--- a/iina/HistoryWindowController.swift
++++ b/iina/HistoryWindowController.swift
+@@ -405,7 +405,18 @@ class HistoryWindowController: NSWindowController, NSOutlineViewDelegate, NSOutl
+   // MARK: - Searching
+ 
+   @objc func searchFieldAction(_ sender: NSSearchField) {
+-    let searchString = sender.stringValue
++    applySearch(sender.stringValue)
++  }
++
++  /// Applies a search term to the history window, using the same filtering as a typed search.
++  /// Also used by the IntentLane `system.searchInApp` handler, so a system request and a typed
++  /// search cannot diverge.
++  func applySearch(_ term: String) {
++    // Keep the field in sync when it exists, without requiring the toolbar item to be built.
++    if let field = searchToolbarItem?.searchField, field.stringValue != term {
++      field.stringValue = term
++    }
++    let searchString = term
+     guard !searchString.isEmpty else {
+       reloadData()
+       return
