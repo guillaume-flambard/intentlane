@@ -1,0 +1,52 @@
+{
+  "phase": "BLOCKED",
+  "pilot": "nextcloud-ios",
+  "upstream": {
+    "repo": "nextcloud/ios",
+    "revision": "5f992a8f1e381478f5da68daea57b025007868a0"
+  },
+  "todos": {
+    "W1": "BLOCKED",
+    "W2": "TODO",
+    "W3": "TODO",
+    "W4": "TODO",
+    "W5": "TODO",
+    "W6": "TODO",
+    "W7": "TODO"
+  },
+  "acceptance": {
+    "AC1": "pending",
+    "AC2": "pending",
+    "AC3": "pending",
+    "AC4": "pending",
+    "AC5": "pending",
+    "AC6": "pending",
+    "AC7": "pending"
+  },
+  "risks_open_high": [
+    "R1",
+    "R2"
+  ],
+  "ready_for_manual_acceptance": false,
+  "blocker": {
+    "work": "W1",
+    "since": "2026-10-07",
+    "error": "Clang dependency scanning failure / Unable to resolve module dependency 'Realm' and 'GRDBSQLite' (in target 'BackgroundUploadExtension')",
+    "tried": [
+      "build 1: generic iOS Simulator destination: Realm and GRDBSQLite unresolved for BackgroundUploadExtension",
+      "build 2: concrete simulator, own flags: same",
+      "build 4: Nextcloud CI command shape (build-for-testing, mock GoogleService-Info.plist): same",
+      "builds 5 to 7: SWIFT_ENABLE_EXPLICIT_MODULES=NO, last one on a fresh derived data folder: the extension error is gone, one error remains in the main target: missing required module GRDBSQLite at NCLocalDatabase+photoLibraryAsset.swift:6 (an ordinary import GRDB)",
+      "build 6 was interrupted by an external signal with 0 errors, then rerun as build 7",
+      "build 8: explicit modules off plus -Xcc -fmodule-map-file for GRDBSQLite: that error is gone, the next one is the same class: missing required modules 'Realm.Private', 'Realm', 'Realm.Swift' in the main target"
+    ],
+    "facts": [
+      "Nextcloud's own CI is green on the pinned revision 5f992a8 (Build: success, Xcode 27.0 runner)",
+      "the failing target declares GRDB, KeychainAccess, NextcloudKit, RealmSwift as package products, so the project declaration is not the cause",
+      "local Xcode is 27.0 build 27A266a; the CI build number is unknown",
+      "GRDB declares GRDBSQLite as a SwiftPM systemLibrary target (module.modulemap with link sqlite3); the Nextcloud main target declares the GRDB product",
+      "the CI logs of the green run are no longer retrievable, so the CI Xcode build number is unknown"
+    ],
+    "next": "stop rule reached for good (8 builds). The failure class is Clang modules provided by Swift packages not being found by this Xcode build; fixing them one at a time is open ended. Owner decision: change target to an app that builds here (FSNotes pilot recorded BUILD SUCCEEDED), or wait for an Xcode update."
+  }
+}
