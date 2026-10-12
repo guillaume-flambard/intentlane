@@ -15,3 +15,7 @@ __pycache__/
 pilots/*/.build/
 pilots/*/VERIFICATION-CHECKLIST-*.md
 .impeccable/
+
+# Claude Code : profil de skills propre a cette machine (liens vers ~/.agents/skills et reglages locaux)
+.claude/settings.local.json
+.claude/skills/

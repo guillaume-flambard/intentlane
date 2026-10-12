@@ -1,0 +1,153 @@
+# Brouillon genere par agents-router propose. A relire : rien n'est applique tant que tu n'as pas lance `apply`.
+schema: 1
+project: intentlane
+tools:
+- claude
+- opencode
+fingerprint:
+  markers:
+  - AGENTS.md
+  - apps/example-expo/package.json
+  - apps/studio/Package.swift
+  - package.json
+  - packages/cli/package.json
+  - packages/core/package.json
+  - packages/expo-plugin/package.json
+  - packages/generator-apple/package.json
+  - packages/schema/package.json
+  - packages/studio-protocol/package.json
+  - pnpm-lock.yaml
+  - tsconfig.json
+  apple: true
+  web: false
+  mobile_js: true
+  swift_tools_version: '6.4'
+  xcode: Xcode 27.0
+  inputs_hash: e93c4c97c3d7f28e
+skills:
+  expose:
+  - id: app-intents-specialist
+    why: implementation et revue App Intents
+  - id: app-intents-whats-new-27
+    why: APIs SDK 26/27
+  - id: xcodebuildmcp-cli
+    why: build, test, run, logs Xcode
+  - id: swift-testing
+    why: ecriture et revue de tests Swift
+  - id: swift-concurrency
+    why: isolation d'acteur, Sendable, tasks
+  - id: apple-liquid-glass-design
+    why: 'regles Liquid Glass : le verre est une couche fonctionnelle'
+  - id: apple-27-baseline
+    why: toolchain et ecosysteme Apple 27
+  - id: apple-27-verification
+    why: definition de fini, perf et energie Apple 27
+  - id: swiftui-specialist
+    why: bonnes pratiques SwiftUI d'Apple
+  - id: swiftui-whats-new-27
+    why: APIs SwiftUI des OS 2027
+  - id: ios-qa
+    why: 'QA sur appareil reel (gstack), chargee avant la reduction du socle'
+  - id: ios-design-review
+    why: 'audit visuel sur appareil reel (gstack), chargee avant la reduction du socle'
+  - id: ios-fix
+    why: 'correcteur de bugs iOS autonome (gstack), chargee avant la reduction du socle'
+  - id: copywriting
+    why: 'axe commercial actif (AGENTS.md) ; chargee avant la reduction du socle'
+  - id: offers
+    why: 'axe commercial actif (AGENTS.md) ; chargee avant la reduction du socle'
+  - id: pricing
+    why: 'axe commercial actif (AGENTS.md) ; chargee avant la reduction du socle'
+  - id: product-marketing
+    why: 'axe commercial actif (AGENTS.md) ; chargee avant la reduction du socle'
+  - id: customer-research
+    why: 'axe commercial actif (AGENTS.md) ; chargee avant la reduction du socle'
+  hide:
+  - id: ai-seo
+    why: seo/geo
+  - id: generative-engine-optimization
+    why: seo/geo
+  - id: geo-llmstxt
+    why: seo/geo
+  - id: seo-audit
+    why: seo/geo
+  - id: seo-geo
+    why: seo/geo
+  - id: churn-prevention
+    why: e-commerce / growth hors offre
+  - id: ecommerce-growth-strategy
+    why: e-commerce / growth hors offre
+  - id: meta-ads
+    why: e-commerce / growth hors offre
+  - id: post-purchase-upsell-flow
+    why: e-commerce / growth hors offre
+  - id: prestashop-development
+    why: e-commerce / growth hors offre
+  - id: whatsapp-marketing
+    why: e-commerce / growth hors offre
+  - id: deploy-to-vercel
+    why: deploiement web
+  - id: deploying-laravel-cloud
+    why: deploiement web
+  - id: supabase
+    why: deploiement web
+  - id: supabase-postgres-best-practices
+    why: deploiement web
+  - id: vercel-cli-with-tokens
+    why: deploiement web
+  - id: vercel-composition-patterns
+    why: deploiement web
+  - id: vercel-optimize
+    why: deploiement web
+  - id: vercel-react-best-practices
+    why: deploiement web
+  - id: vercel-react-native-skills
+    why: deploiement web
+  - id: vercel-react-view-transitions
+    why: deploiement web
+  - id: design-consultation
+    why: design web gstack (pas ios-*)
+  - id: design-html
+    why: design web gstack (pas ios-*)
+  - id: design-review
+    why: design web gstack (pas ios-*)
+  - id: design-shotgun
+    why: design web gstack (pas ios-*)
+  - id: plan-design-review
+    why: design web gstack (pas ios-*)
+  - id: web-design-guidelines
+    why: design web gstack (pas ios-*)
+plugins:
+  disable:
+  - id: taste-skill@taste-skill
+    why: design web (13 skills)
+  - id: ui-ux-pro-max@ui-ux-pro-max-skill
+    why: design web (7 skills)
+  - id: design-skills@anthropic-plugin-directory
+    why: methodes UX generales (10 skills)
+  - id: cloudflare@cloudflare
+    why: pas de Workers dans ce projet (13 skills)
+  - id: stripe@claude-plugins-official
+    why: pas de paiement dans ce projet (9 skills)
+protect:
+- humanizer
+- whole-project-protocol
+- holistic
+- memo:vault-enrich
+- superpowers:brainstorming
+- superpowers:systematic-debugging
+- superpowers:writing-plans
+- superpowers:using-git-worktrees
+- update-config
+- agent-browser
+- ios-qa
+- ios-design-review
+- ios-fix
+- copywriting
+- offers
+- pricing
+- product-marketing
+- customer-research
+manual:
+  note: Rien ici n'est touche par agents-router. Ajoute tes propres reglages dans
+    .claude/settings.local.json.
